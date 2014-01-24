@@ -1,0 +1,403 @@
+package: org.robovm.apple.foundation
+library: Foundation
+framework: Foundation
+header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
+typedefs:
+    NSInteger: MachineSInt
+    NSUInteger: MachineUInt
+enums:
+#    NSStringEncoding:
+#        first: NSASCIIStringEncoding
+    NSStringEncodingConversionOptions:
+        first: NSStringEncodingConversionAllowLossy
+    NSStringCompareOptions:
+        first: NSCaseInsensitiveSearch
+    NSStringEnumerationOptions:
+        first: NSStringEnumerationByLines
+#    NSCalendarUnit:
+#        first: NSEraCalendarUnit
+    NSDataReadingOptions:
+        first: NSDataReadingMappedIfSafe
+    NSDataWritingOptions:
+        first: NSDataWritingAtomic
+#    NSTextAlignment: {}
+#    NSWritingDirection: {}
+classes:
+    NSArray:    
+        protocols: []
+        methods:
+            "-initWithArray:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+            "-initWithObjects:count:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+                parameters:
+                    objects:
+                        type: "@Pointer long"
+            "-containsObject:":
+                visibility: protected
+            "-count":
+                visibility: protected
+            "-objectAtIndex:":
+                visibility: protected
+            "-indexOfObject:":
+                visibility: protected
+            "-subarrayWithRange:":
+                visibility: protected
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSAttributedString:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSAutoreleasePool:
+        protocols: []
+        methods:
+            "-drain":
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSBundle:
+        protocols: []
+        methods:
+            "+mainBundle":
+                name: getMainBundle
+            "-bundlePath":
+                name: getBundlePath
+            "-resourcePath":
+                name: getResourcePath
+            "-infoDictionary":
+                name: getInfoDictionary
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSCoder:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSCalendar:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSData:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSDate:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSDictionary:
+        protocols: []
+        methods:
+            "+dictionaryWithContentsOfFile:":
+                name: fromFile
+                return_type:
+                    NSDictionary
+            "+dictionaryWithContentsOfURL:":
+                name: fromUrl
+                return_type:
+                    NSDictionary
+            "-initWithDictionary:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+            "-initWithObjects:forKeys:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+            "-allKeys":
+                visibility: protected
+            "-allValues":
+                visibility: protected
+            "-count":
+                visibility: protected
+            "-objectForKey:":
+                visibility: protected
+            "-writeToFile:atomically:":
+                name: writeToFile
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSEnumerator:
+        protocols: []
+        methods:
+            "-allObjects":
+                return_type: NSArray<T>
+            "-nextObject":
+                name: _nextObject
+                visibility: protected
+    NSMutableDictionary:
+        protocols: []
+        skip_def_constructor: true
+        methods:
+            "-setObject:forKey:":
+                visibility: protected
+                parameters:
+                    aKey:
+                        type: NSObject
+            "-removeAllObjects":
+                visibility: protected
+            "-removeObjectForKey:":
+                visibility: protected
+            "-initWithCapacity:":
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSError:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSIndexPath:
+        protocols: []
+        methods:
+            "-initWithIndex:":
+            "-length":
+                name: getLength
+            "-indexAtPosition:":
+                name: getIndexAt
+            "-indexPathByAddingIndex:":
+                name: addIndex
+            "-indexPathByRemovingLastIndex":
+                name: removeLastIndex
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSIndexSet:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSLocale:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+        properties:
+            "*":
+                exclude: true
+    NSNumber:
+        protocols: []
+        methods:
+            "+numberWithBool:":
+                name: valueOf
+            "+numberWithChar:":
+                name: valueOf
+            "+numberWithDouble:":
+                name: valueOf
+            "+numberWithFloat:":
+                name: valueOf
+            "+numberWithInt:":
+                name: valueOf
+            "+numberWithShort:":
+                name: valueOf
+            "+numberWithUnsignedShort:":
+                name: valueOf
+            "+numberWithLongLong:":
+                name: valueOf
+            "-boolValue":
+                name: booleanValue
+            "-charValue":
+                name: byteValue
+            "-shortValue":
+                name: shortValue
+            "-unsignedShortValue":
+                name: charValue
+            "-intValue":
+            "-longLongValue":
+                name: longValue
+            "-doubleValue":
+            "-floatValue":
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSObject:
+        protocols: []
+        skip_def_constructor: true
+        skip_skip_init_constructor: true
+        methods:
+            "-retain":
+                visibility: protected
+            "-release":
+                visibility: protected
+            "-init":
+                visibility: private
+                constructor: false
+                return_type: '@Pointer long'
+            "-description":
+            "-isEqual:":
+                visibility: protected
+            "-hash":
+                visibility: protected
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSOperation:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSRunLoop:
+        protocols: []
+        methods:
+            "+currentRunLoop":
+                name: getCurrent
+            "+mainRunLoop":
+                name: getMain
+            "-currentMode":
+                name: getCurrentMode
+            "-runMode:beforeDate:":
+                name: runUntil
+            "-runUntilDate:":
+                name: runUntil
+            "-performSelector:target:argument:order:modes:":
+                name: perform
+            "-cancelPerformSelectorsWithTarget:":
+                name: cancel
+            "-cancelPerformSelector:target:argument:":
+                name: cancel
+            "-addPort:forMode:":
+                exclude: true
+            "-removePort:forMode:":
+                exclude: true
+            "-getCFRunLoop":
+                exclude: true
+    NSSet:
+        protocols: []
+        methods:
+            "-initWithArray:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+            "-initWithSet:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+            "-initWithObjects:count:":
+                visibility: protected
+                constructor: false
+                return_type: "@Pointer long"
+                parameters:
+                    objects:
+                        type: "@Pointer long"
+            "-count":
+                visibility: protected
+            "-member:":
+                visibility: protected
+            "-objectEnumerator":
+                visibility: protected
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSString:
+        protocols: []
+        methods:
+            "-initWithCharactersNoCopy:length:freeWhenDone:":
+                visibility: private
+                parameters:
+                    characters:
+                        type: "@Pointer long"
+            "-characterAtIndex:":
+            "-length":
+            "-getCharacters:range:":
+                visibility: private
+                parameters:
+                    buffer:
+                        type: "@Pointer long"
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSTimer:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSTimeZone:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSUndoManager:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSURL:
+        protocols: []
+        methods:
+            "-initWithString:":
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSURLRequest:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+    NSUUID:
+        protocols: []
+        methods:
+            "-UUIDString":
+                name: asString
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+        properties:
+            "*":
+                exclude: true
+    NSValue:
+        protocols: []
+        methods:
+            "+*":
+                exclude: true
+            "-*":
+                exclude: true
+protocols:
