@@ -3,8 +3,14 @@ library: Foundation
 framework: Foundation
 header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
 typedefs:
+    BOOL: boolean
     NSInteger: MachineSInt
     NSUInteger: MachineUInt
+    NSZone: NSZone
+    struct _NSZone: NSZone
+    id: ObjCObject
+    Class: ObjCClass
+    "Protocol *": ObjCProtocol
 enums:
 #    NSStringEncoding:
 #        first: NSASCIIStringEncoding
@@ -47,24 +53,24 @@ classes:
                 visibility: protected
             "-subarrayWithRange:":
                 visibility: protected
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSAttributedString:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSAutoreleasePool:
         protocols: []
         methods:
             "-drain":
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSBundle:
         protocols: []
@@ -77,37 +83,37 @@ classes:
                 name: getResourcePath
             "-infoDictionary":
                 name: getInfoDictionary
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSCoder:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSCalendar:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSData:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSDate:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSDictionary:
         protocols: []
@@ -138,9 +144,9 @@ classes:
                 visibility: protected
             "-writeToFile:atomically:":
                 name: writeToFile
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSEnumerator:
         protocols: []
@@ -164,16 +170,16 @@ classes:
             "-removeObjectForKey:":
                 visibility: protected
             "-initWithCapacity:":
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSError:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSIndexPath:
         protocols: []
@@ -187,26 +193,26 @@ classes:
                 name: addIndex
             "-indexPathByRemovingLastIndex":
                 name: removeLastIndex
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSIndexSet:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSLocale:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
         properties:
-            "*":
+            ".*":
                 exclude: true
     NSNumber:
         protocols: []
@@ -240,9 +246,9 @@ classes:
                 name: longValue
             "-doubleValue":
             "-floatValue":
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSObject:
         protocols: []
@@ -262,16 +268,16 @@ classes:
                 visibility: protected
             "-hash":
                 visibility: protected
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSOperation:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSRunLoop:
         protocols: []
@@ -322,9 +328,9 @@ classes:
                 visibility: protected
             "-objectEnumerator":
                 visibility: protected
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSString:
         protocols: []
@@ -341,63 +347,65 @@ classes:
                 parameters:
                     buffer:
                         type: "@Pointer long"
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSTimer:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSTimeZone:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSUndoManager:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSURL:
         protocols: []
         methods:
             "-initWithString:":
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSURLRequest:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
     NSUUID:
         protocols: []
         methods:
             "-UUIDString":
                 name: asString
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
         properties:
-            "*":
+            ".*":
                 exclude: true
     NSValue:
         protocols: []
         methods:
-            "+*":
+            "+.*":
                 exclude: true
-            "-*":
+            "-.*":
                 exclude: true
 protocols:
+    NSObject:
+        name: NSObjectProtocol

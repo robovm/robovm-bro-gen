@@ -11,6 +11,9 @@ typedefs:
     __CFByteOrder: CFByteOrder
     SInt32: int
     UInt32: int
+    _NSZone: void
+    "Protocol *": ObjCProtocol
+    "Boolean *": BytePtr
 enums:
     CFBundleExecutableArchitectureType: {first: kCFBundleExecutableArchitectureI386}
     CFCalendarComponentsOptionFlags: {first: kCFCalendarComponentsWrap, prefix: kCFCalendarComponents, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}

@@ -4,6 +4,9 @@ default_class: Dispatch
 header: /usr/include/dispatch/dispatch.h
 path_match: ^.*/usr/include/dispatch/.*$
 force_types: [timespec]
+typedefs:
+    _NSZone: void
+    "Protocol *": ObjCProtocol
 structs:
     timespec:
         visibility: ''

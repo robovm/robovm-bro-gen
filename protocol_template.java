@@ -22,15 +22,21 @@ package org.robovm.foo;
  *
  * <div class="javadoc"></div>
  */
-public interface /*<name>*/ TheName /*</name>*/ /*<implements>*/ extends A, B, C /*</implements>*/ {
+/*<annotations>*/
+/*</annotations>*/
+/*<visibility>*/ public /*</visibility>*/ interface /*<name>*/ TheName /*</name>*/ 
+    /*<implements>*/ extends A, B, C /*</implements>*/ {
 
+    /*<ptr>*/
+    /*</ptr>*/
+    /*<bind>*/
+    /*</bind>*/
+    /*<constants>*/
+    /*</constants>*/
     /*<properties>*/
     /*</properties>*/
     /*<methods>*/
     /*</methods>*/
     /*<adapter>*/
     /*</adapter>*/
-    /*<callbacks>*/
-    /*</callbacks>*/
-
 }

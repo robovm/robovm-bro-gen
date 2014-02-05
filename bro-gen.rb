@@ -95,9 +95,9 @@ module Bro
         elsif @pointee.name == 'Pointer'
           "VoidPtr.Ptr"
         else
-          "VoidPtr"
+          "#{@pointee.java_name}.Ptr"
         end
-      elsif @pointee.is_a?(Struct) || @pointee.is_a?(Typedef) && @pointee.struct
+      elsif @pointee.is_a?(Struct) || @pointee.is_a?(Typedef) && @pointee.struct || @pointee.is_a?(ObjCClass) || @pointee.is_a?(ObjCProtocol)
         @pointee.java_name
       else
         "#{@pointee.java_name}.Ptr"
@@ -127,10 +127,8 @@ module Bro
           "MachineSizedFloatPtr"
         elsif @base_type.name == 'Pointer'
           "VoidPtr.Ptr"
-        elsif @base_type.name == 'FunctionPtr'
-          "FunctionPtr"
         else
-          "VoidPtr"
+          "#{@base_type.java_name}.Ptr"
         end
       elsif @base_type.is_a?(Struct) || @base_type.is_a?(Typedef) && @base_type.struct
         @base_type.java_name
@@ -167,7 +165,11 @@ module Bro
     Builtin.new('__builtin_va_list', [], 'VaList'),
     Builtin.new('ObjCBlock', [:type_block_pointer]),
     Builtin.new('FunctionPtr', [], 'FunctionPtr'),
-    Builtin.new('Selector', [], 'Selector'),
+    Builtin.new('Selector', [:type_obj_c_sel], 'Selector'),
+    Builtin.new('ObjCObject', [], 'ObjCObject'),
+    Builtin.new('ObjCClass', [], 'ObjCClass'),
+    Builtin.new('ObjCProtocol', [], 'ObjCProtocol'),
+    Builtin.new('BytePtr', [], 'BytePtr'),
   ]
   @@builtins_by_name = @@builtins.inject({}) {|h, b| h[b.name] = b ; h}
   @@builtins_by_type_kind = @@builtins.inject({}) {|h, b| b.type_kinds.each {|e| h[e] = b} ; h}
@@ -199,20 +201,20 @@ module Bro
       @ios_version = nil
       @mac_dep_version = nil
       @ios_dep_version = nil
-      if source.match('^CF_[A-Z_]*AVAILABLE_IOS')
+      if source.match('^(CF|NS)_[A-Z_]*AVAILABLE_IOS')
         @ios_version = args[0].sub(/_/, '.')
-      elsif source.match('CF_[A-Z_]*AVAILABLE_MAC')
+      elsif source.match('(CF|NS)_[A-Z_]*AVAILABLE_MAC')
         @mac_version = args[0].sub(/_/, '.')
-      elsif source.match('CF_[A-Z_]*AVAILABLE')
+      elsif source.match('(CF|NS)_[A-Z_]*AVAILABLE')
         @mac_version = args[0].sub(/_/, '.')
         @ios_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('CF_[A-Z_]*DEPRECATED_MAC')
+      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED_MAC')
         @mac_version = args[0].sub(/_/, '.')
         @mac_dep_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('CF_[A-Z_]*DEPRECATED_IOS')
+      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED_IOS')
         @ios_version = args[0].sub(/_/, '.')
         @ios_dep_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('CF_[A-Z_]*DEPRECATED')
+      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED')
         @mac_version = args[0].sub(/_/, '.')
         @mac_dep_version = args[1].sub(/_/, '.')
         @ios_version = args[2].sub(/_/, '.')
@@ -232,6 +234,8 @@ module Bro
       @ios_dep_version = @ios_version == 'NA' ? nil : @ios_dep_version
     end
   end
+  class UnavailableAttribute < Attribute
+  end
   class UnsupportedAttribute < Attribute
     def initialize(source)
       super(source)
@@ -241,10 +245,14 @@ module Bro
   def self.parse_attribute(cursor)
     source = Bro::read_attribute(cursor)
     if source.start_with?('__DARWIN_ALIAS_C') || source.start_with?('__DARWIN_ALIAS') || 
-       source == 'CF_IMPLICIT_BRIDGING_ENABLED' || source.start_with?('DISPATCH_') || source.start_with?('CF_RETURNS_RETAINED') ||
-       source == 'CF_INLINE' || source.start_with?('CF_FORMAT_FUNCTION') || source.start_with?('CF_FORMAT_ARGUMENT') || source == '__header_always_inline'
+       source == 'CF_IMPLICIT_BRIDGING_ENABLED' || source.start_with?('DISPATCH_') || source.match(/^(CF|NS)_RETURNS_RETAINED/) ||
+       source.match(/^(CF|NS)_INLINE$/) || source.match(/^(CF|NS)_FORMAT_FUNCTION.*/) || source.match(/^(CF|NS)_FORMAT_ARGUMENT.*/) || 
+       source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' ||
+       source == 'NS_ROOT_CLASS' || source == '__header_always_inline'
       return IgnoredAttribute.new source
-    elsif source.match('CF_[A-Z_]*AVAILABLE') || source.match('CF_[A-Z_]*DEPRECATED') ||
+    elsif source == 'NS_UNAVAILABLE'
+      return UnavailableAttribute.new source
+    elsif source.match(/^(CF|NS)[A-Z_]*_AVAILABLE.*/) || source.match(/^(CF|NS)[A-Z_]*_DEPRECATED/) ||
           source.start_with?('__OSX_AVAILABLE_STARTING') || source.start_with?('__OSX_AVAILABLE_BUT_DEPRECATED')
       return AvailableAttribute.new source
     else
@@ -336,16 +344,6 @@ module Bro
     def is_opaque?
       @members.empty?
     end
-
-    def to_java(template, name = nil, superclass = nil)
-      name = name ? name : self.name
-      template = template.gsub(/\/\*<name>\*\/.*\/\*<\/name>\*\//, "/*<name>*/ #{name} /*</name>*/")
-      if is_opaque?
-        template = template.gsub(/\/\*<extends>\*\/.*\/\*<\/extends>\*\//, "/*<extends>*/ #{superclass} /*</extends>*/")
-      else
-      end
-      template
-    end
   end
 
   class FunctionParameter
@@ -361,14 +359,14 @@ module Bro
     def initialize(model, cursor)
       super(model, cursor)
       @type = cursor.type
-      @return_type = cursor.type.result_type
+      @return_type = cursor.result_type
       @parameters = []
       @attributes = []
       param_count = 0
       @inline = false
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_obj_c_class_ref
+        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref
           # Ignored
         when :cursor_parm_decl
           @parameters.push FunctionParameter.new cursor, "p#{param_count}"
@@ -389,7 +387,7 @@ module Bro
     end
 
     def types
-      @parameters.inject([@return_type]) {|a, p| a.push(p.type) ; a}
+      [@return_type] + @parameters.map {|e| e.type}
     end
 
     def is_variadic?
@@ -398,6 +396,164 @@ module Bro
 
     def is_inline?
       @inline
+    end
+  end
+
+  class ObjCVar < Entity
+    attr_accessor :type
+    def initialize(model, cursor)
+      super(model, cursor)
+      @type = cursor.type
+    end
+    def types
+      [@type]
+    end
+  end
+  class ObjCInstanceVar < ObjCVar
+  end
+  class ObjCClassVar < ObjCVar
+  end
+  class ObjCInstanceMethod < Function
+    attr_accessor :owner
+    def initialize(model, cursor, owner)
+      super(model, cursor)
+      @owner = owner
+    end
+  end
+  class ObjCClassMethod < Function
+    attr_accessor :owner
+    def initialize(model, cursor, owner)
+      super(model, cursor)
+      @owner = owner
+    end
+  end
+
+  class ObjCProperty < Entity
+    attr_accessor :type, :owner, :getter, :setter
+    def initialize(model, cursor, owner)
+      super(model, cursor)
+      @type = cursor.type
+      @owner = owner
+      @getter = nil
+      @setter = nil
+    end
+    def is_readonly?
+      @setter == nil
+    end
+    def types
+      [@type]
+    end
+  end
+
+  class ObjCClass < Entity
+    attr_accessor :superclass, :protocols, :instance_vars, :class_vars, :instance_methods, :class_methods, :properties
+    def initialize(model, cursor)
+      super(model, cursor)
+      @superclass = nil
+      @protocols = []
+      @instance_vars = []
+      @class_vars = []
+      @instance_methods = []
+      @class_methods = []
+      @properties = []
+      @opaque = false
+      @attributes = []
+      cursor.visit_children do |cursor, parent|
+        case cursor.kind
+        when :cursor_obj_c_class_ref
+          @opaque = @name == cursor.spelling
+        when :cursor_obj_c_super_class_ref
+          @superclass = cursor.spelling
+        when :cursor_obj_c_protocol_ref
+          @protocols.push(cursor.spelling)
+        when :cursor_obj_c_instance_var_decl
+#          @instance_vars.push(ObjCInstanceVar.new(model, cursor))
+        when :cursor_obj_c_class_var_decl
+#          @class_vars.push(ObjCClassVar.new(model, cursor))
+        when :cursor_obj_c_instance_method_decl
+          @instance_methods.push(ObjCInstanceMethod.new(model, cursor, self))
+        when :cursor_obj_c_class_method_decl
+          @class_methods.push(ObjCClassMethod.new(model, cursor, self))
+        when :cursor_obj_c_property_decl
+          @properties.push(ObjCProperty.new(model, cursor, self))
+        when :cursor_unexposed_attr
+          attribute = Bro::parse_attribute(cursor)
+          if attribute.is_a?(UnsupportedAttribute)
+            $stderr.puts "WARN: ObjC class #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
+          end
+          @attributes.push attribute
+        else
+          raise "Unknown cursor kind #{cursor.kind} in ObjC class at #{Bro::location_to_s(@location)}"
+        end
+        next :continue
+      end
+
+      # Properties are alos represented as instance methods in the AST. Remove any instance method
+      # defined on the same position as a property and use the method name as getter/setter.
+      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
+        p = @properties.find {|f| f.id == m.id}
+        if p
+          if m.name =~ /.*:$/
+            p.setter = m
+          else
+            p.getter = m
+          end
+          m
+        else
+          nil
+        end
+      end
+    end
+
+    def types
+      (@instance_vars.map {|m| m.types} + @class_vars.map {|m| m.types} + @instance_methods.map {|m| m.types} + @class_methods.map {|m| m.types} + @properties.map {|m| m.types}).flatten
+    end
+
+    def is_opaque?
+      @opaque
+    end
+  end
+
+  class ObjCProtocol < Entity
+    attr_accessor :protocols, :instance_methods, :class_methods, :properties
+    def initialize(model, cursor)
+      super(model, cursor)
+      @protocols = []
+      @instance_methods = []
+      @class_methods = []
+      @properties = []
+      @opaque = false
+      @attributes = []
+      cursor.visit_children do |cursor, parent|
+        case cursor.kind
+        when :cursor_obj_c_protocol_ref
+          @opaque = @name == cursor.spelling
+          @protocols.push(cursor.spelling)
+        when :cursor_obj_c_instance_method_decl
+          @instance_methods.push(ObjCInstanceMethod.new(model, cursor, self))
+        when :cursor_obj_c_class_method_decl
+          @class_methods.push(ObjCClassMethod.new(model, cursor, self))
+        when :cursor_obj_c_property_decl
+          @properties.push(ObjCProperty.new(model, cursor, self))
+        when :cursor_unexposed_attr
+          attribute = Bro::parse_attribute(cursor)
+          if attribute.is_a?(UnsupportedAttribute)
+            $stderr.puts "WARN: ObjC protocol #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
+          end
+          @attributes.push attribute
+        else
+          raise "Unknown cursor kind #{cursor.kind} in ObjC protocol at #{Bro::location_to_s(@location)}"
+        end
+        next :continue
+      end
+    end
+
+    def types
+      (@instance_methods.map {|m| m.types} + @class_methods.map {|m| m.types} + @properties.map {|m| m.types}).flatten
+    end
+
+    def is_opaque?
+      @opaque
     end
   end
 
@@ -443,11 +599,14 @@ module Bro
       @enum = enum
     end
     def java_name
+      n = @name
       if @name.start_with?(@enum.prefix)
-        @name[@enum.prefix.size..-1]
-      else
-        @name
+        n = @name[@enum.prefix.size..-1]
       end
+      if /^[0-9].*/ =~ n
+        n = "V#{n}"
+      end
+      n
     end
   end
 
@@ -528,17 +687,21 @@ module Bro
   end
 
   class Model
-    attr_accessor :conf, :typedefs, :functions, :global_values, :constant_values, :structs, :enums, :cfenums, :cfoptions, :conf_classes, :conf_enums, :referenced_types
+    attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :global_values, :constant_values, :structs, :enums, :cfenums, 
+      :cfoptions, :conf_classes, :conf_protocols, :conf_enums, :referenced_types
     def initialize(conf)
       @conf = conf
       @conf_typedefs = @conf['typedefs'] || {}
       @conf_enums = @conf['enums'] || {}
       @conf_classes = @conf['classes'] || {}
+      @conf_protocols = @conf['protocols'] || {}
       @typedefs = []
       @functions = []
       @global_values = []
       @constant_values = []
       @structs = []
+      @objc_classes = []
+      @objc_protocols = []
       @enums = []
       @cfenums = [] # CF_ENUM(..., name) locations
       @cfoptions = [] # CF_OPTIONS(..., name) locations
@@ -553,6 +716,8 @@ module Bro
       e = Bro::builtins_by_name(name)
       e = e || @enums.find {|e| e.name == name}
       e = e || @structs.find {|e| e.name == name}
+      e = e || @objc_classes.find {|e| e.name == name}
+      e = e || @objc_protocols.find {|e| e.name == name}
       e = e || @typedefs.find {|e| e.name == name}
       e
     end
@@ -592,6 +757,17 @@ module Bro
         end
       elsif type.kind == :type_record
         @structs.find {|e| e.name == name}
+      elsif type.kind == :type_obj_c_object_pointer
+        name = type.pointee.spelling
+        if name =~ /^id<(.*)>$/
+          # Protocol
+          name = $1
+          e = @objc_protocols.find {|e| e.name == name}
+          e && e.pointer
+        else
+          e = @objc_classes.find {|e| e.name == name}
+          e && e.pointer
+        end
       elsif type.kind == :type_enum
         @enums.find {|e| e.name == name}
       elsif type.kind == :type_unexposed
@@ -717,9 +893,9 @@ module Bro
           end
           next :continue
         when :cursor_macro_expansion
-          if cursor.spelling.to_s == "CF_ENUM"
+          if cursor.spelling.to_s == "CF_ENUM" || cursor.spelling.to_s == "NS_ENUM"
             @cfenums.push Bro::location_to_id(cursor.location)
-          elsif cursor.spelling.to_s == "CF_OPTIONS"
+          elsif cursor.spelling.to_s == "CF_OPTIONS" || cursor.spelling.to_s == "NS_OPTIONS"
             @cfoptions.push Bro::location_to_id(cursor.location)
           end
           next :continue
@@ -729,6 +905,12 @@ module Bro
         when :cursor_variable
           @global_values.push GlobalValue.new self, cursor
           next :continue
+        when :cursor_obj_c_interface_decl
+          @objc_classes.push ObjCClass.new self, cursor
+          next :continue
+        when :cursor_obj_c_protocol_decl
+          @objc_protocols.push ObjCProtocol.new self, cursor
+          next :continue
         else
           next :recurse
         end
@@ -736,6 +918,9 @@ module Bro
 
       # Sort structs so that opaque structs come last. If a struct has a definition it should be used and not the forward declaration.
       @structs = @structs.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }
+
+      @objc_classes = @objc_classes.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }.uniq {|e| e.name}.sort_by {|e| e.name}
+      @objc_protocols = @objc_protocols.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }.uniq {|e| e.name}.sort_by {|e| e.name}
 
       # Merge enums
       enums = @enums.map do |e|
@@ -788,9 +973,8 @@ module Bro
         t
       end
       def unwrap_typedef(u)
-        while u.is_a?(Typedef) && !u.is_callback? && !@conf_classes[u.name]
-          u = u.struct || u.enum || unwrap_pointer(resolve_type(u.typedef_type
-            ))
+        while u.is_a?(Typedef) && !u.is_callback? && !@conf_classes[u.name] && !@conf_typedefs[u.name]
+          u = u.struct || u.enum || unwrap_pointer(resolve_type(u.typedef_type))
         end
         u
       end
@@ -803,7 +987,12 @@ module Bro
           if !visited.include?(t)
             u = unwrap_typedef(t)
             visited.push(t)
-            u.types.inject(t == referer ? {} : {t.name => [t, u, referer ? [referer] : []]}) {|h, t2| h.merge!(find_referenced_types(resolve_type(t2), u, visited), &method(:merge_func)) }
+            name = t.name
+            # Rename if u is an ObjC protocols with the same name as an ObjC class
+            if u.is_a?(ObjCProtocol) && (@conf_protocols[name] || {})['name']
+              name = @conf_protocols[name]['name']
+            end
+            u.types.inject(t == referer ? {} : {name => [t, u, referer ? [referer] : []]}) {|h, t2| h.merge!(find_referenced_types(resolve_type(t2), u, visited), &method(:merge_func)) }
           else
             {}
           end
@@ -811,11 +1000,14 @@ module Bro
       end
       referenced_types = @functions.inject({}) {|h, f| h.merge!(find_referenced_types(f, f, []), &method(:merge_func)) }
       referenced_types.merge!(@global_values.inject({}) {|h, v| h.merge!(find_referenced_types(v, v, []), &method(:merge_func)) }, &method(:merge_func))
+      referenced_types.merge!(@objc_classes.inject({}) {|h, c| h.merge!(find_referenced_types(c, c, []), &method(:merge_func)) }, &method(:merge_func))
+      referenced_types.merge!(@objc_protocols.inject({}) {|h, c| h.merge!(find_referenced_types(c, c, []), &method(:merge_func)) }, &method(:merge_func))
 
       # Add types referenced by the config
       conf_types = (@conf['functions'] || {}).values.map {|h| (h['parameters'] || {}).values.map {|p| p['type']} + [h['return_type']] }.flatten.find_all {|e| e}.uniq
       conf_types = conf_types + (@conf['force_types'] || [])
       conf_types = conf_types + ((@conf['classes'] || {}).map {|(k, v)| k})
+      conf_types = conf_types + ((@conf['protocols'] || {}).map {|(k, v)| k})
       conf_types = conf_types + ((@conf['enums'] || {}).map {|(k, v)| k})
       conf_types = conf_types.map {|e| resolve_type_by_name(e)}.find_all {|e| e}
       #puts conf_types.map {|e| "#{e.class.name}(#{e.name})"}.inspect
@@ -824,7 +1016,7 @@ module Bro
       # Remove types not defined in the framework or library
       lib = conf['framework'] || conf['library']
       referenced_types = referenced_types.inject({}) do |h, (k, v)|
-        if (@conf['force_types'] || []).include?(k) || is_included?(v[0])
+        if (@conf['force_types'] || @conf['classes'] || @conf['protocols'] || []).include?(k) || is_included?(v[0])
           h[k] = v
         else
           $stderr.puts "WARN: The referenced type '#{k}' defined at #{Bro::location_to_s(v[0].location)} is not in #{lib}. It will not be generated. Referenced by #{v[2].map {|e| e ? e.name : '?'}}"
@@ -837,10 +1029,10 @@ module Bro
       # Detect canonical types referenced multiple times through different typedefs and error out if one is found
       referenced_types_renamed = referenced_types.inject({}) {|h, (k, v)| h[(@conf_classes[k] || {})['name'] || k] = v; h}
       # We allow multiple typedefs referencing the same opaque struct so filter out opaque structs
-      canonical_types = referenced_types_renamed.values.map {|e| e[1]}.find_all {|e| !e.is_a?(Builtin) && (!e.is_a?(Struct) || !e.is_opaque?)}
-      dup_types = canonical_types.inject({}) {|h, t| h[t] = (h[t] || 0) + 1 ; h}.find_all {|k, v| v > 1}.map {|k, v| k}
-      dup_types.each do |t|
-        raise "The type '#{t.name}' defined at #{t.location ? Bro::location_to_s(t.location) : ''} is referenced multiple times using different names"
+      canonical_types = referenced_types_renamed.find_all {|(k, v)| !v[1].is_a?(Builtin) && (!v[1].is_a?(Struct) || !v[1].is_opaque?)}
+      dup_types = canonical_types.inject({}) {|h, (k, v)| h[v[1]] = (h[v[1]] || []) + [k] ; h}.find_all {|k, v| v.size > 1}
+      dup_types.each do |(k, v)|
+        raise "The type '#{k.name}' defined at #{k.location ? Bro::location_to_s(k.location) : ''} is referenced multiple times using different names #{v}"
       end
       @referenced_types = referenced_types
 
@@ -860,13 +1052,20 @@ module Bro
           enum.type.declaration.visit_children do |cursor, parent|
             case cursor.kind
             when :cursor_enum_constant_decl
-              @constant_values.push ConstantValue.new self, cursor, cursor.enum_value, type
+              value = cursor.enum_value
+              if type == 'long'
+                value = "#{value}L"
+              end
+              @constant_values.push ConstantValue.new self, cursor, value, type
             end
             next :continue
           end
         end
       end
       #puts unreferenced_enums.map {|e| "#{e.java_name || 'unnamed'} { #{e.values.map {|v| v.name}.join(', ')} }"}
+
+      @objc_classes = @referenced_types.map {|k, v| v[1].is_a?(ObjCClass) && v[1] || nil}.find_all {|e| e}
+      @objc_protocols = @referenced_types.map {|k, v| v[1].is_a?(ObjCProtocol) && v[1] || nil}.find_all {|e| e}
     end
 
     # Returns all referenced structs in an array of (type, canonical) pairs. type
@@ -897,7 +1096,7 @@ sysroot = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platfor
 def dump_ast(cursor, indent)
   cursor.visit_children do |cursor, parent|
     if cursor.kind != :cursor_macro_definition && cursor.kind != :cursor_macro_expansion && cursor.kind != :cursor_inclusion_directive
-      puts "#{indent}#{cursor.kind} '#{cursor.spelling}' #{cursor.type.kind} '#{cursor.type.spelling}' #{cursor.typedef_type ? cursor.typedef_type.kind : ''} #{Bro::location_to_s(cursor.location)}"
+      puts "#{indent}#{cursor.kind} '#{cursor.spelling}' #{cursor.type.kind} '#{cursor.type.spelling}' '#{cursor.return_type.kind}' #{cursor.typedef_type ? cursor.typedef_type.kind : ''} #{Bro::location_to_s(cursor.location)}"
     end
     dump_ast cursor, "#{indent}  "
     next :continue
@@ -928,7 +1127,7 @@ def merge_template(dir, package, name, def_template, data)
 end
 
 def find_conf_matching(name, conf)
-  match = conf.find {|pattern, value| name.match(pattern)}
+  match = conf.find {|pattern, value| name.match(pattern.sub(/^[+]/, "\\+"))}
   if !match
     {}
   elsif !$~.captures.empty?
@@ -1091,13 +1290,69 @@ ARGV[1..-1].each do |yaml_file|
   model.referenced_opaques.each do |pair|
     td = pair[0]
     c = model.conf_classes[td.name] || {}
-    data = template_datas[td.java_name] || {}
-    data['name'] = td.java_name
+    name = c['name'] || td.java_name
+    data = template_datas[name] || {}
+    data['name'] = name
     data['visibility'] = c['visibility'] || 'public'
     data['extends'] = c['extends'] || data['extends'] || 'NativeObject'
     data['imports'] = imports_s
     data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
-    template_datas[td.java_name] = data
+    template_datas[name] = data
+  end
+
+  def property_to_java(model, prop, owner_conf)
+    conf = get_conf_for_key(prop.name, owner_conf)
+    name = conf['name'] || prop.name
+    #name = name[0, 1].downcase + name[1..-1]
+    getter = "get#{name[0, 1].upcase + name[1..-1]}"
+    setter = "set#{name[0, 1].upcase + name[1..-1]}"
+    java_type = conf['type'] || model.to_java_type(model.resolve_type(prop.type))
+    visibility = conf['visibility'] || 'public'
+    native = prop.owner.is_a?(Bro::ObjCClass) ? " native" : ""
+    lines = ["@Property(getter = \"#{prop.getter.name}\")", "#{visibility}#{native} #{java_type} #{getter}();"]
+    if !prop.is_readonly? && !conf['readonly']
+      lines = lines + ["@Property(setter = \"#{prop.setter.name}\")", "#{visibility}#{native} void #{setter}(#{java_type} v);"]
+    end
+    lines
+  end
+
+  def method_to_java(model, method, owner_conf)
+    conf = get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, owner_conf)
+    name = conf['name'] || method.name
+    java_type = conf['type'] || model.to_java_type(model.resolve_type(method.return_type))
+    visibility = conf['visibility'] || 'public'
+    native = method.owner.is_a?(Bro::ObjCClass) ? "native " : ""
+    static = method.is_a?(Bro::ObjCClassMethod) ? "static " : ""
+    lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
+    lines
+  end
+
+  model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
+    c = model.conf_classes[cls.name] || {}
+    name = c['name'] || cls.java_name
+    data = template_datas[name] || {}
+    data['name'] = name
+    data['visibility'] = c['visibility'] || 'public'
+    data['extends'] = c['extends'] || (cls.superclass && (model.conf_classes[cls.superclass] || {})['name'] || cls.superclass) || 'ObjCObject'
+    data['imports'] = imports_s
+    data['implements'] = cls.protocols.empty? && '' || ("implements " + cls.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
+    data['properties'] = cls.properties.map {|p| property_to_java(model, p, c['properties'] || {})}.flatten.join("\n    ")
+    data['methods'] = cls.instance_methods.map {|m| method_to_java(model, m, c['methods'] || {})}.flatten.join("\n    ")
+    data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{cls.java_name}, Ptr> {}"
+    template_datas[name] = data
+  end
+
+  model.objc_protocols.each do |prot|
+    c = model.conf_protocols[prot.name] || {}
+    name = c['name'] || prot.java_name
+    data = template_datas[name] || {}
+    data['name'] = name
+    data['visibility'] = c['visibility'] || 'public'
+    data['implements'] = prot.protocols.empty? && '' || ("extends " + prot.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
+    data['imports'] = imports_s
+    #data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{prot.java_name}, Ptr> {}"
+    data['template'] = def_protocol_template
+    template_datas[name] = data
   end
 
   # Assign global values to classes
@@ -1202,7 +1457,7 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   template_datas.each do |owner, data|
-    merge_template(target_dir, package, owner, def_class_template, data)
+    merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
   end
 
   #puts model.constant_values.map { |e| "#{e.name} = #{e.value} (#{e.framework})" }
