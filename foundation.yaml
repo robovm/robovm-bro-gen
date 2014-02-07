@@ -1,8 +1,11 @@
 package: org.robovm.apple.foundation
+include: [corefoundation.yaml]
 library: Foundation
 framework: Foundation
 clang_args: ['-x', 'objective-c']
 header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
+imports:
+    - org.robovm.apple.corefoundation.*
 typedefs:
     BOOL: boolean
     NSInteger: MachineSInt
@@ -12,6 +15,7 @@ typedefs:
     id: ObjCObject
     Class: ObjCClass
     "Protocol *": ObjCProtocol
+    "NSString *": String
 enums:
 #    NSStringEncoding:
 #        first: NSASCIIStringEncoding
@@ -29,9 +33,30 @@ enums:
         first: NSDataWritingAtomic
 #    NSTextAlignment: {}
 #    NSWritingDirection: {}
+    NSComparisonResult: {}
+    NSNumberFormatterPadPosition: {}
+    NSNumberFormatterRoundingMode: {}
+    NSHTTPCookieAcceptPolicy: {}
+    NSPropertyListFormat: {}
+    NSExpressionType: {}
+    NSCompoundPredicateType: {}
+    NSNumberFormatterStyle: {}
+    NSStreamStatus: {}
+    NSPredicateOperatorType: {}
+    NSNumberFormatterBehavior: {}
+    NSDateFormatterBehavior: {}
+    NSDateFormatterStyle: {}
+    NSDateFormatterStyle: {}
+    NSComparisonPredicateOptions: {}
+    NSComparisonPredicateModifier: {}
+    NSOperationQueuePriority: {}
+    NSURLCredentialPersistence: {}
+
 classes:
+    ^NSRange$: {}
+    NSDecimal: {}
+
     NSArray:    
-        protocols: []
         methods:
             "-initWithArray:":
                 visibility: protected
@@ -54,27 +79,11 @@ classes:
                 visibility: protected
             "-subarrayWithRange:":
                 visibility: protected
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSAttributedString:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSAutoreleasePool:
-        protocols: []
-        methods:
-            "-drain":
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSAssertionHandler: {}
+    NSAttributedString: {}
+    NSAutoreleasePool: {}
+    NSBlockOperation: {}
     NSBundle:
-        protocols: []
         methods:
             "+mainBundle":
                 name: getMainBundle
@@ -84,40 +93,24 @@ classes:
                 name: getResourcePath
             "-infoDictionary":
                 name: getInfoDictionary
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSCoder:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSCalendar:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSData:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSDate:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSCache: {}
+    NSCachedURLResponse: {}
+    NSCalendar: {}
+    NSCharacterSet: {}
+    NSCoder: {}
+    NSComparisonPredicate: {}
+    NSCompoundPredicate: {}
+    NSCondition: {}
+    NSConditionLock: {}
+    NSCountedSet: {}
+    NSData: {}
+    NSDataDetector: {}
+    NSDate: {}
+    NSDateComponents: {}
+    NSDateFormatter: {}
+    NSDecimalNumber: {}
+    NSDecimalNumberHandler: {}
     NSDictionary:
-        protocols: []
         methods:
             "+dictionaryWithContentsOfFile:":
                 name: fromFile
@@ -145,20 +138,60 @@ classes:
                 visibility: protected
             "-writeToFile:atomically:":
                 name: writeToFile
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSDirectoryEnumerator: {}
     NSEnumerator:
-        protocols: []
         methods:
             "-allObjects":
                 return_type: NSArray<T>
             "-nextObject":
                 name: _nextObject
                 visibility: protected
+    NSError: {}
+    NSException: {}
+    NSExpression: {}
+    NSFileCoordinator: {}
+    NSFileHandle: {}
+    NSFileManager: {}
+    NSFileVersion: {}
+    NSFileWrapper: {}
+    NSFormatter: {}
+    NSHashTable: {}
+    NSHTTPCookie: {}
+    NSHTTPCookieStorage: {}
+    NSHTTPURLResponse: {}
+    NSIndexPath:
+        methods:
+            "-initWithIndex:":
+            "-length":
+                name: getLength
+            "-indexAtPosition:":
+                name: getIndexAt
+            "-indexPathByAddingIndex:":
+                name: addIndex
+            "-indexPathByRemovingLastIndex":
+                name: removeLastIndex
+    NSIndexSet: {}
+    NSInputStream: {}
+    NSInvocation: {}
+    NSInvocationOperation: {}
+    NSKeyedArchiver: {}
+    NSKeyedUnarchiver: {}
+    NSLinguisticTagger: {}
+    NSLocale: {}
+    NSLock: {}
+    NSMachPort: {}
+    NSMapTable: {}
+    NSMessagePort: {}
+    NSMetadataItem: {}
+    NSMetadataQuery: {}
+    NSMetadataQueryAttributeValueTuple: {}
+    NSMetadataQueryResultGroup: {}
+    NSMethodSignature: {}
+    NSMutableArray: {}
+    NSMutableAttributedString: {}
+    NSMutableCharacterSet: {}
+    NSMutableData: {}
     NSMutableDictionary:
-        protocols: []
         skip_def_constructor: true
         methods:
             "-setObject:forKey:":
@@ -171,52 +204,18 @@ classes:
             "-removeObjectForKey:":
                 visibility: protected
             "-initWithCapacity:":
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSError:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSIndexPath:
-        protocols: []
-        methods:
-            "-initWithIndex:":
-            "-length":
-                name: getLength
-            "-indexAtPosition:":
-                name: getIndexAt
-            "-indexPathByAddingIndex:":
-                name: addIndex
-            "-indexPathByRemovingLastIndex":
-                name: removeLastIndex
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSIndexSet:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSLocale:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-        properties:
-            ".*":
-                exclude: true
+    NSMutableIndexSet: {}
+    NSMutableOrderedSet: {}
+    NSMutableSet: {}
+    NSMutableString: {}
+    NSMutableURLRequest: {}
+    NSNetService: {}
+    NSNetServiceBrowser: {}
+    NSNotification: {}
+    NSNotificationCenter: {}
+    NSNotificationQueue: {}
+    NSNull: {}
     NSNumber:
-        protocols: []
         methods:
             "+numberWithBool:":
                 name: valueOf
@@ -242,17 +241,17 @@ classes:
                 name: shortValue
             "-unsignedShortValue":
                 name: charValue
-            "-intValue":
+                return_type: char
             "-longLongValue":
                 name: longValue
-            "-doubleValue":
-            "-floatValue":
-            "+.*":
+            "-longValue":
                 exclude: true
-            "-.*":
+            "-integerValue":
                 exclude: true
+            "^-unsigned.*Value$":
+                exclude: true
+    NSNumberFormatter: {}
     NSObject:
-        protocols: []
         skip_def_constructor: true
         skip_skip_init_constructor: true
         methods:
@@ -269,19 +268,22 @@ classes:
                 visibility: protected
             "-hash":
                 visibility: protected
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSOperation:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSOperation: {}
+    NSOperationQueue: {}
+    NSOrderedSet: {}
+    NSOrthography: {}
+    NSOutputStream: {}
+    NSPipe: {}
+    NSPointerArray: {}
+    NSPointerFunctions: {}
+    NSPort: {}
+    NSPredicate: {}
+    NSProcessInfo: {}
+    NSPropertyListSerialization: {}
+    NSProxy: {}
+    NSRecursiveLock: {}
+    NSRegularExpression: {}
     NSRunLoop:
-        protocols: []
         methods:
             "+currentRunLoop":
                 name: getCurrent
@@ -305,8 +307,8 @@ classes:
                 exclude: true
             "-getCFRunLoop":
                 exclude: true
+    NSScanner: {}
     NSSet:
-        protocols: []
         methods:
             "-initWithArray:":
                 visibility: protected
@@ -329,12 +331,9 @@ classes:
                 visibility: protected
             "-objectEnumerator":
                 visibility: protected
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSSortDescriptor: {}
+    NSStream: {}
     NSString:
-        protocols: []
         methods:
             "-initWithCharactersNoCopy:length:freeWhenDone:":
                 visibility: private
@@ -348,65 +347,69 @@ classes:
                 parameters:
                     buffer:
                         type: "@Pointer long"
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSTimer:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSTimeZone:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSUndoManager:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSURL:
-        protocols: []
-        methods:
-            "-initWithString:":
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-    NSURLRequest:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSTextCheckingResult: {}
+    NSThread: {}
+    NSTimer: {}
+    NSTimeZone: {}
+    NSUbiquitousKeyValueStore: {}
+    NSUndoManager: {}
+    NSURL: {}
+    NSURLAuthenticationChallenge: {}
+    NSURLCache: {}
+    NSURLConnection: {}
+    NSURLCredential: {}
+    NSURLCredentialStorage: {}
+    NSURLProtectionSpace: {}
+    NSURLProtocol: {}
+    NSURLRequest: {}
+    NSURLResponse: {}
+    NSURLSession: {}
+    NSURLSessionConfiguration: {}
+    NSURLSessionDataTask: {}
+    NSURLSessionDownloadTask: {}
+    NSURLSessionTask: {}
+    NSURLSessionUploadTask: {}
+    NSUserDefaults: {}
     NSUUID:
-        protocols: []
         methods:
             "-UUIDString":
                 name: asString
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
-        properties:
-            ".*":
-                exclude: true
-    NSValue:
-        protocols: []
-        methods:
-            "+.*":
-                exclude: true
-            "-.*":
-                exclude: true
+    NSValue: {}
+    NSValueTransformer: {}
+    NSXMLParser: {}
+
 protocols:
+    NSCacheDelegate: {}
+    NSCoding: {}
+    NSCopying: {}
+    NSDecimalNumberBehaviors: {}
+    NSErrorRecoveryAttempting: {}
+    NSFastEnumeration: {}
+    NSFileManagerDelegate: {}
+    NSFilePresenter: {}
+    NSKeyedArchiverDelegate: {}
+    NSKeyedUnarchiverDelegate: {}
+    NSKeyValueCoding: {}
+    NSKeyValueObserving: {}
+    NSLocking: {}
+    NSMachPortDelegate: {}
+    NSMetadataQueryDelegate: {}
+    NSMutableCopying: {}
+    NSNetServiceBrowserDelegate: {}
+    NSNetServiceDelegate: {}
     NSObject:
         name: NSObjectProtocol
+    NSPortDelegate: {}
+    NSSecureCoding: {}
+    NSStreamDelegate: {}
+    NSURLAuthenticationChallengeSender: {}
+    NSURLConnectionDataDelegate: {}
+    NSURLConnectionDelegate: {}
+    NSURLConnectionDelegate: {}
+    NSURLConnectionDownloadDelegate: {}
+    NSURLProtocolClient: {}
+    NSURLSessionDataDelegate: {}
+    NSURLSessionDelegate: {}
+    NSURLSessionDownloadDelegate: {}
+    NSURLSessionTaskDelegate: {}
+    NSXMLParserDelegate: {}
