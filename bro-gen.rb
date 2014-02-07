@@ -1230,60 +1230,6 @@ ARGV[1..-1].each do |yaml_file|
     end
   end
 
-  # conf_structs = conf['structs'] || {}
-  # model.referenced_structs.each do |pair|
-  #   td = pair[0]
-  #   struct = pair[1]
-
-  #   data = template_datas[td.java_name] || {}
-  #   sconf = get_conf_for_key(td.java_name, conf_structs) 
-
-  #   inc = struct.union ? 0 : 1
-  #   index = 0
-  #   members = []
-  #   struct.members.each do |e|
-  #     type = (sconf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type))
-  #     members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{td.java_name} #{e.name}(#{type} #{e.name});"].join("\n    "))
-  #     index = index + inc
-  #   end
-  #   members = members.join("\n    ")
-  #   data['methods'] = "\n    #{members}\n    "
-
-  #   constructor_params = []
-  #   constructor_body = []
-  #   struct.members.map do |e|
-  #     type = (sconf[e.name] || {})['type']
-  #     type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type).java_name
-  #     constructor_params.push "#{type} #{e.name}"
-  #     constructor_body.push "this.#{e.name}(#{e.name});"
-  #   end.join("\n    ")
-  #   constructor = "public #{td.java_name}(" + constructor_params.join(', ') + ") {\n        "
-  #   constructor = constructor + constructor_body.join("\n        ")
-  #   constructor = "#{constructor}\n    }"
-  #   data['constructors'] = "\n    #{constructor}\n    "
-
-  #   data['name'] = td.java_name
-  #   data['visibility'] = sconf['visibility'] || 'public'
-  #   data['extends'] = "Struct<#{td.java_name}>"
-  #   data['imports'] = imports_s
-  #   data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
-
-  #   template_datas[td.java_name] = data
-  # end
-
-  # model.referenced_opaques.each do |pair|
-  #   td = pair[0]
-  #   c = model.conf_classes[td.name] || {}
-  #   name = c['name'] || td.java_name
-  #   data = template_datas[name] || {}
-  #   data['name'] = name
-  #   data['visibility'] = c['visibility'] || 'public'
-  #   data['extends'] = c['extends'] || data['extends'] || 'NativeObject'
-  #   data['imports'] = imports_s
-  #   data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
-  #   template_datas[name] = data
-  # end
-
   # model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
   #   c = model.conf_classes[cls.name] || {}
   #   name = c['name'] || cls.java_name
