@@ -7,35 +7,20 @@ force_types: [timespec]
 typedefs:
     _NSZone: void
     "Protocol *": ObjCProtocol
-structs:
-    timespec:
-        visibility: ''
 classes:
-    dispatch_data_t:
-        name: DispatchData
-        extends: DispatchObject
-    dispatch_group_t:
-        name: DispatchGroup
-        extends: DispatchObject
-    dispatch_io_t:
+    ^timespec$:
+        visibility: ''
+    ^dispatch_io_s$:
         name: DispatchIO
         extends: DispatchObject
-    dispatch_object_t:
+    ^dispatch_object_s$:
         name: DispatchObject
-    dispatch_queue_t:
-        name: DispatchQueue
+    ^dispatch_object_t$:
+        name: DispatchObject
+        exclude: true
+    ^(dispatch_(data|group|queue|queue_attr|semaphore|source|source_type))_s$:
+        name: "#{g[0].camelize}"
         extends: DispatchObject
-    dispatch_queue_attr_t:
-        name: DispatchQueueAttr
-        extends: DispatchObject
-    dispatch_semaphore_t:
-        name: DispatchSemaphore
-        extends: DispatchObject
-    dispatch_source_t:
-        name: DispatchSource
-        extends: DispatchObject
-    dispatch_source_type_t:
-        name: DispatchSourceType
 functions:
     ^dispatch_((barrier_)?a?sync.*)$:
         class: DispatchQueue
@@ -103,6 +88,8 @@ values:
         type: DispatchData
         name: "#{g[0].camelize}"
         readonly: true
+    ^dispatch_(.*)$:
+        class: Dispatch
 constants:
     ^DISPATCH_QUEUE_(.*)$:
         class: DispatchQueue

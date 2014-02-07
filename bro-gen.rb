@@ -65,7 +65,7 @@ module Bro
     end
 
     def java_name
-      name ? ((@model.conf_classes[name] || {})['name'] || name) : ''
+      name ? ((@model.get_class_conf(name) || {})['name'] || name) : ''
     end
 
     def pointer
@@ -93,14 +93,14 @@ module Bro
         elsif @pointee.name == 'MachineFloat'
           "MachineSizedFloatPtr"
         elsif @pointee.name == 'Pointer'
-          "VoidPtr.Ptr"
+          "VoidPtr.VoidPtrPtr"
         else
-          "#{@pointee.java_name}.Ptr"
+          "#{@pointee.java_name}.#{@pointee.java_name}Ptr"
         end
       elsif @pointee.is_a?(Struct) || @pointee.is_a?(Typedef) && @pointee.struct || @pointee.is_a?(ObjCClass) || @pointee.is_a?(ObjCProtocol)
         @pointee.java_name
       else
-        "#{@pointee.java_name}.Ptr"
+        "#{@pointee.java_name}.#{@pointee.java_name}Ptr"
       end
     end
   end
@@ -126,14 +126,14 @@ module Bro
         elsif @base_type.name == 'MachineFloat'
           "MachineSizedFloatPtr"
         elsif @base_type.name == 'Pointer'
-          "VoidPtr.Ptr"
+          "VoidPtr.VoidPtrPtr"
         else
-          "#{@base_type.java_name}.Ptr"
+          "#{@base_type.java_name}.#{@base_type.java_name}Ptr"
         end
       elsif @base_type.is_a?(Struct) || @base_type.is_a?(Typedef) && @base_type.struct
         @base_type.java_name
       else
-        "#{@base_type.java_name}.Ptr"
+        "#{@base_type.java_name}.#{@base_type.java_name}Ptr"
       end
     end
   end
@@ -688,11 +688,14 @@ module Bro
 
   class Model
     attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :global_values, :constant_values, :structs, :enums, :cfenums, 
-      :cfoptions, :conf_classes, :conf_protocols, :conf_enums, :referenced_types
+      :cfoptions, :conf_functions, :conf_values, :conf_constants, :conf_classes, :conf_protocols, :conf_enums
     def initialize(conf)
       @conf = conf
       @conf_typedefs = @conf['typedefs'] || {}
       @conf_enums = @conf['enums'] || {}
+      @conf_functions = @conf['functions'] || {}
+      @conf_values = conf['values'] || {}
+      @conf_constants = conf['constants'] || {}
       @conf_classes = @conf['classes'] || {}
       @conf_protocols = @conf['protocols'] || {}
       @typedefs = []
@@ -706,7 +709,6 @@ module Bro
       @cfenums = [] # CF_ENUM(..., name) locations
       @cfoptions = [] # CF_OPTIONS(..., name) locations
       @type_cache = {}
-      @referenced_types = []
     end
     def inspect
       object_id
@@ -742,26 +744,31 @@ module Bro
       if @conf_typedefs[name]
         resolve_type_by_name @conf_typedefs[name]
       elsif type.kind == :type_pointer
-        e = resolve_type(type.pointee)
-        if e.is_a?(Enum) || e.is_a?(Typedef) && e.is_enum?
-          # Pointer to enum. Use an appropriate integer pointer (e.g. IntPtr)
-          enum = e.is_a?(Enum) ? e : e.enum
-          if type.pointee.canonical.kind == :type_enum
-            # Pointer to objc_fixed_enum
-            resolve_type(enum.enum_type).pointer
-          else
-            resolve_type(type.pointee.canonical).pointer
-          end
+        if type.pointee.kind == :type_unexposed && name.match(/\(\*\)/)
+          # Callback. libclang does not expose info for callbacks.
+          Bro::builtins_by_name('FunctionPtr')
         else
-          e.pointer
+          e = resolve_type(type.pointee)
+          if e.is_a?(Enum) || e.is_a?(Typedef) && e.is_enum?
+            # Pointer to enum. Use an appropriate integer pointer (e.g. IntPtr)
+            enum = e.is_a?(Enum) ? e : e.enum
+            if type.pointee.canonical.kind == :type_enum
+              # Pointer to objc_fixed_enum
+              resolve_type(enum.enum_type).pointer
+            else
+              resolve_type(type.pointee.canonical).pointer
+            end
+          else
+            e.pointer
+          end
         end
       elsif type.kind == :type_record
         @structs.find {|e| e.name == name}
       elsif type.kind == :type_obj_c_object_pointer
         name = type.pointee.spelling
-        if name =~ /^id<(.*)>$/
+        if name =~ /^(id|NSObject)<(.*)>$/
           # Protocol
-          name = $1
+          name = $2
           e = @objc_protocols.find {|e| e.name == name}
           e && e.pointer
         else
@@ -794,16 +801,11 @@ module Bro
           # Check builtins for builtin typedefs like va_list
           Bro::builtins_by_name(name)
         else
-          if td.is_callback? || td.is_struct? || td.is_enum? || @conf_classes[td.name]
+          if td.is_callback? || td.is_struct? || td.is_enum?
             td
           else
             e = @enums.find {|e| e.name == name}
-            e = e || resolve_type(td.typedef_type)
-            if e.is_a?(Pointer) && e.pointee.is_a?(Struct) && e.pointee.is_opaque?
-              td
-            else
-              e
-            end
+            e || resolve_type(td.typedef_type)
           end
         end
       elsif type.kind == :type_constant_array
@@ -823,6 +825,49 @@ module Bro
         e = e || @typedefs.find {|e| e.name == name}
         e
       end
+    end
+
+    def find_conf_matching(name, conf)
+      match = conf.find {|pattern, value| name.match(pattern.sub(/^[+]/, "\\+"))}
+      if !match
+        nil
+      elsif !$~.captures.empty?
+        def get_binding(g)
+          binding
+        end
+        b = get_binding($~.captures)
+        # Perform substitution on children
+        captures = $~.captures
+        h = {}
+        match[1].keys.each do |key|
+          v = match[1][key]
+          if v.is_a?(String) && v.match(/#\{/)
+            v = eval("\"#{v}\"", b)
+          end
+          h[key] = v
+        end
+        h
+      else
+        match[1]
+      end
+    end
+    def get_conf_for_key(name, conf)
+      conf[name] || find_conf_matching(name, conf)
+    end
+    def get_class_conf(name)
+      get_conf_for_key(name, @conf_classes)
+    end
+    def get_function_conf(name)
+      get_conf_for_key(name, @conf_functions)
+    end
+    def get_value_conf(name)
+      get_conf_for_key(name, @conf_values)
+    end
+    def get_constant_conf(name)
+      get_conf_for_key(name, @conf_constants)
+    end
+    def get_enum_conf(name)
+      get_conf_for_key(name, @conf_enums)
     end
 
     def to_java_type(type)
@@ -917,7 +962,7 @@ module Bro
       end
 
       # Sort structs so that opaque structs come last. If a struct has a definition it should be used and not the forward declaration.
-      @structs = @structs.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }
+      @structs = @structs.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }.uniq {|e| e.name}.sort_by {|e| e.name}
 
       @objc_classes = @objc_classes.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }.uniq {|e| e.name}.sort_by {|e| e.name}
       @objc_protocols = @objc_protocols.sort {|a, b| (a.is_opaque? ? 1 : 0) <=> (b.is_opaque? ? 1 : 0) }.uniq {|e| e.name}.sort_by {|e| e.name}
@@ -957,136 +1002,6 @@ module Bro
 
       # Filter out constants not defined in the framework or library we're generating code for
       @constant_values = @constant_values.find_all {|v| is_included?(v)}
-
-      # Create a hash of referenced types. The key is the name of the type where it is used. The values
-      # are arrays [type, canonical, referers] where typedef is the used type (possibly a typedef),
-      # canonical is the canonical type (typedefs have been resolved) and referers is an array of
-      # users of the type.
-      def merge_func(key, oldval, newval)
-        oldval[2].push(newval[2][0])
-        oldval
-      end
-      def unwrap_pointer(t)
-        while t.is_a?(Bro::Pointer)
-          t = t.pointee
-        end
-        t
-      end
-      def unwrap_typedef(u)
-        while u.is_a?(Typedef) && !u.is_callback? && !@conf_classes[u.name] && !@conf_typedefs[u.name]
-          u = u.struct || u.enum || unwrap_pointer(resolve_type(u.typedef_type))
-        end
-        u
-      end
-      def find_referenced_types(t, referer, visited)
-        t = unwrap_pointer(t)
-        t = t.is_a?(Array) ? t.base_type : t
-        if t.is_a?(Builtin)
-          {}
-        else
-          if !visited.include?(t)
-            u = unwrap_typedef(t)
-            visited.push(t)
-            name = t.name
-            # Rename if u is an ObjC protocols with the same name as an ObjC class
-            if u.is_a?(ObjCProtocol) && (@conf_protocols[name] || {})['name']
-              name = @conf_protocols[name]['name']
-            end
-            u.types.inject(t == referer ? {} : {name => [t, u, referer ? [referer] : []]}) {|h, t2| h.merge!(find_referenced_types(resolve_type(t2), u, visited), &method(:merge_func)) }
-          else
-            {}
-          end
-        end
-      end
-      referenced_types = @functions.inject({}) {|h, f| h.merge!(find_referenced_types(f, f, []), &method(:merge_func)) }
-      referenced_types.merge!(@global_values.inject({}) {|h, v| h.merge!(find_referenced_types(v, v, []), &method(:merge_func)) }, &method(:merge_func))
-      referenced_types.merge!(@objc_classes.inject({}) {|h, c| h.merge!(find_referenced_types(c, c, []), &method(:merge_func)) }, &method(:merge_func))
-      referenced_types.merge!(@objc_protocols.inject({}) {|h, c| h.merge!(find_referenced_types(c, c, []), &method(:merge_func)) }, &method(:merge_func))
-
-      # Add types referenced by the config
-      conf_types = (@conf['functions'] || {}).values.map {|h| (h['parameters'] || {}).values.map {|p| p['type']} + [h['return_type']] }.flatten.find_all {|e| e}.uniq
-      conf_types = conf_types + (@conf['force_types'] || [])
-      conf_types = conf_types + ((@conf['classes'] || {}).map {|(k, v)| k})
-      conf_types = conf_types + ((@conf['protocols'] || {}).map {|(k, v)| k})
-      conf_types = conf_types + ((@conf['enums'] || {}).map {|(k, v)| k})
-      conf_types = conf_types.map {|e| resolve_type_by_name(e)}.find_all {|e| e}
-      #puts conf_types.map {|e| "#{e.class.name}(#{e.name})"}.inspect
-      referenced_types.merge!(conf_types.inject({}) {|h, t| h[t.name] = [t, t, []]; h}, &method(:merge_func))
-
-      # Remove types not defined in the framework or library
-      lib = conf['framework'] || conf['library']
-      referenced_types = referenced_types.inject({}) do |h, (k, v)|
-        if (@conf['force_types'] || @conf['classes'] || @conf['protocols'] || []).include?(k) || is_included?(v[0])
-          h[k] = v
-        else
-          $stderr.puts "WARN: The referenced type '#{k}' defined at #{Bro::location_to_s(v[0].location)} is not in #{lib}. It will not be generated. Referenced by #{v[2].map {|e| e ? e.name : '?'}}"
-        end
-        h
-      end
-
-      #puts referenced_types.map { |k, v| "#{k} => #{v[0].name} #{v[1].name}"}
-
-      # Detect canonical types referenced multiple times through different typedefs and error out if one is found
-      referenced_types_renamed = referenced_types.inject({}) {|h, (k, v)| h[(@conf_classes[k] || {})['name'] || k] = v; h}
-      # We allow multiple typedefs referencing the same opaque struct so filter out opaque structs
-      canonical_types = referenced_types_renamed.find_all {|(k, v)| !v[1].is_a?(Builtin) && (!v[1].is_a?(Struct) || !v[1].is_opaque?)}
-      dup_types = canonical_types.inject({}) {|h, (k, v)| h[v[1]] = (h[v[1]] || []) + [k] ; h}.find_all {|k, v| v.size > 1}
-      dup_types.each do |(k, v)|
-        raise "The type '#{k.name}' defined at #{k.location ? Bro::location_to_s(k.location) : ''} is referenced multiple times using different names #{v}"
-      end
-      @referenced_types = referenced_types
-
-      # Find unreferenced enums and warn about those with names which are in the framework or library
-      unreferenced_enums = @enums - @referenced_types.map {|k, v| v[1].is_a?(Enum) ? v[1] : nil}.find_all {|e| e}
-      unreferenced_enums = unreferenced_enums.find_all {|e| is_included?(e)}
-      unreferenced_enums.each do |enum|
-        if enum.java_name && enum.java_name.size > 0
-          $stderr.puts "WARN: An unreferenced enum '#{enum.java_name}' defined at #{Bro::location_to_s(enum.location)} is in #{lib}"
-        end
-      end
-
-      # Create ConstantValues for remaining unnamed enums
-      unreferenced_enums.each do |enum|
-        if !enum.java_name || enum.java_name.size == 0
-          type = [:type_longlong, :type_ulonglong].include?(enum.enum_type.kind) ? 'long' : 'int'
-          enum.type.declaration.visit_children do |cursor, parent|
-            case cursor.kind
-            when :cursor_enum_constant_decl
-              value = cursor.enum_value
-              if type == 'long'
-                value = "#{value}L"
-              end
-              @constant_values.push ConstantValue.new self, cursor, value, type
-            end
-            next :continue
-          end
-        end
-      end
-      #puts unreferenced_enums.map {|e| "#{e.java_name || 'unnamed'} { #{e.values.map {|v| v.name}.join(', ')} }"}
-
-      @objc_classes = @referenced_types.map {|k, v| v[1].is_a?(ObjCClass) && v[1] || nil}.find_all {|e| e}
-      @objc_protocols = @referenced_types.map {|k, v| v[1].is_a?(ObjCProtocol) && v[1] || nil}.find_all {|e| e}
-    end
-
-    # Returns all referenced structs in an array of (type, canonical) pairs. type
-    # is the referenced typedef (or the struct if referenced directly) while 
-    # canonical is the Struct instance. Does not return opaque structs.
-    def referenced_structs
-      @referenced_types.map {|k, v| v[1].is_a?(Struct) && !v[1].is_opaque? ? v : nil}.find_all {|e| e}
-    end
-
-    # Returns all referenced opaque structs in an array of (type, canonical) pairs. type
-    # is the referenced typedef (or the struct if referenced directly) while 
-    # canonical is the Struct instance.
-    def referenced_opaques
-      @referenced_types.map {|k, v| v[1].is_a?(Typedef) || v[1].is_a?(Struct) && v[1].is_opaque? ? v : nil}.find_all {|e| e}
-    end
-
-    # Returns all referenced enums in an array of (type, canonical) pairs. type
-    # is the referenced typedef (or the enum if referenced directly) while 
-    # canonical is the Enum instance.
-    def referenced_enums
-      @referenced_types.map {|k, v| v[1].is_a?(Enum) ? v : nil}.find_all {|e| e}
     end
   end
 end
@@ -1119,40 +1034,84 @@ def merge_template(dir, package, name, def_template, data)
     template = template.sub(/^package .*;/, "package #{package};")
   end
   data.each do |key, value|
-    template = template.gsub(/\/\*<#{key}>\*\/.*?\/\*<\/#{key}>\*\//m, "/*<#{key}>*/#{value}/*</#{key}>*/")
+    if value
+      template = template.gsub(/\/\*<#{key}>\*\/.*?\/\*<\/#{key}>\*\//m, "/*<#{key}>*/#{value}/*</#{key}>*/")
+    end
   end
   open(target_file(dir, package, name), 'wb') do |f|
     f << template
   end
 end
 
-def find_conf_matching(name, conf)
-  match = conf.find {|pattern, value| name.match(pattern.sub(/^[+]/, "\\+"))}
-  if !match
-    {}
-  elsif !$~.captures.empty?
-    def get_binding(g)
-      binding
-    end
-    b = get_binding($~.captures)
-    # Perform substitution on children
-    captures = $~.captures
-    h = {}
-    match[1].keys.each do |key|
-      v = match[1][key]
-      if v.is_a?(String) && v.match(/#\{/)
-        v = eval("\"#{v}\"", b)
-      end
-      h[key] = v
-    end
-    h
-  else
-    match[1]
+def struct_to_java(model, data, name, struct, conf)
+  data = data || {}
+  inc = struct.union ? 0 : 1
+  index = 0
+  members = []
+  struct.members.each do |e|
+    type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type))
+    members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{name} #{e.name}(#{type} #{e.name});"].join("\n    "))
+    index = index + inc
   end
+  members = members.join("\n    ")
+  data['methods'] = "\n    #{members}\n    "
+
+  constructor_params = []
+  constructor_body = []
+  struct.members.map do |e|
+    type = (conf[e.name] || {})['type']
+    type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type).java_name
+    constructor_params.push "#{type} #{e.name}"
+    constructor_body.push "this.#{e.name}(#{e.name});"
+  end.join("\n    ")
+  constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
+  constructor = constructor + constructor_body.join("\n        ")
+  constructor = "#{constructor}\n    }"
+  data['constructors'] = "\n    #{constructor}\n    "
+
+  data['name'] = name
+  data['visibility'] = conf['visibility'] || 'public'
+  data['extends'] = "Struct<#{name}>"
+  data['ptr'] = "public static class #{name}Ptr extends Ptr<#{name}, #{name}Ptr> {}"
+  data
 end
-def get_conf_for_key(name, conf)
-  conf[name] || find_conf_matching(name, conf) || {}
+
+def opaque_to_java(model, data, name, struct, conf)
+  data = data || {}
+  data['name'] = name
+  data['visibility'] = conf['visibility'] || 'public'
+  data['extends'] = conf['extends'] || 'NativeObject'
+  data['ptr'] = "public static class #{name}Ptr extends Ptr<#{name}, #{name}Ptr> {}"
+  data
 end
+
+def property_to_java(model, prop, owner_conf)
+  conf = get_conf_for_key(prop.name, owner_conf)
+  name = conf['name'] || prop.name
+  #name = name[0, 1].downcase + name[1..-1]
+  getter = "get#{name[0, 1].upcase + name[1..-1]}"
+  setter = "set#{name[0, 1].upcase + name[1..-1]}"
+  java_type = conf['type'] || model.to_java_type(model.resolve_type(prop.type))
+  visibility = conf['visibility'] || 'public'
+  native = prop.owner.is_a?(Bro::ObjCClass) ? " native" : ""
+  lines = ["@Property(getter = \"#{prop.getter.name}\")", "#{visibility}#{native} #{java_type} #{getter}();"]
+  if !prop.is_readonly? && !conf['readonly']
+    lines = lines + ["@Property(setter = \"#{prop.setter.name}\")", "#{visibility}#{native} void #{setter}(#{java_type} v);"]
+  end
+  lines
+end
+
+def method_to_java(model, method, owner_conf)
+  conf = get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, owner_conf)
+  name = conf['name'] || method.name
+  java_type = conf['type'] || model.to_java_type(model.resolve_type(method.return_type))
+  visibility = conf['visibility'] || 'public'
+  native = method.owner.is_a?(Bro::ObjCClass) ? "native " : ""
+  static = method.is_a?(Bro::ObjCClassMethod) ? "static " : ""
+  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
+  lines
+end
+
 
 script_dir = File.expand_path(File.dirname(__FILE__))
 target_dir = ARGV[0]
@@ -1172,14 +1131,20 @@ ARGV[1..-1].each do |yaml_file|
 
   (conf['include'] || []).each do |f|
     c = YAML.load_file(f)
-    conf['classes'] = (c['classes'] || {}).merge(conf['classes'] || {})
+    # Excluded all classes in included config
+    c_classes = (c['classes'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
+    conf['classes'] = c_classes.merge(conf['classes'] || {})
     conf['enums'] = (c['enums'] || {}).merge(conf['enums'] || {})
     conf['typedefs'] = (c['typedefs'] || {}).merge(conf['typedefs'] || {})
   end
 
   index = FFI::Clang::Index.new
+  clang_args = ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
+  if conf['clang_args']
+    clang_args = clang_args + conf['clang_args']
+  end
   #translation_unit = index.parse_translation_unit(header, ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-x', 'objective-c', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
-  translation_unit = index.parse_translation_unit("#{sysroot}#{header}", ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-x', 'objective-c', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
+  translation_unit = index.parse_translation_unit("#{sysroot}#{header}", clang_args, [], {:detailed_preprocessing_record=>true})
   #translation_unit = index.parse_translation_unit("#{sysroot}#{header}", ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
   #dump_ast translation_unit.cursor, ""
   #exit
@@ -1204,163 +1169,154 @@ ARGV[1..-1].each do |yaml_file|
 
   imports_s = "\n" + imports.map {|im| "import #{im};"}.join("\n") + "\n"
 
-  conf_enums = conf['enums'] || {}
-  model.referenced_enums.each do |pair|
-    td = pair[0]
-    enum = pair[1]
-    data = {}
-    econf = get_conf_for_key(td.java_name, conf_enums) 
-    java_name = td.java_name
-    bits = enum.is_options? || econf['bits']
-    if bits
-      values = enum.values.map { |e| "public static final #{java_name} #{e.java_name} = new #{td.java_name}(#{e.value})" }.join(";\n    ") + ";"
-    else
-      values = enum.values.map { |e| "#{e.java_name}(#{e.value})" }.join(",\n    ") + ";"
-    end
-    data['values'] = "\n    #{values}\n    "
-    data['name'] = java_name
-    if econf['marshaler']
-      data['annotations'] = "@Marshaler(#{econf['marshaler']}.class)"
-    else
-      enum_type = model.resolve_type(enum.enum_type)
-      if enum_type.name =~ /^Machine(.)Int$/
-        if !bits
-          data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSized#{$1}IntMarshaler.class)"
-        else
-          data['annotations'] = "@Marshaler(Bits.AsMachineSizedIntMarshaler.class)"
-        end
+  potential_constant_enums = []
+  model.enums.each do |enum|
+    c = model.get_enum_conf(enum.name)
+    if c && !c['exclude']
+      data = {}
+      java_name = enum.java_name
+      bits = enum.is_options? || c['bits']
+      if bits
+        values = enum.values.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value})" }.join(";\n    ") + ";"
       else
-        typedefedas = model.typedefs.find {|e| e.name == java_name}
-        if typedefedas
-          if typedefedas.typedef_type.spelling == 'CFIndex'
-            data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSizedSIntMarshaler.class)"
-          elsif typedefedas.typedef_type.spelling == 'CFOptionFlags'
+        values = enum.values.map { |e| "#{e.java_name}(#{e.value})" }.join(",\n    ") + ";"
+      end
+      data['values'] = "\n    #{values}\n    "
+      data['name'] = java_name
+      if c['marshaler']
+        data['annotations'] = "@Marshaler(#{c['marshaler']}.class)"
+      else
+        enum_type = model.resolve_type(enum.enum_type)
+        if enum_type.name =~ /^Machine(.)Int$/
+          if !bits
+            data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSized#{$1}IntMarshaler.class)"
+          else
             data['annotations'] = "@Marshaler(Bits.AsMachineSizedIntMarshaler.class)"
+          end
+        else
+          typedefedas = model.typedefs.find {|e| e.name == java_name}
+          if typedefedas
+            if typedefedas.typedef_type.spelling == 'CFIndex'
+              data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSizedSIntMarshaler.class)"
+            elsif typedefedas.typedef_type.spelling == 'CFOptionFlags'
+              data['annotations'] = "@Marshaler(Bits.AsMachineSizedIntMarshaler.class)"
+            end
           end
         end
       end
+      data['imports'] = imports_s
+      merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
+    else
+      # Possibly an enum with values that should be turned into constants
+      potential_constant_enums.push(enum)
     end
-    data['imports'] = imports_s
-    merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
   end
 
   template_datas = {}
 
-  conf_structs = conf['structs'] || {}
-  model.referenced_structs.each do |pair|
-    td = pair[0]
-    struct = pair[1]
-
-    data = template_datas[td.java_name] || {}
-    sconf = get_conf_for_key(td.java_name, conf_structs) 
-
-    inc = struct.union ? 0 : 1
-    index = 0
-    members = []
-    struct.members.each do |e|
-      type = (sconf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type))
-      members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{td.java_name} #{e.name}(#{type} #{e.name});"].join("\n    "))
-      index = index + inc
+  model.structs.find_all {|e| e.name.size > 0 }.each do |struct|
+    c = model.get_class_conf(struct.name)
+    if c && !c['exclude']
+      name = c['name'] || struct.name
+      template_datas[name] = struct.is_opaque? ? opaque_to_java(model, {}, name, struct, c) : struct_to_java(model, {}, name, struct, c)
     end
-    members = members.join("\n    ")
-    data['methods'] = "\n    #{members}\n    "
-
-    constructor_params = []
-    constructor_body = []
-    struct.members.map do |e|
-      type = (sconf[e.name] || {})['type']
-      type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type).java_name
-      constructor_params.push "#{type} #{e.name}"
-      constructor_body.push "this.#{e.name}(#{e.name});"
-    end.join("\n    ")
-    constructor = "public #{td.java_name}(" + constructor_params.join(', ') + ") {\n        "
-    constructor = constructor + constructor_body.join("\n        ")
-    constructor = "#{constructor}\n    }"
-    data['constructors'] = "\n    #{constructor}\n    "
-
-    data['name'] = td.java_name
-    data['visibility'] = sconf['visibility'] || 'public'
-    data['extends'] = "Struct<#{td.java_name}>"
-    data['imports'] = imports_s
-    data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
-
-    template_datas[td.java_name] = data
   end
-
-  model.referenced_opaques.each do |pair|
-    td = pair[0]
-    c = model.conf_classes[td.name] || {}
-    name = c['name'] || td.java_name
-    data = template_datas[name] || {}
-    data['name'] = name
-    data['visibility'] = c['visibility'] || 'public'
-    data['extends'] = c['extends'] || data['extends'] || 'NativeObject'
-    data['imports'] = imports_s
-    data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
-    template_datas[name] = data
-  end
-
-  def property_to_java(model, prop, owner_conf)
-    conf = get_conf_for_key(prop.name, owner_conf)
-    name = conf['name'] || prop.name
-    #name = name[0, 1].downcase + name[1..-1]
-    getter = "get#{name[0, 1].upcase + name[1..-1]}"
-    setter = "set#{name[0, 1].upcase + name[1..-1]}"
-    java_type = conf['type'] || model.to_java_type(model.resolve_type(prop.type))
-    visibility = conf['visibility'] || 'public'
-    native = prop.owner.is_a?(Bro::ObjCClass) ? " native" : ""
-    lines = ["@Property(getter = \"#{prop.getter.name}\")", "#{visibility}#{native} #{java_type} #{getter}();"]
-    if !prop.is_readonly? && !conf['readonly']
-      lines = lines + ["@Property(setter = \"#{prop.setter.name}\")", "#{visibility}#{native} void #{setter}(#{java_type} v);"]
+  model.typedefs.find_all {|e| e.struct && !e.struct.is_opaque? }.each do |td|
+    c = model.get_class_conf(td.name)
+    if c && !c['exclude']
+      puts "#{td.name} #{td.struct}"
+      name = c['name'] || td.name
+      template_datas[name] = struct_to_java(model, {}, name, td.struct, c)
     end
-    lines
   end
 
-  def method_to_java(model, method, owner_conf)
-    conf = get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, owner_conf)
-    name = conf['name'] || method.name
-    java_type = conf['type'] || model.to_java_type(model.resolve_type(method.return_type))
-    visibility = conf['visibility'] || 'public'
-    native = method.owner.is_a?(Bro::ObjCClass) ? "native " : ""
-    static = method.is_a?(Bro::ObjCClassMethod) ? "static " : ""
-    lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
-    lines
-  end
+  # conf_structs = conf['structs'] || {}
+  # model.referenced_structs.each do |pair|
+  #   td = pair[0]
+  #   struct = pair[1]
 
-  model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
-    c = model.conf_classes[cls.name] || {}
-    name = c['name'] || cls.java_name
-    data = template_datas[name] || {}
-    data['name'] = name
-    data['visibility'] = c['visibility'] || 'public'
-    data['extends'] = c['extends'] || (cls.superclass && (model.conf_classes[cls.superclass] || {})['name'] || cls.superclass) || 'ObjCObject'
-    data['imports'] = imports_s
-    data['implements'] = cls.protocols.empty? && '' || ("implements " + cls.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
-    data['properties'] = cls.properties.map {|p| property_to_java(model, p, c['properties'] || {})}.flatten.join("\n    ")
-    data['methods'] = cls.instance_methods.map {|m| method_to_java(model, m, c['methods'] || {})}.flatten.join("\n    ")
-    data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{cls.java_name}, Ptr> {}"
-    template_datas[name] = data
-  end
+  #   data = template_datas[td.java_name] || {}
+  #   sconf = get_conf_for_key(td.java_name, conf_structs) 
 
-  model.objc_protocols.each do |prot|
-    c = model.conf_protocols[prot.name] || {}
-    name = c['name'] || prot.java_name
-    data = template_datas[name] || {}
-    data['name'] = name
-    data['visibility'] = c['visibility'] || 'public'
-    data['implements'] = prot.protocols.empty? && '' || ("extends " + prot.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
-    data['imports'] = imports_s
-    #data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{prot.java_name}, Ptr> {}"
-    data['template'] = def_protocol_template
-    template_datas[name] = data
-  end
+  #   inc = struct.union ? 0 : 1
+  #   index = 0
+  #   members = []
+  #   struct.members.each do |e|
+  #     type = (sconf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type))
+  #     members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{td.java_name} #{e.name}(#{type} #{e.name});"].join("\n    "))
+  #     index = index + inc
+  #   end
+  #   members = members.join("\n    ")
+  #   data['methods'] = "\n    #{members}\n    "
+
+  #   constructor_params = []
+  #   constructor_body = []
+  #   struct.members.map do |e|
+  #     type = (sconf[e.name] || {})['type']
+  #     type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type).java_name
+  #     constructor_params.push "#{type} #{e.name}"
+  #     constructor_body.push "this.#{e.name}(#{e.name});"
+  #   end.join("\n    ")
+  #   constructor = "public #{td.java_name}(" + constructor_params.join(', ') + ") {\n        "
+  #   constructor = constructor + constructor_body.join("\n        ")
+  #   constructor = "#{constructor}\n    }"
+  #   data['constructors'] = "\n    #{constructor}\n    "
+
+  #   data['name'] = td.java_name
+  #   data['visibility'] = sconf['visibility'] || 'public'
+  #   data['extends'] = "Struct<#{td.java_name}>"
+  #   data['imports'] = imports_s
+  #   data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
+
+  #   template_datas[td.java_name] = data
+  # end
+
+  # model.referenced_opaques.each do |pair|
+  #   td = pair[0]
+  #   c = model.conf_classes[td.name] || {}
+  #   name = c['name'] || td.java_name
+  #   data = template_datas[name] || {}
+  #   data['name'] = name
+  #   data['visibility'] = c['visibility'] || 'public'
+  #   data['extends'] = c['extends'] || data['extends'] || 'NativeObject'
+  #   data['imports'] = imports_s
+  #   data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{td.java_name}, Ptr> {}"
+  #   template_datas[name] = data
+  # end
+
+  # model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
+  #   c = model.conf_classes[cls.name] || {}
+  #   name = c['name'] || cls.java_name
+  #   data = template_datas[name] || {}
+  #   data['name'] = name
+  #   data['visibility'] = c['visibility'] || 'public'
+  #   data['extends'] = c['extends'] || (cls.superclass && (model.conf_classes[cls.superclass] || {})['name'] || cls.superclass) || 'ObjCObject'
+  #   data['imports'] = imports_s
+  #   data['implements'] = cls.protocols.empty? && '' || ("implements " + cls.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
+  #   data['properties'] = cls.properties.map {|p| property_to_java(model, p, c['properties'] || {})}.flatten.join("\n    ")
+  #   data['methods'] = cls.instance_methods.map {|m| method_to_java(model, m, c['methods'] || {})}.flatten.join("\n    ")
+  #   data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{cls.java_name}, Ptr> {}"
+  #   template_datas[name] = data
+  # end
+
+  # model.objc_protocols.each do |prot|
+  #   c = model.conf_protocols[prot.name] || {}
+  #   name = c['name'] || prot.java_name
+  #   data = template_datas[name] || {}
+  #   data['name'] = name
+  #   data['visibility'] = c['visibility'] || 'public'
+  #   data['implements'] = prot.protocols.empty? && '' || ("extends " + prot.protocols.map {|e| (model.conf_protocols[e] || {})['name'] || e}.join(', '))
+  #   data['imports'] = imports_s
+  #   #data['ptr'] = "public static class Ptr extends org.robovm.rt.bro.ptr.Ptr<#{prot.java_name}, Ptr> {}"
+  #   data['template'] = def_protocol_template
+  #   template_datas[name] = data
+  # end
 
   # Assign global values to classes
-  conf_values = conf['values'] || {}
   values = {}
   model.global_values.each do |v|
-    vconf = get_conf_for_key(v.name, conf_values) 
-    if !vconf['exclude']
+    vconf = model.get_value_conf(v.name)
+    if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
       values[owner] = (values[owner] || []).push([v, vconf])
     end
@@ -1389,11 +1345,10 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   # Assign functions to classes
-  conf_functions = conf['functions'] || {}
   functions = {}
   model.functions.each do |f|
-    fconf = get_conf_for_key(f.name, conf_functions) 
-    if !fconf['exclude']
+    fconf = model.get_function_conf(f.name)
+    if fconf && !fconf['exclude']
       owner = fconf['class'] || default_class
       functions[owner] = (functions[owner] || []).push([f, fconf])
     end
@@ -1415,7 +1370,6 @@ ARGV[1..-1].each do |yaml_file|
         static = ""
       end
       java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
-      #if f.ret
       paramconf = fconf['parameters'] || {}
       java_parameters = parameters.map do |e|
         pconf = paramconf[e.name] || {}
@@ -1431,13 +1385,33 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   # Assign constants to classes
-  conf_constants = conf['constants'] || {}
   constants = {}
   model.constant_values.each do |v|
-    vconf = get_conf_for_key(v.name, conf_constants) 
-    if !vconf['exclude']
+    vconf = model.get_constant_conf(v.name)
+    if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
       constants[owner] = (constants[owner] || []).push([v, vconf])
+    end
+  end
+  # Create ConstantValues for values in remaining enums
+  potential_constant_enums.each do |enum|
+    type = [:type_longlong, :type_ulonglong].include?(enum.enum_type.kind) ? 'long' : 'int'
+    enum.type.declaration.visit_children do |cursor, parent|
+      case cursor.kind
+      when :cursor_enum_constant_decl
+        name = cursor.spelling
+        value = cursor.enum_value
+        if type == 'long'
+          value = "#{value}L"
+        end
+        c = model.get_constant_conf(name)
+        if c && !c['exclude']
+          owner = c['class'] || default_class
+          v = Bro::ConstantValue.new model, cursor, value, type
+          constants[owner] = (constants[owner] || []).push([v, c])
+        end
+      end
+      next :continue
     end
   end
 
@@ -1457,6 +1431,9 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   template_datas.each do |owner, data|
+    c = model.get_class_conf(owner) || {}
+    data['imports'] = imports_s
+    data['extends'] = data['extends'] || c['extends'] || nil
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
   end
 

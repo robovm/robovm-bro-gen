@@ -1,6 +1,7 @@
 package: org.robovm.apple.foundation
 library: Foundation
 framework: Foundation
+clang_args: ['-x', 'objective-c']
 header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
 typedefs:
     BOOL: boolean

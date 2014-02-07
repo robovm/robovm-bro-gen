@@ -2,196 +2,247 @@ package: org.robovm.apple.corefoundation
 include: [dispatch.yaml]
 library: CoreFoundation
 framework: CoreFoundation
+clang_args: ['-x', 'objective-c']
 header: /System/Library/Frameworks/CoreFoundation.framework/Headers/CoreFoundation.h
 imports:
     - org.robovm.apple.dispatch.*
 typedefs:
     Boolean: boolean
-    CFOptionFlags: MachineUInt
+    #CFOptionFlags: MachineUInt
     __CFByteOrder: CFByteOrder
     SInt32: int
     UInt32: int
-    _NSZone: void
-    "Protocol *": ObjCProtocol
     "Boolean *": BytePtr
 enums:
     CFBundleExecutableArchitectureType: {first: kCFBundleExecutableArchitectureI386}
     CFCalendarComponentsOptionFlags: {first: kCFCalendarComponentsWrap, prefix: kCFCalendarComponents, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}
+    CFCalendarUnit: {}
+    CFCharacterSetPredefinedSet: {}
+    CFComparisonResult: {}
+    CFDataSearchFlags: {}
+    CFDateFormatterStyle: {}
     CFFileDescriptorCallBackType: {first: kCFFileDescriptorReadCallBack, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}
+    CFFileSecurityClearOptions: {}
     CFGregorianUnitFlags: {first: kCFGregorianUnitsYears}
+    CFLocaleLanguageDirection: {}
     CFMessagePortError: {first: kCFMessagePortSuccess}
     CFNotificationPostingOptions: {first: kCFNotificationDeliverImmediately, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}
+    CFNotificationSuspensionBehavior: {}
     CFNumberFormatterOptionFlags: {first: kCFNumberFormatterParseIntegersOnly, prefix: kCFNumberFormatter, bits: true}
     CFNumberFormatterPadPosition: {}
     CFNumberFormatterRoundingMode: {}
+    CFNumberFormatterStyle: {}
+    CFNumberType: {}
     CFPropertyListError: {first: kCFPropertyListReadCorruptError}
+    CFPropertyListFormat: {}
+    CFPropertyListMutabilityOptions: {}
+    CFRunLoopActivity: {}
     CFRunLoopExitReason: {first: kCFRunLoopRunFinished}
+    CFSocketCallBackType: {}
+    CFSocketError: {}
     CFSocketFlags: {first: kCFSocketAutomaticallyReenableReadCallBack, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}
     CFStreamErrorDomain: {}
+    CFStreamEventType: {}
+    CFStreamStatus: {}
     CFStringBuiltInEncodings: {}
+    CFStringCompareFlags: {}
     CFStringEncodings: {}
+    CFStringNormalizationForm: {}
+    CFStringTokenizerTokenType: {}
     CFStringTokenizerUnitOptions: {first: kCFStringTokenizerUnitWord, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler}
+    CFTimeZoneNameStyle: {}
+    CFURLBookmarkCreationOptions: {}
     CFURLBookmarkResolutionOptions2: {first: kCFURLBookmarkResolutionWithSecurityScope, merge_with: CFURLBookmarkResolutionOptions, prefix: kCFURLBookmarkResolution}
     CFURLBookmarkResolutionOptions: {first: kCFBookmarkResolutionWithoutUIMask, prefix: kCFBookmarkResolution, bits: true}
+    CFURLComponentType: {}
+    CFURLEnumeratorOptions: {}
+    CFURLEnumeratorResult: {}
     CFURLError: {}
-structs:
+    CFURLPathStyle: {}
+
+classes:
+    CFAllocatorContext: {}
+    CFArrayCallBacks: {}
+    CFBagCallBacks: {}
+    CFBinaryHeapCallBacks: {}
+    CFBinaryHeapCompareContext: {}
+    CFDictionaryKeyCallBacks: {}
+    CFDictionaryValueCallBacks: {}
+    CFFileDescriptorContext: {}
+    CFGregorianDate: {}
+    CFGregorianUnits: {}
+    CFMachPortContext: {}
+    CFMessagePortContext: {}
+    CFRange: {}
+    CFRunLoopObserverContext: {}
+    CFRunLoopSourceContext: {}
+    CFRunLoopTimerContext: {}
+    CFSetCallBacks: {}
+    CFSocketContext: {}
+    CFSocketSignature: {}
+    CFStreamClientContext: {}
     CFStreamError:
         domain:
             type: CFStreamErrorDomain
-classes:
-    CFTypeRef: 
-        name: CFType
-    CFAllocatorRef:
+    CFTreeContext: {}
+    CFUUIDBytes: {}
+
+    OS_dispatch_queue:
+        exclude: true
+        name: DispatchQueue
+
+    CFType: 
+        extends: NativeObject
+    __CFAllocator:
         name: CFAllocator
         extends: CFType
-    CFArrayRef:
+    __CFArray:
         name: CFArray
         extends: CFPropertyList
-    CFAttributedStringRef:
+    __CFAttributedString:
         name: CFAttributedString
         extends: CFType
-    CFBagRef:
+    __CFBag:
         name: CFBag
         extends: CFType
-    CFBinaryHeapRef:
+    __CFBinaryHeap:
         name: CFBinaryHeap
         extends: CFType
-    CFBitVectorRef:
+    __CFBitVector:
         name: CFBitVector
         extends: CFType
-    CFBooleanRef:
+    __CFBoolean:
         name: CFBoolean
         extends: CFPropertyList
-    CFBundleRef:
+    __CFBundle:
         name: CFBundle
         extends: CFType
-    CFCalendarRef:
+    __CFCalendar:
         name: CFCalendar
         extends: CFType
-    CFCharacterSetRef:
+    __CFCharacterSet:
         name: CFCharacterSet
         extends: CFType
-    CFDataRef:
+    __CFData:
         name: CFData
         extends: CFPropertyList
-    CFDateFormatterRef:
+    __CFDateFormatter:
         name: CFDateFormatter
         extends: CFType
-    CFDateRef:
+    __CFDate:
         name: CFDate
         extends: CFPropertyList
-    CFDictionaryRef:
+    __CFDictionary:
         name: CFDictionary
         extends: CFPropertyList
-    CFErrorRef:
+    __CFError:
         name: CFError
         extends: CFType
-    CFFileDescriptorRef:
+    __CFFileDescriptor:
         name: CFFileDescriptor
         extends: CFType
-    CFFileSecurityRef:
+    __CFFileSecurity:
         name: CFFileSecurity
         extends: CFType
-    CFLocaleRef:
+    __CFLocale:
         name: CFLocale
         extends: CFType
-    CFMachPortRef:
+    __CFMachPort:
         name: CFMachPort
         extends: CFType
-    CFMessagePortRef:
+    __CFMessagePort:
         name: CFMessagePort
         extends: CFType
-    CFMutableArrayRef:
+    __CFMutableArray:
         name: CFMutableArray
         extends: CFArray
-    CFMutableAttributedStringRef:
+    __CFMutableAttributedString:
         name: CFMutableAttributedString
         extends: CFAttributedString
-    CFMutableBagRef:
+    __CFMutableBag:
         name: CFMutableBag
         extends: CFBag
-    CFMutableBitVectorRef:
+    __CFMutableBitVector:
         name: CFMutableBitVector
         extends: CFBitVector
-    CFMutableCharacterSetRef:
+    __CFMutableCharacterSet:
         name: CFMutableCharacterSet
         extends: CFCharacterSet
-    CFMutableDataRef:
+    __CFMutableData:
         name: CFMutableData
         extends: CFData
-    CFMutableDictionaryRef:
+    __CFMutableDictionary:
         name: CFMutableDictionary
         extends: CFDictionary
-    CFMutableSetRef:
+    __CFMutableSet:
         name: CFMutableSet
         extends: CFSet
-    CFMutableStringRef:
+    __CFMutableString:
         name: CFMutableString
         extends: CFString
-    CFNotificationCenterRef:
+    __CFNotificationCenter:
         name: CFNotificationCenter
         extends: CFType
-    CFNullRef:
+    __CFNull:
         name: CFNull
         extends: CFType
-    CFNumberFormatterRef:
+    __CFNumberFormatter:
         name: CFNumberFormatter
         extends: CFType
-    CFNumberRef:
+    __CFNumber:
         name: CFNumber
         extends: CFPropertyList
-    CFPlugInInstanceRef:
+    __CFPlugInInstance:
         name: CFPlugInInstance
         extends: CFType
-    CFPlugInRef:
+    __CFPlugIn:
         name: CFPlugIn
         extends: CFType
-    CFPropertyListRef:
-        name: CFPropertyList
+    CFPropertyList:
         extends: CFType
-    CFReadStreamRef:
+    __CFReadStream:
         name: CFReadStream
         extends: CFType
-    CFRunLoopObserverRef:
+    __CFRunLoopObserver:
         name: CFRunLoopObserver
         extends: CFType
-    CFRunLoopRef:
+    __CFRunLoop:
         name: CFRunLoop
         extends: CFType
-    CFRunLoopSourceRef:
+    __CFRunLoopSource:
         name: CFRunLoopSource
         extends: CFType
-    CFRunLoopTimerRef:
+    __CFRunLoopTimer:
         name: CFRunLoopTimer
         extends: CFType
-    CFSetRef:
+    __CFSet:
         name: CFSet
         extends: CFType
-    CFSocketRef:
+    __CFSocket:
         name: CFSocket
         extends: CFType
-    CFStringRef:
+    __CFString:
         name: CFString
         extends: CFPropertyList
-    CFStringTokenizerRef:
+    __CFStringTokenizer:
         name: CFStringTokenizer
         extends: CFType
-    CFTimeZoneRef:
+    __CFTimeZone:
         name: CFTimeZone
         extends: CFType
-    CFTreeRef:
+    __CFTree:
         name: CFTree
         extends: CFType
-    CFURLEnumeratorRef:
+    __CFURLEnumerator:
         name: CFURLEnumerator
         extends: CFType
-    CFURLRef:
+    __CFURL:
         name: CFURL
         extends: CFType
-    CFUUIDRef:
+    __CFUUID:
         name: CFUUID
         extends: CFType
-    CFWriteStreamRef:
+    __CFWriteStream:
         name: CFWriteStream
         extends: CFType
 functions:
@@ -507,6 +558,9 @@ functions:
         parameters:
             streamEvents:
                 type: CFStreamEventType
+    ^(CF.*)$:
+        class: CoreFoundation
+        name: "#{g[0]}"
 
 values:
     ^kCF(AbsoluteTimeIntervalSince.*)$:
@@ -597,6 +651,10 @@ values:
         class: CoreFoundation
         name: "#{g[0]}"
         readonly: true
+    # Make sure we don't miss any values if new ones are introduced in a later CoreFoundation
+    ^(kCF.*)$:
+        class: CoreFoundation
+        name: "#{g[0]}"
 
 
 constants:
@@ -613,5 +671,3 @@ constants:
     ^(kCF.*)$:
         class: CoreFoundation
         name: "#{g[0]}"
-    "^.*$":
-        exclude: true
