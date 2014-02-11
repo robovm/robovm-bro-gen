@@ -10,53 +10,97 @@ typedefs:
     BOOL: boolean
     NSInteger: MachineSInt
     NSUInteger: MachineUInt
-    NSZone: NSZone
-    struct _NSZone: NSZone
-    id: ObjCObject
+    _NSZone: NSZone
+    id: NSObject
     Class: ObjCClass
     "Protocol *": ObjCProtocol
     "NSString *": String
+    "NSString **": "NSString.NSStringPtr"
+    "BOOL *": BytePtr
 enums:
-#    NSStringEncoding:
-#        first: NSASCIIStringEncoding
-    NSStringEncodingConversionOptions:
-        first: NSStringEncodingConversionAllowLossy
-    NSStringCompareOptions:
-        first: NSCaseInsensitiveSearch
-    NSStringEnumerationOptions:
-        first: NSStringEnumerationByLines
-#    NSCalendarUnit:
-#        first: NSEraCalendarUnit
-    NSDataReadingOptions:
-        first: NSDataReadingMappedIfSafe
-    NSDataWritingOptions:
-        first: NSDataWritingAtomic
 #    NSTextAlignment: {}
 #    NSWritingDirection: {}
+
+    NSActivityOptions: {}
+    NSAttributedStringEnumerationOptions: {}
+    NSBinarySearchingOptions: {}
+    NSBundleExecutableArchitectureType: { first: NSBundleExecutableArchitectureI386 }
+    NSCalculationError: {}
+    NSCalendarOptions: {}
+    NSCalendarUnit: {}
+    NSComparisonPredicateModifier: {}
+    NSComparisonPredicateOptions: {}
     NSComparisonResult: {}
-    NSNumberFormatterPadPosition: {}
-    NSNumberFormatterRoundingMode: {}
-    NSHTTPCookieAcceptPolicy: {}
-    NSPropertyListFormat: {}
-    NSExpressionType: {}
     NSCompoundPredicateType: {}
-    NSNumberFormatterStyle: {}
-    NSStreamStatus: {}
-    NSPredicateOperatorType: {}
-    NSNumberFormatterBehavior: {}
+    NSDataBase64DecodingOptions: { prefix: NSDataBase64Decoding }
+    NSDataBase64EncodingOptions: {}
+    NSDataReadingOptions: {}
+    NSDataSearchOptions: {}
+    NSDataWritingOptions: {}
     NSDateFormatterBehavior: {}
     NSDateFormatterStyle: {}
     NSDateFormatterStyle: {}
-    NSComparisonPredicateOptions: {}
-    NSComparisonPredicateModifier: {}
+    NSDirectoryEnumerationOptions: {}
+    NSExpressionType: {}
+    NSFileCoordinatorReadingOptions: {}
+    NSFileCoordinatorWritingOptions: {}
+    NSFileManagerItemReplacementOptions: {}
+    NSFileVersionAddingOptions: { prefix: NSFileVersionAdding }
+    NSFileVersionReplacingOptions: { prefix: NSFileVersionReplacing }
+    NSFileWrapperReadingOptions: {}
+    NSFileWrapperWritingOptions: {}
+    NSHTTPCookieAcceptPolicy: {}
+    NSKeyValueChange: {}
+    NSKeyValueObservingOptions: {}
+    NSKeyValueSetMutationKind: {}
+    NSLinguisticTaggerOptions: {}
+    NSLocaleLanguageDirection: {}
+    NSMatchingOptions: {}
+    NSNetServiceOptions: {}
+    NSNumberFormatterBehavior: {}
+    NSNumberFormatterPadPosition: {}
+    NSNumberFormatterRoundingMode: {}
+    NSNumberFormatterStyle: {}
     NSOperationQueuePriority: {}
+    NSPostingStyle: {}
+    NSPredicateOperatorType: {}
+    NSPropertyListFormat: {}
+    NSPropertyListMutabilityOptions: {}
+    NSRegularExpressionOptions: {}
+    NSRoundingMode: {}
+    NSSearchPathDirectory: {}
+    NSSearchPathDomainMask: {}
+    NSStreamEvent: {}
+    NSStreamStatus: {}
+    NSStringCompareOptions: {}
+    NSStringEncodingConversionOptions: {}
+    NSStringEncodings: { first: NSASCIIStringEncoding }
+    NSStringEnumerationOptions: {}
+    NSTextCheckingType: {}
+    NSTimeZoneNameStyle: {}
+    NSURLBookmarkCreationOptions: {}
+    NSURLBookmarkResolutionOptions: {}
+    NSURLBookmarkResolutionOptions: {}
+    NSURLCacheStoragePolicy: { first: NSURLCacheStorageAllowed, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
     NSURLCredentialPersistence: {}
+    NSURLError: { first: NSURLErrorUnknown }
+    NSURLErrorCancelledReason: { first: NSURLErrorCancelledReasonUserForceQuitApplication }
+    NSURLRequestCachePolicy: { first: NSURLRequestUseProtocolCachePolicy, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
+    NSURLRequestNetworkServiceType: { first: NSURLNetworkServiceTypeDefault, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
+    NSURLSessionAuthChallengeDisposition: {}
+    NSURLSessionTaskState: {}
+    NSVolumeEnumerationOptions: {}
+    NSXMLParserError: {}
 
 classes:
     ^NSRange$: {}
     NSDecimal: {}
+    NSZone: {}
+    NSFastEnumerationState: {}
 
-    NSArray:    
+    ^NS.*Internal$: { exclude: true }
+
+    ^NSArray$:    
         methods:
             "-initWithArray:":
                 visibility: protected
@@ -79,11 +123,15 @@ classes:
                 visibility: protected
             "-subarrayWithRange:":
                 visibility: protected
-    NSAssertionHandler: {}
-    NSAttributedString: {}
-    NSAutoreleasePool: {}
-    NSBlockOperation: {}
-    NSBundle:
+    ^NSAssertionHandler$: {}
+    ^NSAttributedString$: {}
+    ^NSAutoreleasePool$:
+        methods:
+            "^-drain$": {}
+            "^+.*$": { exclude: true }
+            "^-.*$": { exclude: true }
+    ^NSBlockOperation$: {}
+    ^NSBundle$:
         methods:
             "+mainBundle":
                 name: getMainBundle
@@ -93,24 +141,31 @@ classes:
                 name: getResourcePath
             "-infoDictionary":
                 name: getInfoDictionary
-    NSCache: {}
-    NSCachedURLResponse: {}
-    NSCalendar: {}
-    NSCharacterSet: {}
-    NSCoder: {}
-    NSComparisonPredicate: {}
-    NSCompoundPredicate: {}
-    NSCondition: {}
-    NSConditionLock: {}
-    NSCountedSet: {}
-    NSData: {}
-    NSDataDetector: {}
-    NSDate: {}
-    NSDateComponents: {}
-    NSDateFormatter: {}
-    NSDecimalNumber: {}
-    NSDecimalNumberHandler: {}
-    NSDictionary:
+    ^NSCache$: {}
+    ^NSCachedURLResponse$:
+        methods:
+            "-storagePolicy":
+                return_type: NSURLCacheStoragePolicy
+            "-initWithResponse:data:userInfo:storagePolicy:":
+                parameters:
+                    storagePolicy:
+                        type: NSURLCacheStoragePolicy
+    ^NSCalendar$: {}
+    ^NSCharacterSet$: {}
+    ^NSCoder$: {}
+    ^NSComparisonPredicate$: {}
+    ^NSCompoundPredicate$: {}
+    ^NSCondition$: {}
+    ^NSConditionLock$: {}
+    ^NSCountedSet$: {}
+    ^NSData$: {}
+    ^NSDataDetector$: {}
+    ^NSDate$: {}
+    ^NSDateComponents$: {}
+    ^NSDateFormatter$: {}
+    ^NSDecimalNumber$: {}
+    ^NSDecimalNumberHandler$: {}
+    ^NSDictionary$:
         methods:
             "+dictionaryWithContentsOfFile:":
                 name: fromFile
@@ -138,28 +193,28 @@ classes:
                 visibility: protected
             "-writeToFile:atomically:":
                 name: writeToFile
-    NSDirectoryEnumerator: {}
-    NSEnumerator:
+    ^NSDirectoryEnumerator$: {}
+    ^NSEnumerator$:
         methods:
             "-allObjects":
                 return_type: NSArray<T>
             "-nextObject":
                 name: _nextObject
                 visibility: protected
-    NSError: {}
-    NSException: {}
-    NSExpression: {}
-    NSFileCoordinator: {}
-    NSFileHandle: {}
-    NSFileManager: {}
-    NSFileVersion: {}
-    NSFileWrapper: {}
-    NSFormatter: {}
-    NSHashTable: {}
-    NSHTTPCookie: {}
-    NSHTTPCookieStorage: {}
-    NSHTTPURLResponse: {}
-    NSIndexPath:
+    ^NSError$: {}
+    ^NSException$: {}
+    ^NSExpression$: {}
+    ^NSFileCoordinator$: {}
+    ^NSFileHandle$: {}
+    ^NSFileManager$: {}
+    ^NSFileVersion$: {}
+    ^NSFileWrapper$: {}
+    ^NSFormatter$: {}
+    ^NSHashTable$: {}
+    ^NSHTTPCookie$: {}
+    ^NSHTTPCookieStorage$: {}
+    ^NSHTTPURLResponse$: {}
+    ^NSIndexPath$:
         methods:
             "-initWithIndex:":
             "-length":
@@ -170,28 +225,28 @@ classes:
                 name: addIndex
             "-indexPathByRemovingLastIndex":
                 name: removeLastIndex
-    NSIndexSet: {}
-    NSInputStream: {}
-    NSInvocation: {}
-    NSInvocationOperation: {}
-    NSKeyedArchiver: {}
-    NSKeyedUnarchiver: {}
-    NSLinguisticTagger: {}
-    NSLocale: {}
-    NSLock: {}
-    NSMachPort: {}
-    NSMapTable: {}
-    NSMessagePort: {}
-    NSMetadataItem: {}
-    NSMetadataQuery: {}
-    NSMetadataQueryAttributeValueTuple: {}
-    NSMetadataQueryResultGroup: {}
-    NSMethodSignature: {}
-    NSMutableArray: {}
-    NSMutableAttributedString: {}
-    NSMutableCharacterSet: {}
-    NSMutableData: {}
-    NSMutableDictionary:
+    ^NSIndexSet$: {}
+    ^NSInputStream$: {}
+    ^NSInvocation$: {}
+    ^NSInvocationOperation$: {}
+    ^NSKeyedArchiver$: {}
+    ^NSKeyedUnarchiver$: {}
+    ^NSLinguisticTagger$: {}
+    ^NSLocale$: {}
+    ^NSLock$: {}
+    ^NSMachPort$: {}
+    ^NSMapTable$: {}
+    ^NSMessagePort$: {}
+    ^NSMetadataItem$: {}
+    ^NSMetadataQuery$: {}
+    ^NSMetadataQueryAttributeValueTuple$: {}
+    ^NSMetadataQueryResultGroup$: {}
+    ^NSMethodSignature$: {}
+    ^NSMutableArray$: {}
+    ^NSMutableAttributedString$: {}
+    ^NSMutableCharacterSet$: {}
+    ^NSMutableData$: {}
+    ^NSMutableDictionary$:
         skip_def_constructor: true
         methods:
             "-setObject:forKey:":
@@ -204,18 +259,18 @@ classes:
             "-removeObjectForKey:":
                 visibility: protected
             "-initWithCapacity:":
-    NSMutableIndexSet: {}
-    NSMutableOrderedSet: {}
-    NSMutableSet: {}
-    NSMutableString: {}
-    NSMutableURLRequest: {}
-    NSNetService: {}
-    NSNetServiceBrowser: {}
-    NSNotification: {}
-    NSNotificationCenter: {}
-    NSNotificationQueue: {}
-    NSNull: {}
-    NSNumber:
+    ^NSMutableIndexSet$: {}
+    ^NSMutableOrderedSet$: {}
+    ^NSMutableSet$: {}
+    ^NSMutableString$: {}
+    ^NSMutableURLRequest$: {}
+    ^NSNetService$: {}
+    ^NSNetServiceBrowser$: {}
+    ^NSNotification$: {}
+    ^NSNotificationCenter$: {}
+    ^NSNotificationQueue$: {}
+    ^NSNull$: {}
+    ^NSNumber$:
         methods:
             "+numberWithBool:":
                 name: valueOf
@@ -231,8 +286,13 @@ classes:
                 name: valueOf
             "+numberWithUnsignedShort:":
                 name: valueOf
+                parameters:
+                    value:
+                        type: char
             "+numberWithLongLong:":
                 name: valueOf
+            "+numberWith.*$":
+                exclude: true
             "-boolValue":
                 name: booleanValue
             "-charValue":
@@ -250,40 +310,41 @@ classes:
                 exclude: true
             "^-unsigned.*Value$":
                 exclude: true
-    NSNumberFormatter: {}
-    NSObject:
+    ^NSNumberFormatter$: {}
+    ^NSObject$:
         skip_def_constructor: true
         skip_skip_init_constructor: true
         methods:
-            "-retain":
-                visibility: protected
-            "-release":
-                visibility: protected
+            "^\\+.*$": { exclude: true }
+            # "-retain":
+            #     visibility: protected
+            # "-release":
+            #     visibility: protected
             "-init":
                 visibility: private
                 constructor: false
                 return_type: '@Pointer long'
-            "-description":
-            "-isEqual:":
-                visibility: protected
-            "-hash":
-                visibility: protected
-    NSOperation: {}
-    NSOperationQueue: {}
-    NSOrderedSet: {}
-    NSOrthography: {}
-    NSOutputStream: {}
-    NSPipe: {}
-    NSPointerArray: {}
-    NSPointerFunctions: {}
-    NSPort: {}
-    NSPredicate: {}
-    NSProcessInfo: {}
-    NSPropertyListSerialization: {}
-    NSProxy: {}
-    NSRecursiveLock: {}
-    NSRegularExpression: {}
-    NSRunLoop:
+            # "-description":
+            # "-isEqual:":
+            #     visibility: protected
+            # "-hash":
+            #     visibility: protected
+    ^NSOperation$: {}
+    ^NSOperationQueue$: {}
+    ^NSOrderedSet$: {}
+    ^NSOrthography$: {}
+    ^NSOutputStream$: {}
+    ^NSPipe$: {}
+    ^NSPointerArray$: {}
+    ^NSPointerFunctions$: {}
+    ^NSPort$: {}
+    ^NSPredicate$: {}
+    ^NSProcessInfo$: {}
+    ^NSPropertyListSerialization$: {}
+    ^NSProxy: { exclude$: true }
+    ^NSRecursiveLock$: {}
+    ^NSRegularExpression$: {}
+    ^NSRunLoop$:
         methods:
             "+currentRunLoop":
                 name: getCurrent
@@ -307,8 +368,8 @@ classes:
                 exclude: true
             "-getCFRunLoop":
                 exclude: true
-    NSScanner: {}
-    NSSet:
+    ^NSScanner$: {}
+    ^NSSet$:
         methods:
             "-initWithArray:":
                 visibility: protected
@@ -331,9 +392,9 @@ classes:
                 visibility: protected
             "-objectEnumerator":
                 visibility: protected
-    NSSortDescriptor: {}
-    NSStream: {}
-    NSString:
+    ^NSSortDescriptor$: {}
+    ^NSStream$: {}
+    ^NSString$:
         methods:
             "-initWithCharactersNoCopy:length:freeWhenDone:":
                 visibility: private
@@ -347,69 +408,162 @@ classes:
                 parameters:
                     buffer:
                         type: "@Pointer long"
-    NSTextCheckingResult: {}
-    NSThread: {}
-    NSTimer: {}
-    NSTimeZone: {}
-    NSUbiquitousKeyValueStore: {}
-    NSUndoManager: {}
-    NSURL: {}
-    NSURLAuthenticationChallenge: {}
-    NSURLCache: {}
-    NSURLConnection: {}
-    NSURLCredential: {}
-    NSURLCredentialStorage: {}
-    NSURLProtectionSpace: {}
-    NSURLProtocol: {}
-    NSURLRequest: {}
-    NSURLResponse: {}
-    NSURLSession: {}
-    NSURLSessionConfiguration: {}
-    NSURLSessionDataTask: {}
-    NSURLSessionDownloadTask: {}
-    NSURLSessionTask: {}
-    NSURLSessionUploadTask: {}
-    NSUserDefaults: {}
-    NSUUID:
+    ^NSTextCheckingResult$: {}
+    ^NSThread$:
+        methods:
+            '^\+threadPriority$': { exclude: true }
+            '^\+setThreadPriority:$': { exclude: true }
+            '^\+isMainThread$': { exclude: true }
+            '^\+callStack.*$': { exclude: true }
+    ^NSTimer$: {}
+    ^NSTimeZone$: {}
+    ^NSUbiquitousKeyValueStore$: {}
+    ^NSUndoManager$: {}
+    ^NSURL$: {}
+    ^NSURLAuthenticationChallenge$: {}
+    ^NSURLCache$: {}
+    ^NSURLConnection$: {}
+    ^NSURLCredential$: {}
+    ^NSURLCredentialStorage$: {}
+    ^NSURLProtectionSpace$: {}
+    ^NSURLProtocol$: {}
+    ^NSURLRequest$: {}
+    ^NSURLResponse$: {}
+    ^NSURLSession$: {}
+    ^NSURLSessionConfiguration$: {}
+    ^NSURLSessionDataTask$: {}
+    ^NSURLSessionDownloadTask$: {}
+    ^NSURLSessionTask$: {}
+    ^NSURLSessionUploadTask$: {}
+    ^NSUserDefaults$: {}
+    ^NSUUID$:
         methods:
             "-UUIDString":
                 name: asString
-    NSValue: {}
-    NSValueTransformer: {}
-    NSXMLParser: {}
+    ^NSValue$: {}
+    ^NSValueTransformer$: {}
+    ^NSXMLParser$: {}
 
 protocols:
-    NSCacheDelegate: {}
-    NSCoding: {}
-    NSCopying: {}
-    NSDecimalNumberBehaviors: {}
-    NSErrorRecoveryAttempting: {}
-    NSFastEnumeration: {}
-    NSFileManagerDelegate: {}
-    NSFilePresenter: {}
-    NSKeyedArchiverDelegate: {}
-    NSKeyedUnarchiverDelegate: {}
-    NSKeyValueCoding: {}
-    NSKeyValueObserving: {}
-    NSLocking: {}
-    NSMachPortDelegate: {}
-    NSMetadataQueryDelegate: {}
-    NSMutableCopying: {}
-    NSNetServiceBrowserDelegate: {}
-    NSNetServiceDelegate: {}
-    NSObject:
+    ^NSCacheDelegate$: {}
+    ^NSCoding$: {}
+    ^NSCopying$: {}
+    ^NSDecimalNumberBehaviors$: {}
+    ^NSErrorRecoveryAttempting$: {}
+#    ^NSFastEnumeration$: {}
+    ^NSFileManagerDelegate$: {}
+    ^NSFilePresenter$: {}
+    ^NSKeyedArchiverDelegate$: {}
+    ^NSKeyedUnarchiverDelegate$: {}
+    ^NSKeyValueCoding$: {}
+    ^NSKeyValueObserving$: {}
+    ^NSLocking$: {}
+    ^NSMachPortDelegate$: {}
+    ^NSMetadataQueryDelegate$: {}
+    ^NSMutableCopying$: {}
+    ^NSNetServiceBrowserDelegate$: {}
+    ^NSNetServiceDelegate$: {}
+    ^NSObject$:
         name: NSObjectProtocol
-    NSPortDelegate: {}
-    NSSecureCoding: {}
-    NSStreamDelegate: {}
-    NSURLAuthenticationChallengeSender: {}
-    NSURLConnectionDataDelegate: {}
-    NSURLConnectionDelegate: {}
-    NSURLConnectionDelegate: {}
-    NSURLConnectionDownloadDelegate: {}
-    NSURLProtocolClient: {}
-    NSURLSessionDataDelegate: {}
-    NSURLSessionDelegate: {}
-    NSURLSessionDownloadDelegate: {}
-    NSURLSessionTaskDelegate: {}
-    NSXMLParserDelegate: {}
+        methods:
+            "-zone":
+                exclude: true
+    ^NSPortDelegate$: {}
+#    ^NSSecureCoding$: {}
+    ^NSStreamDelegate$: {}
+    ^NSURLAuthenticationChallengeSender$: {}
+    ^NSURLConnectionDataDelegate$: {}
+    ^NSURLConnectionDelegate$: {}
+    ^NSURLConnectionDownloadDelegate$: {}
+    ^NSURLProtocolClient$: {}
+    ^NSURLSessionDataDelegate$: {}
+    ^NSURLSessionDelegate$: {}
+    ^NSURLSessionDownloadDelegate$: {}
+    ^NSURLSessionTaskDelegate$: {}
+    ^NSXMLParserDelegate$: {}
+
+functions:
+    ^NS.*$: {}
+
+values: 
+    ^NS(.*Calendar)$:
+        class: NSCalendar
+        name: "#{g[0]}"
+    ^NSFileHandle(.*Notification)$:
+        class: NSFileHandle
+        name: "#{g[0]}"
+    ^NSFileHandle(.*)$:
+        class: NSFileHandle
+        name: "#{g[0]}"
+    ^NSFile(AppendOnly|Busy|CreationDate|DeviceIdentifier|ExtensionHidden|GroupOwnerAccountID|GroupOwnerAccountName)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
+    ^NSFile(HFSCreatorCode|HFSTypeCode|Immutable|ModificationDate|OwnerAccountID|OwnerAccountName|PosixPermissions)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
+    ^NSFile(ReferenceCount|Size|SystemFileNumber|SystemNumber|Type)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
+    ^NSMetadataItem(.*Key)$:
+        class: NSMetadataItem
+        type: NSString
+        name: "#{g[0]}"
+    ^NSMetadataUbiquitousItem(.*Key)$:
+        class: NSMetadataItem
+        type: NSString
+        name: "Ubiquitous#{g[0]}"
+    ^NSURLCredential(StorageRemoveSynchronizableCredentials)$:
+        class: NSURLCredential
+        type: NSString
+        name: "#{g[0]}"
+    ^NSURLCredential(.*)$:
+        class: NSURLCredential
+        name: "#{g[0]}"
+    ^NSURLProtectionSpace(.*)Proxy$:
+        class: NSURLProtectionSpace
+        name: "ProxyType#{g[0]}"
+    ^NSURLProtectionSpace(HTTP|HTTPS|FTP)$:
+        class: NSURLProtectionSpace
+        name: "ProtocolType#{g[0]}"
+    ^NSURL(Authentication.*)$:
+        class: NSURLProtectionSpace
+        name: "#{g[0]}"
+    ^NSURLSession(DownloadTaskResumeData)$:
+        class: NSURLSession
+        type: NSString
+        name: "#{g[0]}"
+    ^NSURLError(BackgroundTaskCancelledReasonKey)$:
+        class: NSURLSession
+        type: NSString
+        name: "#{g[0]}"
+    ^NSURL(.*Key)$:
+        class: NSURL
+        type: NSString
+        name: "#{g[0]}"
+    ^NSURL(.*)$:
+        class: NSURL
+        name: "#{g[0]}"
+    ^NS((Global|Argument|Registration)Domain)$:
+        class: NSUserDefaults
+        name: "#{g[0]}"
+    # Make sure we don't miss any values if new ones are introduced in a later Foundation
+    ^(NS.*)$:
+        class: Foundation
+        name: "#{g[0]}"
+
+constants:
+    ^NS(OpenStepUnicodeReservedBase)$: { name: "#{g[0]}" }
+    ^NSURLResponse(.*)$:
+        class: NSURLResponse
+        name: "#{g[0]}"
+    ^NSFoundation(.*)$:
+        class: Foundation
+        name: "#{g[0]}"
+    NSWrapCalendarComponents: { exclude: true }
+    # Make sure we don't miss any constants if new ones are introduced in a later Foundation
+    ^(NS.*)$:
+        class: Foundation
+        name: "#{g[0]}"
