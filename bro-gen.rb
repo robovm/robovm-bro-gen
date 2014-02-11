@@ -1242,6 +1242,10 @@ def method_to_java(model, owner, method, methods_conf)
       l.push(get_generic_type(model, owner, method, p.type, l.size + 1, (params_conf[p.name] || {})['type'], p.name))
       l
     end
+    if method.is_variadic?
+      # TODO: Doesn't work. Does libclang expose this info about methods?
+      param_types.push(['...', nil, ''])
+    end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
     visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || ''
     native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
@@ -1529,8 +1533,8 @@ ARGV[1..-1].each do |yaml_file|
         protc = model.get_protocol_conf(prot.name)
         if protc # && !protc['exclude']
           c = c.clone
-          c['methods'] = (c['methods'] || {}).merge(!protc['methods'] ? {} : protc['methods'])
-          c['properties'] = (c['properties'] || {}).merge(!protc['properties'] ? {} : protc['properties'])
+          #c['methods'] = (c['methods'] || {}).merge(!protc['methods'] ? {} : protc['methods'])
+          #c['properties'] = (c['properties'] || {}).merge(!protc['properties'] ? {} : protc['properties'])
           methods[owner] = [(methods[owner] || [[]])[0] + prot.instance_methods + prot.class_methods, cls, c]
           properties[owner] = [(properties[owner] || [[]])[0] + prot.properties, cls, c]
         end
