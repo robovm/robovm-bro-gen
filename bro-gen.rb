@@ -1190,13 +1190,22 @@ def opaque_to_java(model, data, name, struct, conf)
   data
 end
 
+def is_init?(owner, method)
+  owner.is_a?(Bro::ObjCClass) && method.is_a?(Bro::ObjCInstanceMethod) && method.name.start_with?('init') && (method.return_type.spelling == 'id' || method.return_type.spelling == 'instancetype')
+end
+
 def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   if conf_type
     conf_type =~ /<\s*([A-Z0-9])+\s+>/ ? [$1, conf_type, name] : [conf_type, nil, name]
   else
-    resolved_type = model.resolve_type(type, owner, method)
-    java_type = model.to_java_type(resolved_type)
-    resolved_type.is_a?(Bro::ObjCId) && ["T#{index}", "T#{index} extends Object & #{java_type}", name] || [java_type, nil, name]
+    if is_init?(owner, method) && index == 0
+      # init method return type should always be '@Pointer long'
+      [Bro::builtins_by_name('Pointer').java_name, nil, name]
+    else
+      resolved_type = model.resolve_type(type, owner, method)
+      java_type = model.to_java_type(resolved_type)
+      resolved_type.is_a?(Bro::ObjCId) && ["T#{index}", "T#{index} extends Object & #{java_type}", name] || [java_type, nil, name]
+    end
   end
 end
 
@@ -1233,7 +1242,8 @@ def method_to_java(model, owner, method, methods_conf)
       l.push(get_generic_type(model, owner, method, p.type, l.size + 1, (params_conf[p.name] || {})['type'], p.name))
       l
     end
-    visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && 'public' || ''
+    # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
+    visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || ''
     native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
     static = method.is_a?(Bro::ObjCClassMethod) ? "static" : ""
   #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
