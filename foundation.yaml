@@ -155,12 +155,20 @@ classes:
     ^NSCoder$: {}
     ^NSComparisonPredicate$: {}
     ^NSCompoundPredicate$: {}
-    ^NSCondition$: {}
+    ^NSCondition$:
+        methods:
+            "^-wait$":
+                name: await
+            "^-waitUntilDate:$":
+                name: await
     ^NSConditionLock$: {}
     ^NSCountedSet$: {}
     ^NSData$: {}
     ^NSDataDetector$: {}
-    ^NSDate$: {}
+    ^NSDate$:
+        methods:
+            '^\+timeIntervalSinceReferenceDate$':
+                exclude: true
     ^NSDateComponents$: {}
     ^NSDateFormatter$: {}
     ^NSDecimalNumber$: {}
@@ -229,8 +237,18 @@ classes:
     ^NSInputStream$: {}
     ^NSInvocation$: {}
     ^NSInvocationOperation$: {}
-    ^NSKeyedArchiver$: {}
-    ^NSKeyedUnarchiver$: {}
+    ^NSKeyedArchiver$:
+        methods:
+            '^\+classNameForClass:$':
+                name: getDefaultClassName
+            '^\+setClassName:forClass:$':
+                name: setDefaultClassName
+    ^NSKeyedUnarchiver$:
+        methods:
+            '^\+classForClassName:$':
+                name: getDefaultClass
+            '^\+setClass:forClassName:$':
+                name: setDefaultClass
     ^NSLinguisticTagger$: {}
     ^NSLocale$: {}
     ^NSLock$: {}
@@ -269,7 +287,10 @@ classes:
     ^NSNotification$: {}
     ^NSNotificationCenter$: {}
     ^NSNotificationQueue$: {}
-    ^NSNull$: {}
+    ^NSNull$:
+        methods:
+            "+null":
+                name: getNull
     ^NSNumber$:
         methods:
             "+numberWithBool:":
@@ -316,19 +337,26 @@ classes:
         skip_skip_init_constructor: true
         methods:
             "^\\+.*$": { exclude: true }
-            # "-retain":
-            #     visibility: protected
-            # "-release":
-            #     visibility: protected
-            "-init":
-                visibility: private
-                constructor: false
-                return_type: '@Pointer long'
-            # "-description":
-            # "-isEqual:":
-            #     visibility: protected
-            # "-hash":
-            #     visibility: protected
+            "-retain":
+                visibility: protected
+            "-release":
+                visibility: protected
+            # "-init":
+            #     visibility: private
+            #     constructor: false
+            #     return_type: '@Pointer long'
+            "-description":
+            "-isEqual:":
+                visibility: protected
+            "-hash":
+                visibility: protected
+            "-class$": { exclude: true }
+            "-superclass$": { exclude: true }
+            "-finalize$": { exclude: true }
+            "-self$": { exclude: true }
+            "-zone$": { exclude: true }
+            "-autorelease$": { exclude: true }
+            "-conformsToProtocol:$": { exclude: true }
     ^NSOperation$: {}
     ^NSOperationQueue$: {}
     ^NSOrderedSet$: {}
@@ -338,10 +366,12 @@ classes:
     ^NSPointerArray$: {}
     ^NSPointerFunctions$: {}
     ^NSPort$: {}
+    ^NSPortMessage$:
+        extends: NSObject
     ^NSPredicate$: {}
     ^NSProcessInfo$: {}
     ^NSPropertyListSerialization$: {}
-    ^NSProxy: { exclude$: true }
+    ^NSProxy$: { exclude: true }
     ^NSRecursiveLock$: {}
     ^NSRegularExpression$: {}
     ^NSRunLoop$:
@@ -446,7 +476,10 @@ classes:
 
 protocols:
     ^NSCacheDelegate$: {}
-    ^NSCoding$: {}
+    ^NSCoding$:
+        methods:
+            "^-initWithCoder:$":
+                exclude: true
     ^NSCopying$: {}
     ^NSDecimalNumberBehaviors$: {}
     ^NSErrorRecoveryAttempting$: {}
@@ -466,7 +499,7 @@ protocols:
     ^NSObject$:
         name: NSObjectProtocol
         methods:
-            "-zone":
+            "-.*":
                 exclude: true
     ^NSPortDelegate$: {}
 #    ^NSSecureCoding$: {}
