@@ -1140,9 +1140,8 @@ def merge_template(dir, package, name, def_template, data)
     template = template.sub(/^package .*;/, "package #{package};")
   end
   data.each do |key, value|
-    if value
-      template = template.gsub(/\/\*<#{key}>\*\/.*?\/\*<\/#{key}>\*\//m, "/*<#{key}>*/#{value}/*</#{key}>*/")
-    end
+    value = value || ''
+    template = template.gsub(/\/\*<#{key}>\*\/.*?\/\*<\/#{key}>\*\//m, "/*<#{key}>*/#{value}/*</#{key}>*/")
   end
   open(target_file(dir, package, name), 'wb') do |f|
     f << template
@@ -1630,7 +1629,12 @@ ARGV[1..-1].each do |yaml_file|
   template_datas.each do |owner, data|
     c = model.get_class_conf(owner) || {}
     data['imports'] = imports_s
-    data['extends'] = data['extends'] || c['extends'] || nil
+    data['extends'] = data['extends'] || c['extends'] || 'Object'
+    data['annotations'] = data['annotations'] || nil
+    data['implements'] = data['implements'] || nil
+    data['properties'] = data['properties'] || nil
+    data['methods'] = data['methods'] || nil
+    data['constants'] = data['constants'] || nil
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
   end
 
