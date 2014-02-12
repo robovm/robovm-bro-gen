@@ -298,7 +298,7 @@ module Bro
         when :cursor_struct, :cursor_union
           @struct = Struct.new model, cursor, nil, cursor.kind == :cursor_union
         when :cursor_type_ref
-          if cursor.type.kind == :type_record
+          if cursor.type.kind == :type_record && @typedef_type.kind != :type_pointer
             @struct = Struct.new model, cursor, nil, cursor.spelling.match(/\bunion\b/)
           end
         when :cursor_enum_decl
