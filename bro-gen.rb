@@ -1235,16 +1235,20 @@ end
 
 def method_to_java(model, owner, method, methods_conf)
   conf = model.get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, methods_conf) || {}
-  if !conf['exclude']
+  if method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
+    param_types = method.parameters.map {|e| e.type.spelling}
+    if (method.is_variadic?)
+      param_types.push('...')
+    end
+    $stderr.puts "WARN: Ignoring variadic method '#{owner.name}.#{method.name}(#{param_types.join(', ')})' at #{Bro::location_to_s(method.location)}"
+    []
+  elsif !conf['exclude']
     name = conf['name'] || method.name.gsub(/:/, '$')
     ret_type = get_generic_type(model, owner, method, method.return_type, 0, conf['return_type'])
     params_conf = conf['parameters'] || {}
     param_types = method.parameters.inject([]) do |l, p|
       l.push(get_generic_type(model, owner, method, p.type, l.size + 1, (params_conf[p.name] || {})['type'], p.name))
       l
-    end
-    if method.is_variadic?
-      param_types.push(['...', nil, ''])
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
     visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || ''
