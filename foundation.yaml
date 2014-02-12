@@ -4,8 +4,6 @@ library: Foundation
 framework: Foundation
 clang_args: ['-x', 'objective-c']
 header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
-imports:
-    - org.robovm.apple.corefoundation.*
 typedefs:
     BOOL: boolean
     NSInteger: MachineSInt
@@ -260,7 +258,10 @@ classes:
     ^NSLinguisticTagger$: {}
     ^NSLocale$: {}
     ^NSLock$: {}
-    ^NSMachPort$: {}
+    ^NSMachPort$:
+        methods:
+            '-delegate$': { exclude: true }
+            '-setDelegate:$': { exclude: true }
     ^NSMapTable$: {}
     ^NSMessagePort$: {}
     ^NSMetadataItem$: {}

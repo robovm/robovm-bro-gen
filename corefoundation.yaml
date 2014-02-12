@@ -4,8 +4,6 @@ library: CoreFoundation
 framework: CoreFoundation
 clang_args: ['-x', 'objective-c']
 header: /System/Library/Frameworks/CoreFoundation.framework/Headers/CoreFoundation.h
-imports:
-    - org.robovm.apple.dispatch.*
 typedefs:
     Boolean: boolean
     #CFOptionFlags: MachineUInt
@@ -91,7 +89,8 @@ classes:
         exclude: true
         name: DispatchQueue
 
-    CFType: 
+    CFTypeRef: 
+        name: CFType
         extends: NativeObject
     __CFAllocator:
         name: CFAllocator
@@ -198,7 +197,7 @@ classes:
     __CFPlugIn:
         name: CFPlugIn
         extends: CFType
-    CFPropertyList:
+    ^CFPropertyList$:
         extends: CFType
     __CFReadStream:
         name: CFReadStream
@@ -296,7 +295,7 @@ functions:
 
     ^CF(.*)GetTypeID:
         class: "CF#{g[0]}"
-        name: "get#{g[0]}TypeID"
+        name: getClassTypeID
 
     ^CF(.*)(CreateMutable.*)$:
         class: "CFMutable#{g[0]}"
