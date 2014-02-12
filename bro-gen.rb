@@ -1453,7 +1453,7 @@ ARGV[1..-1].each do |yaml_file|
       visibility = fconf['visibility'] || 'public'
       parameters = f.parameters
       static = "static "
-      if parameters.size >= 1 && model.resolve_type(parameters[0].type).java_name == owner
+      if !fconf['static'] && parameters.size >= 1 && model.resolve_type(parameters[0].type).java_name == owner
         # Instance method
         parameters = parameters[1..-1]
         static = ""
