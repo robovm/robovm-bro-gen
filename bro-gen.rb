@@ -1283,7 +1283,10 @@ global = YAML.load_file("#{script_dir}/global.yaml")
 ARGV[1..-1].each do |yaml_file|
   conf = YAML.load_file(yaml_file)
 
-  header = conf['header'] || abort("Required 'header' value missing in #{yaml_file}")
+  headers = []
+  headers.push(conf['header']) unless !conf['header']
+  headers.concat(conf['headers']) unless !conf['headers']
+  abort("Required 'header' or 'headers' value missing in #{yaml_file}") unless !headers.empty?
 
   conf = global.merge conf
   conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {})
@@ -1317,11 +1320,15 @@ ARGV[1..-1].each do |yaml_file|
 
   index = FFI::Clang::Index.new
   clang_args = ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
+  headers[1 .. -1].each do |e|
+    clang_args.push('-include')
+    clang_args.push("#{sysroot}#{e}")
+  end
   if conf['clang_args']
     clang_args = clang_args + conf['clang_args']
   end
   #translation_unit = index.parse_translation_unit(header, ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-x', 'objective-c', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
-  translation_unit = index.parse_translation_unit("#{sysroot}#{header}", clang_args, [], {:detailed_preprocessing_record=>true})
+  translation_unit = index.parse_translation_unit("#{sysroot}#{headers[0]}", clang_args, [], {:detailed_preprocessing_record=>true})
   #translation_unit = index.parse_translation_unit("#{sysroot}#{header}", ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
   #dump_ast translation_unit.cursor, ""
   #exit
