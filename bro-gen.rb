@@ -898,6 +898,8 @@ module Bro
           else
             if td.is_callback? || td.is_struct? || td.is_enum?
               td
+            elsif get_class_conf(td.name)
+              td
             else
               e = @enums.find {|e| e.name == name}
               e || resolve_type(td.typedef_type)
@@ -1181,7 +1183,7 @@ def struct_to_java(model, data, name, struct, conf)
   data
 end
 
-def opaque_to_java(model, data, name, struct, conf)
+def opaque_to_java(model, data, name, conf)
   data = data || {}
   data['name'] = name
   data['visibility'] = conf['visibility'] || 'public'
@@ -1388,14 +1390,14 @@ ARGV[1..-1].each do |yaml_file|
     c = model.get_class_conf(struct.name)
     if c && !c['exclude']
       name = c['name'] || struct.name
-      template_datas[name] = struct.is_opaque? ? opaque_to_java(model, {}, name, struct, c) : struct_to_java(model, {}, name, struct, c)
+      template_datas[name] = struct.is_opaque? ? opaque_to_java(model, {}, name, c) : struct_to_java(model, {}, name, struct, c)
     end
   end
-  model.typedefs.find_all {|e| e.struct }.each do |td|
+  model.typedefs.each do |td|
     c = model.get_class_conf(td.name)
     if c && !c['exclude']
       name = c['name'] || td.name
-      template_datas[name] = td.struct.is_opaque? ? opaque_to_java(model, {}, name, td.struct, c) : struct_to_java(model, {}, name, td.struct, c)
+      template_datas[name] = (!td.struct || td.struct.is_opaque?) ? opaque_to_java(model, {}, name, c) : struct_to_java(model, {}, name, td.struct, c)
     end
   end
 
@@ -1633,6 +1635,7 @@ ARGV[1..-1].each do |yaml_file|
     data['annotations'] = data['annotations'] || nil
     data['implements'] = data['implements'] || nil
     data['properties'] = data['properties'] || nil
+    data['constructors'] = data['constructors'] || nil
     data['methods'] = data['methods'] || nil
     data['constants'] = data['constants'] || nil
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
