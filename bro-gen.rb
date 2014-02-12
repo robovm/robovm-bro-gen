@@ -383,6 +383,7 @@ module Bro
       @attributes = []
       param_count = 0
       @inline = false
+      @variadic = cursor.variadic?
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref
@@ -410,7 +411,7 @@ module Bro
     end
 
     def is_variadic?
-      @type.variadic?
+      @variadic
     end
 
     def is_inline?
@@ -1243,7 +1244,6 @@ def method_to_java(model, owner, method, methods_conf)
       l
     end
     if method.is_variadic?
-      # TODO: Doesn't work. Does libclang expose this info about methods?
       param_types.push(['...', nil, ''])
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
@@ -1254,7 +1254,13 @@ def method_to_java(model, owner, method, methods_conf)
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
-    lines = ["#{[visibility,static,native,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+    ret_anno = ''
+    if generics_s.size > 0 && ret_type[0] =~ /^(@Pointer|@ByVal|@MachineSizedFloat|@MachineSizedSInt|@MachineSizedUInt)/
+      # Generic types and an annotated return type. Move the annotation before the generic type info
+      ret_anno = $1
+      ret_type[0] = ret_type[0].sub(/^@.*\s+(.*)$/, '\1')
+    end
+    lines = ["#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
     lines
   else
     []
