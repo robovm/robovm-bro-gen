@@ -38,6 +38,8 @@ package org.robovm.foo;
     /*</constructors>*/
     /*<properties>*/
     /*</properties>*/
+    /*<members>*/
+    /*</members>*/
     /*<methods>*/
     /*</methods>*/
 }

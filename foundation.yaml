@@ -1,5 +1,5 @@
 package: org.robovm.apple.foundation
-include: [corefoundation.yaml]
+include: [corefoundation.yaml, security.yaml]
 library: Foundation
 framework: Foundation
 clang_args: ['-x', 'objective-c']
@@ -210,11 +210,11 @@ classes:
     ^NSDirectoryEnumerator$: {}
     ^NSEnumerator$:
         methods:
-            "-allObjects":
-                return_type: NSArray<T>
-            "-nextObject":
-                name: _nextObject
-                visibility: protected
+            # "-allObjects":
+            #     return_type: NSArray<T>
+            # "-nextObject":
+            #     name: _nextObject
+            #     visibility: protected
     ^NSError$: {}
     ^NSException$: {}
     ^NSExpression$: {}
@@ -525,6 +525,10 @@ protocols:
     ^NSXMLParserDelegate$: {}
 
 functions:
+    ^NSDecimal(.*)$:
+        class: NSDecimal
+        name: "#{g[0]}"
+        static: true
     ^NS.*$: {}
 
 values: 
