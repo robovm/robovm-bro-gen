@@ -1161,7 +1161,7 @@ def struct_to_java(model, data, name, struct, conf)
     index = index + inc
   end
   members = members.join("\n    ")
-  data['methods'] = "\n    #{members}\n    "
+  data['members'] = "\n    #{members}\n    "
 
   constructor_params = []
   constructor_body = []
@@ -1636,6 +1636,7 @@ ARGV[1..-1].each do |yaml_file|
     data['implements'] = data['implements'] || nil
     data['properties'] = data['properties'] || nil
     data['constructors'] = data['constructors'] || nil
+    data['members'] = data['members'] || nil
     data['methods'] = data['methods'] || nil
     data['constants'] = data['constants'] || nil
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
