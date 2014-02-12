@@ -1349,9 +1349,9 @@ ARGV[1..-1].each do |yaml_file|
       java_name = enum.java_name
       bits = enum.is_options? || c['bits']
       if bits
-        values = enum.values.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)" }.join(";\n    ") + ";"
+        values = enum.values.find_all {|e| !c['ignore'] || !e.name.match(c['ignore'])}.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)" }.join(";\n    ") + ";"
       else
-        values = enum.values.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
+        values = enum.values.find_all {|e| !c['ignore'] || !e.name.match(c['ignore'])}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
       end
       data['values'] = "\n    #{values}\n    "
       data['name'] = java_name
