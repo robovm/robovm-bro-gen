@@ -1288,6 +1288,17 @@ ARGV[1..-1].each do |yaml_file|
   conf = global.merge conf
   conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {})
 
+  imports = []
+  imports << "java.nio.*"
+  imports << "java.util.*"
+  imports << "org.robovm.objc.*"
+  imports << "org.robovm.objc.annotation.*"
+  imports << "org.robovm.objc.block.*"
+  imports << "org.robovm.rt.bro.*"
+  imports << "org.robovm.rt.bro.annotation.*"
+  imports << "org.robovm.rt.bro.ptr.*"
+  imports = imports + (conf['imports'] || [])
+
   (conf['include'] || []).each do |f|
     c = YAML.load_file(f)
     # Excluded all classes in included config
@@ -1296,7 +1307,13 @@ ARGV[1..-1].each do |yaml_file|
     c_enums = (c['enums'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
     conf['enums'] = c_enums.merge(conf['enums'] || {})
     conf['typedefs'] = (c['typedefs'] || {}).merge(conf['typedefs'] || {})
+    if c['package']
+      imports.push("#{c['package']}.*")
+    end
   end
+
+  imports.uniq!
+  imports_s = "\n" + imports.map {|im| "import #{im};"}.join("\n") + "\n"
 
   index = FFI::Clang::Index.new
   clang_args = ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
@@ -1315,19 +1332,6 @@ ARGV[1..-1].each do |yaml_file|
   package = conf['package'] || ''
   library = conf['library'] || ''
   default_class = conf['default_class'] || conf['framework'] || 'Functions'
-
-  imports = conf['imports'] || []
-  imports << "java.nio.*"
-  imports << "java.util.*"
-  imports << "org.robovm.objc.*"
-  imports << "org.robovm.objc.annotation.*"
-  imports << "org.robovm.objc.block.*"
-  imports << "org.robovm.rt.bro.*"
-  imports << "org.robovm.rt.bro.annotation.*"
-  imports << "org.robovm.rt.bro.ptr.*"
-  imports.uniq!
-
-  imports_s = "\n" + imports.map {|im| "import #{im};"}.join("\n") + "\n"
 
   potential_constant_enums = []
   model.enums.each do |enum|
