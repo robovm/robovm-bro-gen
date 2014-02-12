@@ -141,6 +141,14 @@ classes:
                 name: getResourcePath
             "-infoDictionary":
                 name: getInfoDictionary
+            '^\+pathForResource:ofType:inDirectory:$':
+                name: findResourcePath
+            '^\+pathsForResourcesOfType:inDirectory:$':
+                name: findResourcesPaths
+            '-pathForResource:ofType:inDirectory:$':
+                name: findResourcePathInSubPath
+            '-pathsForResourcesOfType:inDirectory:$':
+                name: findResourcesPathsInSubPath
     ^NSCache$: {}
     ^NSCachedURLResponse$:
         methods:
