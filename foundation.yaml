@@ -3,7 +3,8 @@ include: [corefoundation.yaml, security.yaml]
 library: Foundation
 framework: Foundation
 clang_args: ['-x', 'objective-c']
-header: /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
+headers:
+    - /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
 typedefs:
     BOOL: boolean
     NSInteger: MachineSInt
@@ -40,6 +41,7 @@ enums:
     NSDateFormatterStyle: {}
     NSDateFormatterStyle: {}
     NSDirectoryEnumerationOptions: {}
+    NSEnumerationOptions: { first: NSEnumerationConcurrent, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSExpressionType: {}
     NSFileCoordinatorReadingOptions: {}
     NSFileCoordinatorWritingOptions: {}
@@ -69,6 +71,7 @@ enums:
     NSRoundingMode: {}
     NSSearchPathDirectory: {}
     NSSearchPathDomainMask: {}
+    NSSortOptions: { first: NSSortConcurrent, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSStreamEvent: {}
     NSStreamStatus: {}
     NSStringCompareOptions: {}
@@ -96,7 +99,7 @@ classes:
     ^NSRange$: {}
     NSDecimal: {}
     NSZone: {}
-    NSFastEnumerationState: {}
+    #NSFastEnumerationState: {}
 
     # These classes do not exist in Foundation. We use them to hold global values related to the
     # NSKeyValueCoding and NSKeyValueObserving informal protocols.
@@ -537,7 +540,8 @@ functions:
         class: NSDecimal
         name: "#{g[0]}"
         static: true
-    ^NS.*$: {}
+    ^(NS.*)$:
+        name: "Function__#{g[0]}"
 
 values: 
     ^NS.*Exception$:
@@ -833,6 +837,9 @@ constants:
     ^NS(FoundationVersionWithFileManagerResourceForkSupport)$:
         class: NSFileManager
         name: "#{g[0]}"
+    ^NSNotFound$:
+        class: Foundation
+        name: NotFound
     ^NSFoundation(.*)$:
         class: Foundation
         name: "#{g[0]}"
@@ -840,4 +847,4 @@ constants:
     # Make sure we don't miss any constants if new ones are introduced in a later Foundation
     ^(NS.*)$:
         class: Foundation
-        name: "#{g[0]}"
+        name: "Constant__#{g[0]}"
