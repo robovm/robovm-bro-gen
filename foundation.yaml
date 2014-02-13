@@ -24,6 +24,8 @@ enums:
     NSAttributedStringEnumerationOptions: {}
     NSBinarySearchingOptions: {}
     NSBundleExecutableArchitectureType: { first: NSBundleExecutableArchitectureI386 }
+    NSByteCountFormatterCountStyle: {}
+    NSByteCountFormatterUnits: {}
     NSCalculationError: {}
     NSCalendarOptions: {}
     NSCalendarUnit: { prefix: NSCalendarUnit, ignore: '^.+CalendarUnit$' }
@@ -51,18 +53,23 @@ enums:
     NSFileWrapperReadingOptions: {}
     NSFileWrapperWritingOptions: {}
     NSHTTPCookieAcceptPolicy: {}
+    NSJSONReadingOptions: {}
+    NSJSONWritingOptions: {}
     NSKeyValueChange: {}
     NSKeyValueObservingOptions: {}
     NSKeyValueSetMutationKind: {}
     NSLinguisticTaggerOptions: {}
     NSLocaleLanguageDirection: {}
+    NSMatchingFlags: {}
     NSMatchingOptions: {}
     NSNetServiceOptions: {}
+    NSNetServicesError: {}
     NSNumberFormatterBehavior: {}
     NSNumberFormatterPadPosition: {}
     NSNumberFormatterRoundingMode: {}
     NSNumberFormatterStyle: {}
     NSOperationQueuePriority: {}
+    NSPointerFunctionsOptions: { first: NSPointerFunctionsStrongMemory, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSPostingStyle: {}
     NSPredicateOperatorType: {}
     NSPropertyListFormat: {}
@@ -91,6 +98,7 @@ enums:
     NSURLRequestCachePolicy: { first: NSURLRequestUseProtocolCachePolicy, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
     NSURLRequestNetworkServiceType: { first: NSURLNetworkServiceTypeDefault, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
     NSURLSessionAuthChallengeDisposition: {}
+    NSURLSessionResponseDisposition: {}
     NSURLSessionTaskState: {}
     NSVolumeEnumerationOptions: {}
     NSXMLParserError: {}
@@ -157,6 +165,7 @@ classes:
                 name: findResourcePathInSubPath
             '-pathsForResourcesOfType:inDirectory:$':
                 name: findResourcesPathsInSubPath
+    ^NSByteCountFormatter$: {}
     ^NSCache$: {}
     ^NSCachedURLResponse$:
         methods:
@@ -253,6 +262,7 @@ classes:
     ^NSInputStream$: {}
     ^NSInvocation$: {}
     ^NSInvocationOperation$: {}
+    ^NSJSONSerialization$: {}
     ^NSKeyedArchiver$:
         methods:
             '^\+classNameForClass:$':
@@ -830,6 +840,27 @@ values:
         name: "Value__#{g[0]}"
 
 constants:
+    # Garbage
+    ^NSEC_PER_.*|NSIG|NSINTEGER_DEFINED|NS_BLOCKS_AVAILABLE|NS_UNICHAR_IS_EIGHT_BIT$:
+        exclude: true
+    # These are not constant but depend on the CPU (32-bit / 64-bit)
+    ^NSU?IntegerMax$:
+        exclude: true
+    # ByteOrder constants depend on the host
+    ^NS_UnknownByteOrder|NS_LittleEndian|NS_BigEndian$:
+        exclude: true
+
+    ^NSHashTable.*$:
+        exclude: true
+    ^NSMapTable.*$:
+        exclude: true
+    ^NSTextCheckingAll.*Types$:
+        exclude: true
+
+    ^NSDecimal(.*)$:
+        class: NSDecimal
+        name: "#{g[0]}"
+
     ^NS(OpenStepUnicodeReservedBase)$: { name: "#{g[0]}" }
     ^NSURLResponse(.*)$:
         class: NSURLResponse
