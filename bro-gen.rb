@@ -1031,6 +1031,7 @@ module Bro
             if src =~ /^(([-+.0-9Ee]+[fF]?)|(~?0x[0-9a-fA-F]+[UL]*)|(~?[0-9]+[UL]*))$/i
               value = $1
               value = value.sub(/^((0x)?.*)U$/i, '\1')
+              value = value.sub(/^((0x)?.*)UL$/i, '\1')
               value = value.sub(/^((0x)?.*)ULL$/i, '\1L')
               value = value.sub(/^((0x)?.*)LL$/i, '\1L')
               @constant_values.push ConstantValue.new self, cursor, value
@@ -1106,10 +1107,10 @@ module Bro
       end
 
       # Filter out global values not defined in the framework or library we're generating code for
-      @global_values = @global_values.find_all {|v| is_included?(v)}
+      #@global_values = @global_values.find_all {|v| is_included?(v)}
 
       # Filter out constants not defined in the framework or library we're generating code for
-      @constant_values = @constant_values.find_all {|v| is_included?(v)}
+      #@constant_values = @constant_values.find_all {|v| is_included?(v)}
     end
   end
 end
