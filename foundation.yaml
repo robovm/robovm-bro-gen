@@ -77,6 +77,7 @@ enums:
     NSStringEnumerationOptions: {}
     NSTextCheckingType: {}
     NSTimeZoneNameStyle: {}
+    NSUbiquitousKeyValueStoreChangeReason: { first: NSUbiquitousKeyValueStoreServerChange }
     NSURLBookmarkCreationOptions: {}
     NSURLBookmarkResolutionOptions: {}
     NSURLBookmarkResolutionOptions: {}
@@ -96,6 +97,11 @@ classes:
     NSDecimal: {}
     NSZone: {}
     NSFastEnumerationState: {}
+
+    # These classes do not exist in Foundation. We use them to hold global values related to the
+    # NSKeyValueCoding and NSKeyValueObserving informal protocols.
+    ^NSKeyValueOperator$: { visibility: 'public abstract' }
+    ^NSKeyValueChangeKey$: { visibility: 'public abstract' }
 
     ^NS.*Internal$: { exclude: true }
 
@@ -499,7 +505,7 @@ protocols:
     ^NSFilePresenter$: {}
     ^NSKeyedArchiverDelegate$: {}
     ^NSKeyedUnarchiverDelegate$: {}
-    ^NSKeyValueCoding$: {}
+    #^NSKeyValueCoding$: {}
     ^NSKeyValueObserving$: {}
     ^NSLocking$: {}
     ^NSMachPortDelegate$: {}
@@ -582,6 +588,25 @@ values:
         class: NSFileManager
         type: NSString
         name: "Key#{g[0]}"
+    ^NSFile(.*)Key$:
+        class: NSFileManager
+        type: NSString
+        name: "Key#{g[0]}"
+    ^NS(UbiquityIdentityDidChange)Notification$:
+        class: NSFileManager
+        name: "Notification#{g[0]}"
+    ^NS(FileProtection.*)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
+    ^NS(FileSystem.*)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
+    ^NS(FileType.*)$:
+        class: NSFileManager
+        type: NSString
+        name: "#{g[0]}"
     ^NSHTTPCookieManager(.*)Notification$:
         class: NSHTTPCookieStorage
         name: "Notification#{g[0]}"
@@ -589,6 +614,13 @@ values:
         class: NSHTTPCookie
         type: NSString
         name: "Key#{g[0]}"
+    ^NSKeyValue(.*)Key$:
+        class: NSKeyValueChangeKey
+        type: NSString
+        name: "Key#{g[0]}"
+    ^NS(.*)KeyValueOperator$:
+        class: NSKeyValueOperator
+        name: "#{g[0]}"
     ^NSLinguistic(TagScheme.*)$:
         class: NSLinguisticTagger
         type: NSString
@@ -673,9 +705,23 @@ values:
     ^NSStream(.*ErrorDomain)$:
         class: NSStream
         name: "#{g[0]}"
+    ^NS(.*Become.*Threaded)Notification$:
+        class: NSThread
+        name: "Notification#{g[0]}"
+    ^NSThread(WillExit)Notification$:
+        class: NSThread
+        name: "NotificationThread#{g[0]}"
     ^NSTextChecking(.*)Key$:
         class: NSTextCheckingResult
+        type: NSString
         name: "Key#{g[0]}"
+    ^NSUbiquitousKeyValueStore(.*)Key$:
+        class: NSUbiquitousKeyValueStore
+        type: NSString
+        name: "Key#{g[0]}"
+    ^NSUbiquitousKeyValueStore(.*)Notification$:
+        class: NSUbiquitousKeyValueStore
+        name: "Notification#{g[0]}"
     ^NSUndoManager(.*)Notification$:
         class: NSUndoManager
         name: "Notification#{g[0]}"
@@ -733,6 +779,9 @@ constants:
     ^NS(OpenStepUnicodeReservedBase)$: { name: "#{g[0]}" }
     ^NSURLResponse(.*)$:
         class: NSURLResponse
+        name: "#{g[0]}"
+    ^NS(FoundationVersionWithFileManagerResourceForkSupport)$:
+        class: NSFileManager
         name: "#{g[0]}"
     ^NSFoundation(.*)$:
         class: Foundation
