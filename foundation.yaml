@@ -542,12 +542,21 @@ functions:
 values: 
     ^NS.*Exception$:
         exclude: true
+    ^NSBundle(.*)Notification$:
+        class: NSBundle
+        name: "Notification#{g[0]}"
     ^NS(.*)Calendar$:
         class: NSLocale
         name: "CalendarIdentifier#{g[0]}"
     ^NSCalendarIdentifier(.*)$:
         class: NSCalendar
         name: "CalendarIdentifier#{g[0]}"
+    ^NSCalendar(.*)Notification$:
+        class: NSCalendar
+        name: "Notification#{g[0]}"
+    ^NS(SystemClockDidChange)Notification$:
+        class: NSDate
+        name: "Notification#{g[0]}"
     ^NSDecimalNumber(.*)$:
         class: NSDecimalNumber
         name: "#{g[0]}"
@@ -671,6 +680,9 @@ values:
         class: NSMetadataQuery
         type: NSString
         name: "Key#{g[0]}"
+    ^NSPort(.*)Notification$:
+        class: NSPort
+        name: "Notification#{g[0]}"
     ^NSProgress(.*)Key$:
         class: NSProgress
         type: NSString
@@ -715,6 +727,9 @@ values:
         class: NSTextCheckingResult
         type: NSString
         name: "Key#{g[0]}"
+    ^NS(SystemTimeZoneDidChange)Notification$:
+        class: NSTimeZone
+        name: "Notification#{g[0]}"
     ^NSUbiquitousKeyValueStore(.*)Key$:
         class: NSUbiquitousKeyValueStore
         type: NSString
@@ -767,10 +782,17 @@ values:
     ^NSXMLParser(.*)$:
         class: NSXMLParser
         name: "#{g[0]}"
+    ^NSUserDefaults(.*)Notification$:
+        class: NSUserDefaults
+        name: "Notification#{g[0]}"
     ^NS((Global|Argument|Registration)Domain)$:
         class: NSUserDefaults
         name: "#{g[0]}"
     # Make sure we don't miss any values if new ones are introduced in a later Foundation
+    ^NSFoundation(.*)$:
+        class: Foundation
+        readonly: true
+        name: "#{g[0]}"
     ^(NS.*)$:
         class: Foundation
         name: "Value__#{g[0]}"
