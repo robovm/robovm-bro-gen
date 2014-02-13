@@ -542,9 +542,17 @@ functions:
 values: 
     ^NS.*Exception$:
         exclude: true
+    ^NSAssertionHandlerKey$:
+        class: NSAssertionHandler
+        type: NSString
+        name: "KeyThreadAssertionHandler"
     ^NSBundle(.*)Notification$:
         class: NSBundle
         name: "Notification#{g[0]}"
+    ^NS(LoadedClasses)$:
+        class: NSBundle
+        type: NSString
+        name: "Key#{g[0]}"
     ^NS(.*)Calendar$:
         class: NSLocale
         name: "CalendarIdentifier#{g[0]}"
@@ -576,7 +584,7 @@ values:
         class: NSError
         type: NSString
         name: "Key#{g[0]}"
-    ^NS((POSIX|OSStatus|Mach)ErrorDomain)$:
+    ^NS((Cocoa|POSIX|OSStatus|Mach)ErrorDomain)$:
         class: NSError
         name: "#{g[0]}"
     ^NSFileHandle(.*)Notification$:
@@ -621,6 +629,10 @@ values:
         name: "Notification#{g[0]}"
     ^NSHTTPCookie(.*)$:
         class: NSHTTPCookie
+        type: NSString
+        name: "Key#{g[0]}"
+    ^NSKeyedArchive(RootObjectKey)$:
+        class: NSKeyedArchiver
         type: NSString
         name: "Key#{g[0]}"
     ^NSKeyValue(.*)Key$:
@@ -680,6 +692,13 @@ values:
         class: NSMetadataQuery
         type: NSString
         name: "Key#{g[0]}"
+    ^NSNetServices(ErrorCode)$:
+        class: NSNetService
+        type: NSString
+        name: "#{g[0]}"
+    ^NSNetServices(ErrorDomain)$:
+        class: NSNetService
+        name: "#{g[0]}"
     ^NSPort(.*)Notification$:
         class: NSPort
         name: "Notification#{g[0]}"
@@ -694,6 +713,12 @@ values:
     ^NSProgress(.*)$:
         class: NSProgress
         name: "#{g[0]}"
+    ^NSDefaultRunLoopMode$:
+        class: NSRunLoop
+        name: "ModeDefault"
+    ^NSRunLoopCommonModes$:
+        class: NSRunLoop
+        name: "ModeCommon"
     ^NSStream(.*)Key$:
         class: NSStream
         type: NSString
@@ -779,6 +804,9 @@ values:
         class: NSURL
         readonly: true
         name: "#{g[0]}"
+    ^NS(.*)Name$:
+        class: NSValueTransformer
+        name: "Name#{g[0]}"
     ^NSXMLParser(.*)$:
         class: NSXMLParser
         name: "#{g[0]}"
