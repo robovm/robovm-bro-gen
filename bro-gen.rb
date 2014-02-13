@@ -1629,8 +1629,9 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   template_datas.each do |owner, data|
-    c = model.get_class_conf(owner) || {}
+    c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || {}
     data['imports'] = imports_s
+    data['visibility'] = c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
     data['annotations'] = data['annotations'] || nil
     data['implements'] = data['implements'] || nil
