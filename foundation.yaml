@@ -623,9 +623,9 @@ values:
         class: NSError
         type: NSString
         name: "Key#{g[0]}"
-    ^NS((Cocoa|POSIX|OSStatus|Mach)ErrorDomain)$:
+    ^NS(Cocoa|POSIX|OSStatus|Mach)ErrorDomain$:
         class: NSError
-        name: "#{g[0]}"
+        name: "ErrorDomain#{g[0]}"
     ^NSFileHandle(.*)Notification$:
         class: NSFileHandle
         name: "Notification#{g[0]}"
@@ -735,9 +735,9 @@ values:
         class: NSNetService
         type: NSString
         name: "#{g[0]}"
-    ^NSNetServices(ErrorDomain)$:
+    ^NSNetServicesErrorDomain$:
         class: NSNetService
-        name: "#{g[0]}"
+        name: "ErrorDomainNetServices"
     ^NSPort(.*)Notification$:
         class: NSPort
         name: "Notification#{g[0]}"
@@ -778,9 +778,9 @@ values:
         class: NSStream
         type: NSString
         name: "#{g[0]}"
-    ^NSStream(.*ErrorDomain)$:
+    ^NSStream(.*)ErrorDomain$:
         class: NSStream
-        name: "#{g[0]}"
+        name: "ErrorDomain#{g[0]}"
     ^NS(.*Become.*Threaded)Notification$:
         class: NSThread
         name: "Notification#{g[0]}"
@@ -839,6 +839,10 @@ values:
         class: NSURL
         type: NSString
         name: "Key#{g[0]}"
+    ^NSURLErrorDomain$:
+        class: NSURL
+        readonly: true
+        name: "ErrorDomainURL"
     ^NSURL(.*)$:
         class: NSURL
         readonly: true
@@ -846,15 +850,18 @@ values:
     ^NS(.*)Name$:
         class: NSValueTransformer
         name: "Name#{g[0]}"
+    ^NSXMLParserErrorDomain$:
+        class: NSXMLParser
+        name: "ErrorDomainXMLParser"
     ^NSXMLParser(.*)$:
         class: NSXMLParser
         name: "#{g[0]}"
     ^NSUserDefaults(.*)Notification$:
         class: NSUserDefaults
         name: "Notification#{g[0]}"
-    ^NS((Global|Argument|Registration)Domain)$:
+    ^NS(Global|Argument|Registration)Domain$:
         class: NSUserDefaults
-        name: "#{g[0]}"
+        name: "Domain#{g[0]}"
     # Make sure we don't miss any values if new ones are introduced in a later Foundation
     ^NSFoundation(.*)$:
         class: Foundation

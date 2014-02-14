@@ -73,6 +73,10 @@ values:
     ^kSec((Class|Attr|Match|Return|Value|UseItemList).*)$:
         class: SecItem
         readonly: true
+        name: "Key#{g[0]}"
+    ^kSec((Class|Attr|Match|Return|Value|UseItemList).*)$:
+        class: SecItem
+        readonly: true
         name: "#{g[0]}"
     ^kSec(PropertyType.*)$:
         class: SecCertificate
@@ -82,10 +86,14 @@ values:
         class: SecKey
         readonly: true
         name: "#{g[0]}"
-    ^kSecImportItem(.*)$:
+    ^kSecImport(Item.*)$:
         class: SecImportExport
         readonly: true
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
+    ^kSecImportExport(.*)$:
+        class: SecImportExport
+        readonly: true
+        name: "Key#{g[0]}"
     ^(kSec.*)$:
         name: "#{g[0]}"
     ^(kSSL.*)$:

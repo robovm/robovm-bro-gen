@@ -565,18 +565,15 @@ values:
     ^kCF(AbsoluteTimeIntervalSince.*)$:
         class: CFDate
         name: "#{g[0]}"
-    ^kCFAllocator(.*)$:
+    ^kCF(Allocator.*)$:
         class: CFAllocator
         name: "#{g[0]}"
     ^kCFBoolean(.*)$:
         class: CFBoolean
         name: "#{g[0]}"
-    ^kCFBundle(.*)$:
+    ^kCFBundle(.*)Key$:
         class: CFBundle
-        name: "#{g[0]}"
-    ^kCF(.*Calendar)$:
-        class: CFLocale
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
     ^kCF(CopyStringBagCallBacks)$:
         class: CFBag
         name: "#{g[0]}"
@@ -588,34 +585,52 @@ values:
         name: "#{g[0]}"
     ^kCFDateFormatter(.*)$:
         class: CFDateFormatter
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
+    ^kCFError(.*)Key$:
+        class: CFError
+        name: "Key#{g[0]}"
     ^kCFError(.*)$:
         class: CFError
         name: "#{g[0]}"
+    ^kCF(.*Calendar)$:
+        class: CFLocale
+        name: "CalendarIdentifier#{g[0]}"
+    ^kCFLocale(CurrentLocaleDidChange)Notification$:
+        class: CFLocale
+        name: "Notification#{g[0]}"
     ^kCFLocale(.*)$:
         class: CFLocale
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
     kCFNull:
         class: CFNull
         name: "Null"
     ^kCFNumberFormatter(.*)$:
         class: CFNumberFormatter
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
     ^kCFNumber(.*)$:
         class: CFNumber
         name: "#{g[0]}"
-    ^kCFPlugIn(.*)$:
+    ^kCFPlugIn(.*)Key$:
         class: CFPlugIn
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
     ^kCFPreferences(.*)$:
         class: CFPreferences
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
+    ^kCFRunLoopCommonModes$:
+        class: CFRunLoop
+        name: "ModeCommon"
+    ^kCFRunLoopDefaultMode$:
+        class: CFRunLoop
+        name: "ModeDefault"
     ^kCFRunLoop(.*)$:
         class: CFRunLoop
         name: "#{g[0]}"
-    ^kCFSocket(.*)$:
+    ^kCFSocket(Command|Name|Value|Result|Error)Key$:
         class: CFSocket
-        name: "#{g[0]}"
+        name: "Key#{g[0]}"
+    ^kCFSocket(.*)Command$:
+        class: CFSocket
+        name: "Command#{g[0]}"
     ^kCFStream(.*)$:
         class: CFStream
         name: "#{g[0]}"
@@ -625,9 +640,12 @@ values:
     ^kCF(StringBinaryHeapCallBacks)$:
         class: CFBinaryHeap
         name: "#{g[0]}"
-    ^kCFTimeZone(.*)$:
+    ^kCFTimeZone(SystemTimeZoneDidChange)Notification$:
         class: CFTimeZone
-        name: "#{g[0]}"
+        name: "Notification#{g[0]}"
+    ^kCFURL(.*)Key$:
+        class: CFURL
+        name: "Key#{g[0]}"
     ^kCFURL(.*)$:
         class: CFURL
         name: "#{g[0]}"
