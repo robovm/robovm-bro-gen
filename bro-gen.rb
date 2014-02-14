@@ -840,6 +840,8 @@ module Bro
         if type.pointee.kind == :type_unexposed && name.match(/\(\*\)/)
           # Callback. libclang does not expose info for callbacks.
           Bro::builtins_by_name('FunctionPtr')
+        elsif type.pointee.kind == :type_typedef && type.pointee.declaration.typedef_type.kind == :type_function_proto
+            Bro::builtins_by_name('FunctionPtr')
         else
           e = resolve_type(type.pointee)
           if e.is_a?(Enum) || e.is_a?(Typedef) && e.is_enum?
