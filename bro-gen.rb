@@ -1113,10 +1113,10 @@ module Bro
       end
 
       # Filter out global values not defined in the framework or library we're generating code for
-      #@global_values = @global_values.find_all {|v| is_included?(v)}
+      @global_values = @global_values.find_all {|v| is_included?(v)}
 
       # Filter out constants not defined in the framework or library we're generating code for
-      #@constant_values = @constant_values.find_all {|v| is_included?(v)}
+      @constant_values = @constant_values.find_all {|v| is_included?(v)}
     end
   end
 end
