@@ -2,6 +2,7 @@ package: org.robovm.apple.foundation
 include: [corefoundation.yaml, security.yaml]
 library: Foundation
 framework: Foundation
+path_match: ^.*/usr/include/objc/.*$
 clang_args: ['-x', 'objective-c']
 headers:
     - /System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
@@ -60,6 +61,7 @@ enums:
     NSKeyValueSetMutationKind: {}
     NSLinguisticTaggerOptions: {}
     NSLocaleLanguageDirection: {}
+    NSMachPortRights: { first: NSMachPortDeallocateNone, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSMatchingFlags: {}
     NSMatchingOptions: {}
     NSNetServiceOptions: {}
@@ -284,6 +286,14 @@ classes:
         methods:
             '-delegate$': { exclude: true }
             '-setDelegate:$': { exclude: true }
+            '+portWithMachPort:options:$':
+                parameters:
+                    f:
+                        type: NSMachPortRights
+            '-initWithMachPort:options:$':
+                parameters:
+                    f:
+                        type: NSMachPortRights
     ^NSMapTable$: {}
     ^NSMessagePort$: {}
     ^NSMetadataItem$: {}
