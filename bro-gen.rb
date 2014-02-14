@@ -680,6 +680,9 @@ module Bro
       if @name.start_with?(@enum.prefix)
         n = @name[@enum.prefix.size..-1]
       end
+      if n.end_with?(@enum.suffix)
+        n = n[0..(n.size - @enum.suffix.size - 1)]
+      end
       if /^[0-9].*/ =~ n
         n = "V#{n}"
       end
@@ -717,6 +720,9 @@ module Bro
     end
     def enum_conf
       (@model.conf_enums.find { |k, v| k == name || v['first'] == values.first.name } || [{}, {}])[1]
+    end
+    def suffix
+        enum_conf['suffix'] || ''
     end
     def prefix
       if @prefix
