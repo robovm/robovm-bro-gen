@@ -31,21 +31,20 @@ enums:
     NSCalendarOptions: {}
     NSCalendarUnit: { prefix: NSCalendarUnit, ignore: '^.+CalendarUnit$' }
     NSCocoaError: { first: NSFileNoSuchFileError }
-    NSComparisonPredicateModifier: {}
-    NSComparisonPredicateOptions: {}
+    NSComparisonPredicateModifier: { suffix: PredicateModifier }
+    NSComparisonPredicateOptions: { suffix: PredicateOption }
     NSComparisonResult: {}
-    NSCompoundPredicateType: {}
+    NSCompoundPredicateType: { suffix: PredicateType }
     NSDataBase64DecodingOptions: { prefix: NSDataBase64Decoding }
     NSDataBase64EncodingOptions: {}
     NSDataReadingOptions: {}
     NSDataSearchOptions: {}
     NSDataWritingOptions: {}
     NSDateFormatterBehavior: {}
-    NSDateFormatterStyle: {}
-    NSDateFormatterStyle: {}
+    NSDateFormatterStyle: { suffix: Style }
     NSDirectoryEnumerationOptions: {}
     NSEnumerationOptions: { first: NSEnumerationConcurrent, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
-    NSExpressionType: {}
+    NSExpressionType: { suffix: ExpressionType }
     NSFileCoordinatorReadingOptions: {}
     NSFileCoordinatorWritingOptions: {}
     NSFileManagerItemReplacementOptions: {}
@@ -58,7 +57,7 @@ enums:
     NSJSONWritingOptions: { prefix: NSJSONWriting }
     NSKeyValueChange: {}
     NSKeyValueObservingOptions: {}
-    NSKeyValueSetMutationKind: {}
+    NSKeyValueSetMutationKind: { suffix: SetMutation }
     NSLinguisticTaggerOptions: {}
     NSLocaleLanguageDirection: {}
     NSMachPortRights: { first: NSMachPortDeallocateNone, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
@@ -70,13 +69,13 @@ enums:
     NSNumberFormatterBehavior: {}
     NSNumberFormatterPadPosition: {}
     NSNumberFormatterRoundingMode: {}
-    NSNumberFormatterStyle: {}
+    NSNumberFormatterStyle: { suffix: Style }
     NSOperatingSystem: { first: NSWindowsNTOperatingSystem, suffix: OperatingSystem, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
     NSOperationQueuePriority: {}
     NSPointerFunctionsOptions: { first: NSPointerFunctionsStrongMemory, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSPostingStyle: {}
-    NSPredicateOperatorType: {}
-    NSPropertyListFormat: {}
+    NSPredicateOperatorType: { suffix: PredicateOperatorType }
+    NSPropertyListFormat: { suffix: Format }
     NSPropertyListMutabilityOptions: {}
     NSRegularExpressionOptions: {}
     NSRoundingMode: {}
@@ -85,9 +84,10 @@ enums:
     NSSortOptions: { first: NSSortConcurrent, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSStreamEvent: {}
     NSStreamStatus: {}
-    NSStringCompareOptions: {}
+    NSStringCompareOptions: { suffix: Search }
     NSStringEncodingConversionOptions: {}
-    NSStringEncodings: { first: NSASCIIStringEncoding }
+    NSStringEncodings: { first: NSASCIIStringEncoding, suffix: StringEncoding }
+    NSStringEncodings2: {first: NSProprietaryStringEncoding, merge_with: NSStringEncodings, prefix: NS, suffix: StringEncoding }
     NSStringEnumerationOptions: {}
     NSTextCheckingType: {}
     NSTimeZoneNameStyle: {}
@@ -105,7 +105,7 @@ enums:
     NSURLSessionResponseDisposition: {}
     NSURLSessionTaskState: {}
     NSVolumeEnumerationOptions: {}
-    NSXMLParserError: {}
+    NSXMLParserError: { suffix: Error }
 
 classes:
     ^NSRange$: {}
@@ -893,7 +893,27 @@ constants:
         class: NSDecimal
         name: "#{g[0]}"
 
-    ^NS(OpenStepUnicodeReservedBase)$: { name: "#{g[0]}" }
+    ^NS(TimeIntervalSince1970)$:
+        class: NSDate
+        name: "#{g[0]}"
+
+    # Deprecated
+    ^NSUndefinedDateComponent$:
+        exclude: true
+
+    ^NSDateComponentUndefined$:
+        class: NSDateComponents
+        name: "Undefined"
+
+    ^NS(OpenStepUnicodeReservedBase)$:
+        class: NSCharacterSet
+        name: "#{g[0]}"
+    ^NSOperationQueue(DefaultMaxConcurrentOperationCount)$:
+        class: NSOperationQueue
+        name: "#{g[0]}"
+    ^NS(UndoCloseGroupingRunLoopOrdering)$:
+        class: NSUndoManager
+        name: "#{g[0]}"
     ^NSURLResponse(.*)$:
         class: NSURLResponse
         name: "#{g[0]}"
