@@ -54,7 +54,7 @@ enums:
     NSFileWrapperWritingOptions: {}
     NSHTTPCookieAcceptPolicy: {}
     NSJSONReadingOptions: {}
-    NSJSONWritingOptions: {}
+    NSJSONWritingOptions: { prefix: NSJSONWriting }
     NSKeyValueChange: {}
     NSKeyValueObservingOptions: {}
     NSKeyValueSetMutationKind: {}
@@ -64,10 +64,12 @@ enums:
     NSMatchingOptions: {}
     NSNetServiceOptions: {}
     NSNetServicesError: {}
+    NSNotificationCoalescing: { bits: true }
     NSNumberFormatterBehavior: {}
     NSNumberFormatterPadPosition: {}
     NSNumberFormatterRoundingMode: {}
     NSNumberFormatterStyle: {}
+    NSOperatingSystem: { first: NSWindowsNTOperatingSystem, suffix: OperatingSystem, marshaler: ValuedEnum.AsMachineSizedUIntMarshaler }
     NSOperationQueuePriority: {}
     NSPointerFunctionsOptions: { first: NSPointerFunctionsStrongMemory, bits: true, marshaler: Bits.AsMachineSizedIntMarshaler }
     NSPostingStyle: {}
@@ -315,7 +317,16 @@ classes:
     ^NSNetServiceBrowser$: {}
     ^NSNotification$: {}
     ^NSNotificationCenter$: {}
-    ^NSNotificationQueue$: {}
+    ^NSNotificationQueue$:
+        methods:
+            "-dequeueNotificationsMatching:coalesceMask:$":
+                parameters:
+                    coalesceMask:
+                        type: NSNotificationCoalescing
+            "-enqueueNotification:postingStyle:coalesceMask:forModes:$":
+                parameters:
+                    coalesceMask:
+                        type: NSNotificationCoalescing
     ^NSNull$:
         methods:
             "+null":
@@ -398,7 +409,11 @@ classes:
     ^NSPortMessage$:
         extends: NSObject
     ^NSPredicate$: {}
-    ^NSProcessInfo$: {}
+    ^NSProcessInfo$:
+        methods:
+            "-operatingSystem$":
+                name: getOperatingSystem
+                return_type: NSOperatingSystem
     ^NSProgress$: {}
     ^NSPropertyListSerialization$: {}
     ^NSProxy$: { exclude: true }
