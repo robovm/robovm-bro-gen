@@ -508,12 +508,12 @@ module Bro
         next :continue
       end
 
-      # Properties are alos represented as instance methods in the AST. Remove any instance method
+      # Properties are also represented as instance methods in the AST. Remove any instance method
       # defined on the same position as a property and use the method name as getter/setter.
       @instance_methods = @instance_methods - @instance_methods.find_all do |m|
         p = @properties.find {|f| f.id == m.id}
         if p
-          if m.name =~ /.*:$/
+          if m.name.end_with?(':')
             p.setter = m
           else
             p.getter = m
@@ -566,6 +566,22 @@ module Bro
         end
         next :continue
       end
+
+      # Properties are also represented as instance methods in the AST. Remove any instance method
+      # defined on the same position as a property and use the method name as getter/setter.
+      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
+        p = @properties.find {|f| f.id == m.id}
+        if p
+          if m.name.end_with?(':')
+            p.setter = m
+          else
+            p.getter = m
+          end
+          m
+        else
+          nil
+        end
+      end
     end
 
     def types
@@ -612,12 +628,12 @@ module Bro
         next :continue
       end
 
-      # Properties are alos represented as instance methods in the AST. Remove any instance method
+      # Properties are also represented as instance methods in the AST. Remove any instance method
       # defined on the same position as a property and use the method name as getter/setter.
       @instance_methods = @instance_methods - @instance_methods.find_all do |m|
         p = @properties.find {|f| f.id == m.id}
         if p
-          if m.name =~ /.*:$/
+          if m.name.end_with?(':')
             p.setter = m
           else
             p.getter = m
@@ -1231,11 +1247,9 @@ def property_to_java(model, owner, prop, props_conf)
     native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
-#    lines = ["@Property(getter = \"#{prop.getter.name}\")", "#{visibility}#{native} #{java_type} #{getter}();"]
-    lines = ["#{[visibility,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}();"]
+    lines = ["@Property(selector = \"#{prop.getter.name}\")", "#{[visibility,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}();"]
     if !prop.is_readonly? && !conf['readonly']
-      lines = lines + ["#{[visibility,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{type[0]} v);"]
-#      lines = lines + ["@Property(setter = \"#{prop.setter.name}\")", "#{visibility}#{native} void #{setter}(#{java_type} v);"]
+      lines = lines + ["@Property(selector = \"#{prop.setter.name}\")", "#{[visibility,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{type[0]} v);"]
     end
     lines
   else
@@ -1274,7 +1288,7 @@ def method_to_java(model, owner, method, methods_conf)
       ret_anno = $1
       ret_type[0] = ret_type[0].sub(/^@.*\s+(.*)$/, '\1')
     end
-    lines = ["#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+    lines = ["@Method(selector = \"#{method.name}\")", "#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
     lines
   else
     []
