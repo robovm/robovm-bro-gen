@@ -571,10 +571,88 @@ protocols:
     ^NSXMLParserDelegate$: {}
 
 functions:
+    ^NSAllocateObject$:
+        exclude: true
+    ^NSCopyObject$:
+        exclude: true
+    ^NSDeallocateObject$:
+        exclude: true
+    ^NS(Class|Protocol|Selector)FromString$:
+        exclude: true
+    ^NSStringFrom(Class|Protocol|Selector)$:
+        exclude: true
+    ^NSMakeCollectable$:
+        exclude: true
+    ^NSGetSizeAndAlignment$:
+        exclude: true
+
     ^NSDecimal(.*)$:
         class: NSDecimal
         name: "#{g[0]}"
         static: true
+
+    ^NS(.*UncaughtExceptionHandler)$:
+        class: NSException
+        name: "#{g[0]}"
+
+    ^NS(.*ExtraRefCount.*)$:
+        class: NSObject
+        name: "#{g[0]}"
+        visibility: protected
+    ^NS(ShouldRetainWithZone)$:
+        class: NSObject
+        name: "#{g[0]}"
+        visibility: protected
+
+    ^NS(UserName|FullUserName|HomeDirectory|HomeDirectoryForUser|TemporaryDirectory|OpenStepRootDirectory)$:
+        class: NSPathUtilities
+        name: "get#{g[0]}"
+    ^NS(SearchPathForDirectoriesInDomains)$:
+        class: NSPathUtilities
+        name: "get#{g[0]}"
+
+    ^NS(Intersection|Union)Range$:
+        class: NSRange
+        static: true
+        name: "#{g[0]}"
+    ^NSRangeFromString$:
+        class: NSRange
+        name: "fromString"
+    ^NSStringFromRange$:
+        class: NSRange
+        static: true
+        visibility: protected
+        name: "toString"
+
+    ^NSZoneName$:
+        class: NSZone
+        name: "getName"
+    ^NSSetZoneName$:
+        class: NSZone
+        name: "setName"
+    ^NS(Create|Recycle)Zone$:
+        class: NSZone
+        name: "#{g[0]}"
+    ^NS(DefaultMallocZone)$:
+        class: NSZone
+        name: "get#{g[0]}"
+    ^NSZone(.*)$:
+        class: NSZone
+        name: "#{g[0]}"
+    ^NS((Allocate|Deallocate|Copy)MemoryPages)$:
+        class: NSZone
+        name: "#{g[0]}"
+    ^NS((Log)?PageSize)$:
+        class: NSZone
+        name: "get#{g[0]}"
+    ^NS(.*PageSize)$:
+        class: NSZone
+        name: "#{g[0]}"
+    ^NS(RealMemoryAvailable)$:
+        class: NSZone
+        name: "get#{g[0]}"
+
+    # Make sure we don't miss any functions if new ones are introduced in a later Foundation
     ^(NS.*)$:
         name: "Function__#{g[0]}"
 
@@ -862,11 +940,11 @@ values:
     ^NS(Global|Argument|Registration)Domain$:
         class: NSUserDefaults
         name: "Domain#{g[0]}"
-    # Make sure we don't miss any values if new ones are introduced in a later Foundation
     ^NSFoundation(.*)$:
         class: Foundation
         readonly: true
         name: "#{g[0]}"
+    # Make sure we don't miss any values if new ones are introduced in a later Foundation
     ^(NS.*)$:
         class: Foundation
         name: "Value__#{g[0]}"
