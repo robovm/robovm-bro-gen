@@ -133,6 +133,7 @@ classes:
                 parameters:
                     objects:
                         type: "@Pointer long"
+            '-init.*': {exclude: true}
             "-containsObject:":
                 visibility: protected
             "-count":
@@ -192,12 +193,15 @@ classes:
                 name: await
     ^NSConditionLock$: {}
     ^NSCountedSet$: {}
-    ^NSData$: {}
+    ^NSData$:
+        '-init.*': {exclude: true}
     ^NSDataDetector$: {}
     ^NSDate$:
         methods:
             '^\+timeIntervalSinceReferenceDate$':
                 exclude: true
+            '-initWithTimeIntervalSince1970:': {}
+            '-init.*': {exclude: true}
     ^NSDateComponents$: {}
     ^NSDateFormatter$: {}
     ^NSDecimalNumber$: {}
@@ -381,6 +385,8 @@ classes:
                 exclude: true
             "^-unsigned.*Value$":
                 exclude: true
+            '-init.*':
+                exclude: true
     ^NSNumberFormatter$: {}
     ^NSObject$:
         skip_def_constructor: true
@@ -391,10 +397,10 @@ classes:
                 visibility: protected
             "-release":
                 visibility: protected
-            # "-init":
-            #     visibility: private
-            #     constructor: false
-            #     return_type: '@Pointer long'
+            "-init":
+                visibility: private
+                constructor: false
+                return_type: '@Pointer long'
             "-description":
             "-isEqual:":
                 visibility: protected
@@ -486,6 +492,7 @@ classes:
                 parameters:
                     characters:
                         type: "@Pointer long"
+            '-init.*': { exclude: true }
             "-characterAtIndex:":
             "-length":
             "-getCharacters:range:":
