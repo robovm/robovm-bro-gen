@@ -1240,9 +1240,10 @@ def property_to_java(model, owner, prop, props_conf)
   conf = model.get_conf_for_key(prop.name, props_conf) || {}
   if !conf['exclude']
     name = conf['name'] || prop.name
-    getter = "get#{name[0, 1].upcase + name[1..-1]}"
-    setter = "set#{name[0, 1].upcase + name[1..-1]}"
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
+    base = name[0, 1].upcase + name[1..-1]
+    getter = type[0] == 'boolean' ? "is#{base}" : "get#{base}"
+    setter = "set#{base}"
     visibility = conf['visibility'] || 'public'
     native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
@@ -1257,7 +1258,7 @@ def property_to_java(model, owner, prop, props_conf)
   end
 end
 
-def method_to_java(model, owner, method, methods_conf)
+def method_to_java(model, owner_name, owner, method, methods_conf)
   conf = model.get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, methods_conf) || {}
   if method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
     param_types = method.parameters.map {|e| e.type.spelling}
@@ -1265,7 +1266,7 @@ def method_to_java(model, owner, method, methods_conf)
       param_types.push('...')
     end
     $stderr.puts "WARN: Ignoring variadic method '#{owner.name}.#{method.name}(#{param_types.join(', ')})' at #{Bro::location_to_s(method.location)}"
-    []
+    [[], []]
   elsif !conf['exclude']
     name = conf['name'] || method.name.gsub(/:/, '$')
     ret_type = get_generic_type(model, owner, method, method.return_type, 0, conf['return_type'])
@@ -1288,10 +1289,16 @@ def method_to_java(model, owner, method, methods_conf)
       ret_anno = $1
       ret_type[0] = ret_type[0].sub(/^@.*\s+(.*)$/, '\1')
     end
-    lines = ["@Method(selector = \"#{method.name}\")", "#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
-    lines
+    method_lines = ["@Method(selector = \"#{method.name}\")", "#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+    constructor_lines = []
+    if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
+      constructor_visibility = conf['constructor_visibility'] || 'public'
+      args_s = param_types.map {|p| p[2]}.join(', ')
+      constructor_lines = ["#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }"]
+    end
+    [method_lines, constructor_lines]
   else
-    []
+    [[], []]
   end
 end
 
@@ -1321,6 +1328,7 @@ ARGV[1..-1].each do |yaml_file|
   imports << "org.robovm.objc.*"
   imports << "org.robovm.objc.annotation.*"
   imports << "org.robovm.objc.block.*"
+  imports << "org.robovm.rt.*"
   imports << "org.robovm.rt.bro.*"
   imports << "org.robovm.rt.bro.annotation.*"
   imports << "org.robovm.rt.bro.ptr.*"
@@ -1633,10 +1641,23 @@ ARGV[1..-1].each do |yaml_file|
     owner_name = c['name'] || owner.java_name
     data = template_datas[owner_name] || {}
     data['name'] = owner_name
-    methods_s = methods.map do |m|
-      method_to_java(model, owner, m, c['methods'] || {})
-    end.flatten.join("\n    ")
+    methods_lines = []
+    constructors_lines = []
+    methods.each do |m|
+      a = method_to_java(model, owner_name, owner, m, c['methods'] || {})
+      methods_lines.concat(a[0])
+      constructors_lines.concat(a[1])
+    end
+    if !c['skip_skip_init_constructor']
+      constructors_lines.unshift("protected #{owner_name}(SkipInit skipInit) { super(skipInit); }")
+    end
+    if !c['skip_def_constructor']
+      constructors_lines.unshift("public #{owner_name}() {}")
+    end
+    methods_s = methods_lines.flatten.join("\n    ")
+    constructors_s = constructors_lines.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
+    data['constructors'] = (data['constructors'] || '') + "\n    #{constructors_s}\n    "
     template_datas[owner_name] = data
   end
 
