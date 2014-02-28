@@ -17,6 +17,13 @@ typedefs:
     "NSString *": String
     "NSString **": "NSString.NSStringPtr"
     "BOOL *": BytePtr
+    "NSArray *": NSArray<? extends NSObject>
+    "NSArray **": "NSArray.NSArrayPtr<? extends NSObject>"
+    "NSSet *": NSSet<? extends NSObject>
+    "NSSet **": "NSSet.NSSetPtr<? extends NSObject>"
+    "NSOrderedSet *": NSOrderedSet<? extends NSObject>
+    "NSOrderedSet **": "NSOrderedSet.NSOrderedSetPtr<? extends NSObject>"
+    "NSEnumerator *": NSEnumerator<? extends NSObject>
 enums:
 #    NSTextAlignment: {}
 #    NSWritingDirection: {}
@@ -125,25 +132,47 @@ classes:
             "-initWithArray:":
                 visibility: protected
                 constructor: false
-                return_type: "@Pointer long"
             "-initWithObjects:count:":
                 visibility: protected
                 constructor: false
-                return_type: "@Pointer long"
                 parameters:
                     objects:
                         type: "@Pointer long"
-            '-init.*': {exclude: true}
             "-containsObject:":
                 visibility: protected
             "-count":
                 visibility: protected
             "-objectAtIndex:":
                 visibility: protected
-            "-indexOfObject:":
+            "-indexOfObject:$":
                 visibility: protected
             "-subarrayWithRange:":
                 visibility: protected
+                return_type: NSArray<T>
+            '+arrayWithContentsOfFile:':
+                visibility: protected
+                return_type: NSArray<? extends NSObject>
+            '+arrayWithContentsOfURL:':
+                name: read
+                return_type: NSArray<? extends NSObject>
+            '-writeToFile:atomically:':
+                visibility: protected
+            '-writeToURL:atomically:':
+                name: write
+            '-componentsJoinedByString:':
+                name: join
+            '-firstObject$':
+                name: getFirst
+            '-lastObject$':
+                name: getLast
+            '-addObserver:toObjectsAtIndexes:forKeyPath:options:context:':
+                name: addObserver
+            '-removeObserver:fromObjectsAtIndexes:forKeyPath:context:':
+                name: removeObserver
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSAssertionHandler$: {}
     ^NSAttributedString$: {}
     ^NSAutoreleasePool$:
@@ -194,7 +223,57 @@ classes:
     ^NSConditionLock$: {}
     ^NSCountedSet$: {}
     ^NSData$:
-        '-init.*': {exclude: true}
+        methods:
+
+            '-initWithData:':
+            '-initWithBase64EncodedData:options:':
+                constructor: false
+            '-initWithBase64EncodedString:options:':
+                constructor: false
+            '-initWithBytes:length:':
+                constructor: false
+                parameters:
+                    bytes:
+                        type: "@Pointer long"
+            '-initWithBytesNoCopy:length:freeWhenDone:':
+                constructor: false
+                parameters:
+                    bytes:
+                        type: "@Pointer long"
+
+            '-length':
+                name: getLength
+            '-bytes':
+                visibility: protected
+                return_type: "@Pointer long"
+            '-getBytes:length:':
+                visibility: protected
+                parameters:
+                    buffer:
+                        type: "@Pointer long"
+            '-subdataWithRange:':
+                name: getSubdata
+            '-rangeOfData:options:range:':
+                name: find
+
+            '-writeToFile.*':
+                visibility: protected
+            '-writeToURL.*':
+                name: write
+
+            '-base64EncodedDataWithOptions:':
+                name: toBase64EncodedData
+            '-base64EncodedStringWithOptions:':
+                name: toBase64EncodedString
+
+            '+dataWithContentsOfURL.*':
+                name: read
+            '+dataWithContentsOf.*File.*':
+                visibility: protected
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSDataDetector$: {}
     ^NSDate$:
         methods:
@@ -234,14 +313,14 @@ classes:
                 visibility: protected
             "-writeToFile:atomically:":
                 name: writeToFile
+
+            '-init$': {exclude: true}
+
     ^NSDirectoryEnumerator$: {}
     ^NSEnumerator$:
         methods:
-            # "-allObjects":
-            #     return_type: NSArray<T>
-            # "-nextObject":
-            #     name: _nextObject
-            #     visibility: protected
+            '-nextObject':
+                return_type: T
     ^NSError$: {}
     ^NSException$: {}
     ^NSExpression$: {}
@@ -249,7 +328,13 @@ classes:
     ^NSFileHandle$: {}
     ^NSFileManager$: {}
     ^NSFileVersion$: {}
-    ^NSFileWrapper$: {}
+    ^NSFileWrapper$:
+        methods:
+            '-initWithSerializedRepresentation:':
+                constructor: false
+            '-serializedRepresentation':
+                name: serialize
+
     ^NSFormatter$: {}
     ^NSHashTable$: {}
     ^NSHTTPCookie$: {}
@@ -266,7 +351,14 @@ classes:
                 name: addIndex
             "-indexPathByRemovingLastIndex":
                 name: removeLastIndex
-    ^NSIndexSet$: {}
+
+            '-init$': {exclude: true}
+
+    ^NSIndexSet$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSInputStream$: {}
     ^NSInvocation$: {}
     ^NSInvocationOperation$: {}
@@ -284,7 +376,11 @@ classes:
             '^\+setClass:forClassName:$':
                 name: setDefaultClass
     ^NSLinguisticTagger$: {}
-    ^NSLocale$: {}
+    ^NSLocale$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSLock$: {}
     ^NSMachPort$:
         methods:
@@ -301,14 +397,62 @@ classes:
     ^NSMapTable$: {}
     ^NSMessagePort$: {}
     ^NSMetadataItem$: {}
-    ^NSMetadataQuery$: {}
+    ^NSMetadataQuery$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSMetadataQueryAttributeValueTuple$: {}
     ^NSMetadataQueryResultGroup$: {}
     ^NSMethodSignature$: {}
-    ^NSMutableArray$: {}
+    ^NSMutableArray$:
+        methods:
+            '-removeObjectAtIndex:':
+                visibility: protected
+            '-init$': {exclude: true}
+
+#            '\+.*': {exclude: true}
+#            '-.*': {exclude: true}
+
     ^NSMutableAttributedString$: {}
     ^NSMutableCharacterSet$: {}
-    ^NSMutableData$: {}
+    ^NSMutableData$:
+        methods:
+
+            '-initWithCapacity:':
+            '-increaseLengthBy:':
+                name: increaseLength
+            '-setLength:':
+                name: setLength
+            '-mutableBytes':
+                visibility: protected
+                return_type: "@Pointer long"
+            '-appendBytes:length:':
+                visibility: protected
+                parameters:
+                    bytes:
+                        type: "@Pointer long"
+            '-appendData:':
+                name: append
+            '-replaceBytesInRange:withBytes:':
+                visibility: protected
+                parameters:
+                    bytes:
+                        type: "@Pointer long"
+            '-replaceBytesInRange:withBytes:length:':
+                visibility: protected
+                parameters:
+                    replacementBytes:
+                        type: "@Pointer long"
+            '-resetBytesInRange:':
+                name: resetRange
+            '-setData:':
+                name: setData
+
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSMutableDictionary$:
         skip_def_constructor: true
         methods:
@@ -322,15 +466,41 @@ classes:
             "-removeObjectForKey:":
                 visibility: protected
             "-initWithCapacity:":
+
+#            '\+.*': {exclude: true}
+#            '-.*': {exclude: true}
+
     ^NSMutableIndexSet$: {}
-    ^NSMutableOrderedSet$: {}
-    ^NSMutableSet$: {}
+    ^NSMutableOrderedSet$:
+        methods:
+
+            '-init$': {exclude: true}
+
+#            '\+.*': {exclude: true}
+#            '-.*': {exclude: true}
+
+    ^NSMutableSet$:
+        methods:
+
+            '-init$': {exclude: true}
+
+#            '\+.*': {exclude: true}
+#            '-.*': {exclude: true}
+
     ^NSMutableString$: {}
     ^NSMutableURLRequest$: {}
     ^NSNetService$: {}
-    ^NSNetServiceBrowser$: {}
-    ^NSNotification$: {}
-    ^NSNotificationCenter$: {}
+    ^NSNetServiceBrowser$:
+        methods:
+
+            '-init$': {exclude: true}
+
+    ^NSNotification$:
+        methods:
+            '-init$': {exclude: true}
+    ^NSNotificationCenter$:
+        methods:
+            '-init$': {exclude: true}
     ^NSNotificationQueue$:
         methods:
             "-dequeueNotificationsMatching:coalesceMask:$":
@@ -400,25 +570,142 @@ classes:
             "-init":
                 visibility: private
                 constructor: false
-                return_type: '@Pointer long'
             "-description":
+                visibility: protected
             "-isEqual:":
                 visibility: protected
             "-hash":
                 visibility: protected
+
+            '-copy':
+            '-mutableCopy':
+
+            '-performSelectorInBackground:withObject:':
+                name: performSelectorInBackground
+            '-performSelector.*':
+                name: performSelector
+            '-cancelPreviousPerformRequests.*':
+                name: cancelPreviousPerformRequests
+
+            '–addObserver:forKeyPath:options:context:':
+                name: addObserver
+            '-removeObserver:forKeyPath:context:':
+                name: removeObserver
+            '-didChange:values.*':
+                name: didChangeValues
+            '-didChangeValue.*':
+                name: didChangeValue
+            '-willChange:values.*':
+                name: willChangeValues
+            '-willChangeValue.*':
+                name: willChangeValue
+            '-observeValueForKeyPath:ofObject:change:context:':
+                name: observeValue
+#            '+automaticallyNotifiesObserversForKey':
+#                name: automaticallyNotifiesObservers
+#            '+keyPathsForValuesAffectingValueForKey:':
+#                name: getKeyPathsForValuesAffectingValue
+
+            '-setValue:forKey(.*):':
+                name: 'setValueForKey#{g[0]}'
+            '-setValuesForKeysWithDictionary:':
+                name: setValuesForKeys
+            '-setNilValueForKey:':
+                name: setNilValueForKey
+            '-setValue:forUndefinedKey:':
+                name: 'setValueForUndefinedKey'
+
+            '-valueForKey(.*):':
+                name: 'getValueForKey#{g[0]}'
+            '-dictionaryWithValuesForKeys:':
+                name: getDictionaryWithValuesForKeys
+            '-valueForUndefinedKey:':
+                name: getValueForUndefinedKey
+            '-mutable(.*ValueForKey.*):':
+                name: 'getMutable#{g[0]}'
+            '-validateValue:forKey:error:':
+                name: validateValueForKey
+            '-validateValue:forKeyPath:error:':
+                name: validateValueForKeyPath
+
+            "-conformsToProtocol:$":
+                name: conformsToProtocol
+            '-respondsToSelector:$':
+                name: respondsToSelector
+            '-isMemberOfClass:':
+                name: isMemberOfClass
+            '-isKindOfClass:':
+                name: isKindOfClass
+
             "-class$": { exclude: true }
             "-superclass$": { exclude: true }
             "-finalize$": { exclude: true }
             "-self$": { exclude: true }
             "-zone$": { exclude: true }
             "-autorelease$": { exclude: true }
-            "-conformsToProtocol:$": { exclude: true }
-    ^NSOperation$: {}
+
+            '\+.*': { exclude: true }
+            '-.*': { exclude: true }
+
+    ^NSOperation$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSOperationQueue$: {}
-    ^NSOrderedSet$: {}
+    ^NSOrderedSet$:
+        methods:
+            "-initWithArray:$":
+                constructor: false
+            "-initWithOrderedSet:$":
+                constructor: false
+            "-initWithObjects:count:$":
+                constructor: false
+                parameters:
+                    objects:
+                        type: "@Pointer long"
+            "-count":
+                visibility: protected
+            "-objectEnumerator":
+                visibility: protected
+                return_type: NSEnumerator<T>
+            "-containsObject:":
+                visibility: protected
+            "-objectAtIndex:":
+                visibility: protected
+            '-objectsAtIndexes:':
+                visibility: protected
+                return_type: NSArray<T>
+            "-indexOfObject:$":
+                visibility: protected
+            "-subarrayWithRange:":
+                visibility: protected
+                return_type: NSOrderedSet<T>
+            '-firstObject$':
+                name: getFirst
+            '-lastObject$':
+                name: getLast
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSOrthography$: {}
-    ^NSOutputStream$: {}
-    ^NSPipe$: {}
+    ^NSOutputStream$:
+        skip_def_constructor: true
+        methods:
+            '-write:maxLength:':
+                visibility: protected
+                parameters:
+                    buffer:
+                        type: "@Pointer long"
+            '-init$': {exclude: true}
+            '+outputStream.*': {exclude: true}
+
+    ^NSPipe$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSPointerArray$: {}
     ^NSPointerFunctions$: {}
     ^NSPort$: {}
@@ -463,17 +750,11 @@ classes:
     ^NSSet$:
         methods:
             "-initWithArray:":
-                visibility: protected
                 constructor: false
-                return_type: "@Pointer long"
             "-initWithSet:":
-                visibility: protected
                 constructor: false
-                return_type: "@Pointer long"
             "-initWithObjects:count:":
-                visibility: protected
                 constructor: false
-                return_type: "@Pointer long"
                 parameters:
                     objects:
                         type: "@Pointer long"
@@ -483,6 +764,11 @@ classes:
                 visibility: protected
             "-objectEnumerator":
                 visibility: protected
+                return_type: NSEnumerator<T>
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSSortDescriptor$: {}
     ^NSStream$: {}
     ^NSString$:
@@ -507,17 +793,33 @@ classes:
             '^\+setThreadPriority:$': { exclude: true }
             '^\+isMainThread$': { exclude: true }
             '^\+callStack.*$': { exclude: true }
+
+            '-init$': {exclude: true}
+
     ^NSTimer$: {}
     ^NSTimeZone$: {}
     ^NSUbiquitousKeyValueStore$: {}
     ^NSUndoManager$: {}
-    ^NSURL$: {}
+    ^NSURL$:
+        methods:
+            '-initFileURLWithPath:.*':
+                constructor: false
+
+            '-initFileURLWithFileSystemRepresentation:isDirectory:relativeToURL:': {exclude: true}
+            '+fileURL.*': {exclude: true}
+            '+URL.*': {exclude: true}
+
     ^NSURLAuthenticationChallenge$: {}
     ^NSURLCache$: {}
     ^NSURLConnection$: {}
     ^NSURLCredential$: {}
     ^NSURLCredentialStorage$: {}
-    ^NSURLProtectionSpace$: {}
+    ^NSURLProtectionSpace$:
+        methods:
+            '-initWithHost:port:protocol:realm:authenticationMethod:':
+                constructor: false
+            '-initWithProxyHost:port:type:realm:authenticationMethod:':
+                constructor: false
     ^NSURLProtocol$: {}
     ^NSURLRequest$: {}
     ^NSURLResponse$: {}
@@ -527,11 +829,18 @@ classes:
     ^NSURLSessionDownloadTask$: {}
     ^NSURLSessionTask$: {}
     ^NSURLSessionUploadTask$: {}
-    ^NSUserDefaults$: {}
+    ^NSUserDefaults$:
+        methods:
+
+            '-init$': {exclude: true}
+
     ^NSUUID$:
         methods:
             "-UUIDString":
                 name: asString
+
+            '-init$': {exclude: true}
+
     ^NSValue$: {}
     ^NSValueTransformer$: {}
     ^NSXMLParser$: {}
@@ -542,7 +851,7 @@ protocols:
         methods:
             "^-initWithCoder:$":
                 exclude: true
-    ^NSCopying$: {}
+#    ^NSCopying$: {}
     ^NSDecimalNumberBehaviors$: {}
     ^NSErrorRecoveryAttempting$: {}
 #    ^NSFastEnumeration$: {}
@@ -555,7 +864,7 @@ protocols:
     ^NSLocking$: {}
     ^NSMachPortDelegate$: {}
     ^NSMetadataQueryDelegate$: {}
-    ^NSMutableCopying$: {}
+#    ^NSMutableCopying$: {}
     ^NSNetServiceBrowserDelegate$: {}
     ^NSNetServiceDelegate$: {}
     ^NSObject$:
@@ -603,13 +912,15 @@ functions:
         name: "#{g[0]}"
 
     ^NS(.*ExtraRefCount.*)$:
-        class: NSObject
-        name: "#{g[0]}"
-        visibility: protected
+        exclude: true
+#        class: NSObject
+#        name: "#{g[0]}"
+#        visibility: protected
     ^NS(ShouldRetainWithZone)$:
-        class: NSObject
-        name: "#{g[0]}"
-        visibility: protected
+        exclude: true
+#        class: NSObject
+#        name: "#{g[0]}"
+#        visibility: protected
 
     ^NS(UserName|FullUserName|HomeDirectory|HomeDirectoryForUser|TemporaryDirectory|OpenStepRootDirectory)$:
         class: NSPathUtilities
