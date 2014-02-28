@@ -1323,6 +1323,7 @@ ARGV[1..-1].each do |yaml_file|
   conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {})
 
   imports = []
+  imports << "java.io.*"
   imports << "java.nio.*"
   imports << "java.util.*"
   imports << "org.robovm.objc.*"
