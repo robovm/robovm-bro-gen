@@ -882,7 +882,11 @@ module Bro
           names = $2.split(/\s*,/)
           types = names.map {|e| @objc_protocols.find {|p| p.name == e}}
           if types.find_all {|e| !e}.empty?
-            ObjCId.new(types)
+            if types.size == 1
+              types[0]
+            else
+              ObjCId.new(types)
+            end
           else
             nil
           end
@@ -1268,12 +1272,22 @@ def method_to_java(model, owner_name, owner, method, methods_conf)
     $stderr.puts "WARN: Ignoring variadic method '#{owner.name}.#{method.name}(#{param_types.join(', ')})' at #{Bro::location_to_s(method.location)}"
     [[], []]
   elsif !conf['exclude']
-    name = conf['name'] || method.name.gsub(/:/, '$')
     ret_type = get_generic_type(model, owner, method, method.return_type, 0, conf['return_type'])
     params_conf = conf['parameters'] || {}
     param_types = method.parameters.inject([]) do |l, p|
       l.push(get_generic_type(model, owner, method, p.type, l.size + 1, (params_conf[p.name] || {})['type'], p.name))
       l
+    end
+    name = conf['name']
+    if !name
+      name = method.name.gsub(/:/, '$')
+      if method.parameters.empty? && method.return_type.kind != :type_void && conf['property']
+        base = name[0, 1].upcase + name[1..-1]
+        name = ret_type[0] == 'boolean' ? "is#{base}" : "get#{base}"
+      elsif method.name.start_with?('set') && method.name.size > 3 && method.parameters.size == 1 && method.return_type.kind == :type_void && conf['property']
+        base = name[0, 1].upcase + name[1..-2]
+        name = "set#{base}"
+      end
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
     visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || ''
@@ -1598,13 +1612,17 @@ ARGV[1..-1].each do |yaml_file|
 
   def protocol_list(model, keyword, protocols, conf)
     l = []
-    (conf['protocols'] || protocols).each do |name|
-      c = model.get_protocol_conf(name)
-      if c
-        l.push(model.objc_protocols.find {|p| p.name == name}.java_name)
+    if conf['protocols']
+      l = conf['protocols']
+    else
+      protocols.each do |name|
+        c = model.get_protocol_conf(name)
+        if c
+          l.push(model.objc_protocols.find {|p| p.name == name}.java_name)
+        end
       end
     end
-    l.empty? ? '' : (keyword + " " + l.join(', '))
+    l.empty? ? nil : (keyword + " " + l.join(', '))
   end
 
   model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
@@ -1631,7 +1649,7 @@ ARGV[1..-1].each do |yaml_file|
       data = template_datas[name] || {}
       data['name'] = name
       data['visibility'] = c['visibility'] || 'public'
-      data['implements'] = protocol_list(model, 'extends', prot.protocols, c)
+      data['implements'] = protocol_list(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
       data['imports'] = imports_s
       data['template'] = def_protocol_template
       template_datas[name] = data
