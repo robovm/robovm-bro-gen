@@ -423,8 +423,49 @@ classes:
     ^NSLinguisticTagger$: {}
     ^NSLocale$:
         methods:
+            '+(autoupdatingCurrent|current|system)Locale$':
+                property: true
+                return_type: NSLocale
+            '-localeIdentifier':
+                property: true
+            '+(ISO.*|availableLocaleIdentifiers|commonISOCurrencyCodes|preferredLanguages)$':
+                property: true
+                return_type: NSArray<NSString>
+            '+canonical(.*Identifier)FromString:':
+                property: true
+                name: "getCanonical#{g[0]}"
+            '+characterDirectionForLanguage:':
+                name: getCharacterDirection
+            '+lineDirectionForLanguage:':
+                name: getLineDirection
+            '+componentsFromLocaleIdentifier:$':
+                name: getCmponentsFromLocaleIdentifier
+                return_type: "NSDictionary<NSString, ?>"
+            '+localeIdentifierFromComponents:$':
+                name: getLocaleIdentifierFromComponents
+                parameters:
+                    dict:
+                        type: "NSDictionary<NSString, ?>"
+            '+localeIdentifierFromWindowsLocaleCode:$':
+                name: getLocaleIdentifierFromWindowsLocaleCode
+            '+windowsLocaleCodeFromLocaleIdentifier:$':
+                name: getWindowsLocaleCodeFromLocaleIdentifier
 
-            '-init$': {exclude: true}
+            '-displayNameForKey:value:$':
+                name: getDisplayName
+                parameters:
+                    key:
+                        type: NSString
+            '-objectForKey:$':
+                name: getComponent
+                parameters:
+                    key:
+                        type: NSString
+
+            '-initWithLocaleIdentifier:$':
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSLock$: {}
     ^NSMachPort$:
@@ -990,6 +1031,13 @@ functions:
     ^NSGetSizeAndAlignment$:
         exclude: true
 
+    ^NSDecimalString$:
+        class: NSDecimal
+        name: toString
+        static: true
+        visibility: protected
+    ^NSDecimalCopy$:
+        exclude: true
     ^NSDecimal(.*)$:
         class: NSDecimal
         name: "#{g[0]}"
@@ -1184,6 +1232,10 @@ values:
     ^NSCurrentLocaleDidChangeNotification$:
         class: NSLocale
         name: "NotificationCurrentLocaleDidChange"
+    ^NSLocale(.*)Key$:
+        class: NSLocale
+        type: NSString
+        name: "Key#{g[0]}"
     ^NSLocale(.*)$:
         class: NSLocale
         type: NSString
