@@ -1442,8 +1442,12 @@ ARGV[1..-1].each do |yaml_file|
   model.typedefs.each do |td|
     c = model.get_class_conf(td.name)
     if c && !c['exclude']
+      struct = td.struct
+      if struct && struct.is_opaque?
+        struct = model.structs.find {|e| e.name == td.struct.name} || td.struct
+      end
       name = c['name'] || td.name
-      template_datas[name] = (!td.struct || td.struct.is_opaque?) ? opaque_to_java(model, {}, name, c) : struct_to_java(model, {}, name, td.struct, c)
+      template_datas[name] = (!struct || struct.is_opaque?) ? opaque_to_java(model, {}, name, c) : struct_to_java(model, {}, name, struct, c)
     end
   end
 
