@@ -216,28 +216,28 @@ module Bro
       @ios_version = nil
       @mac_dep_version = nil
       @ios_dep_version = nil
-      if source.match('^(CF|NS)_[A-Z_]*AVAILABLE_IOS')
+      if source.match(/_AVAILABLE_IOS\(/)
         @ios_version = args[0].sub(/_/, '.')
-      elsif source.match('(CF|NS)_[A-Z_]*AVAILABLE_MAC')
+      elsif source.match(/_AVAILABLE_MAC\(/)
         @mac_version = args[0].sub(/_/, '.')
-      elsif source.match('(CF|NS)_[A-Z_]*AVAILABLE')
+      elsif source.match(/_AVAILABLE\(/)
         @mac_version = args[0].sub(/_/, '.')
         @ios_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED_MAC')
+      elsif source.match(/_DEPRECATED_MAC\(/)
         @mac_version = args[0].sub(/_/, '.')
         @mac_dep_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED_IOS')
+      elsif source.match(/_DEPRECATED_IOS\(/)
         @ios_version = args[0].sub(/_/, '.')
         @ios_dep_version = args[1].sub(/_/, '.')
-      elsif source.start_with?('^(CF|NS)_[A-Z_]*DEPRECATED')
+      elsif source.match(/_DEPRECATED\(/)
         @mac_version = args[0].sub(/_/, '.')
         @mac_dep_version = args[1].sub(/_/, '.')
         @ios_version = args[2].sub(/_/, '.')
         @ios_dep_version = args[3].sub(/_/, '.')
-      elsif source.start_with?('__OSX_AVAILABLE_STARTING')
+      elsif source.match(/_AVAILABLE_STARTING\(/)
         @mac_version = args[0].sub(/^__MAC_/, '').sub(/_/, '.')
         @ios_version = args[1].sub(/^__IPHONE_/, '').sub(/_/, '.')
-      elsif source.start_with?('__OSX_AVAILABLE_BUT_DEPRECATED')
+      elsif source.match(/_AVAILABLE_BUT_DEPRECATED\(/)
         @mac_version = args[0].sub(/^__MAC_/, '').sub(/_/, '.')
         @mac_dep_version = args[1].sub(/^__MAC_/, '').sub(/_/, '.')
         @ios_version = args[2].sub(/^__IPHONE_/, '').sub(/_/, '.')
@@ -267,8 +267,8 @@ module Bro
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE'
       return UnavailableAttribute.new source
-    elsif source.match(/^(CF|NS)[A-Z_]*_AVAILABLE.*/) || source.match(/^(CF|NS)[A-Z_]*_DEPRECATED/) ||
-          source.start_with?('__OSX_AVAILABLE_STARTING') || source.start_with?('__OSX_AVAILABLE_BUT_DEPRECATED')
+    elsif source.match(/_AVAILABLE/) || source.match(/_DEPRECATED/) ||
+          source.match(/_AVAILABLE_STARTING/) || source.match(/_AVAILABLE_BUT_DEPRECATED/)
       return AvailableAttribute.new source
     else
       return UnsupportedAttribute.new source
