@@ -1218,6 +1218,7 @@ def opaque_to_java(model, data, name, conf)
   data['visibility'] = conf['visibility'] || 'public'
   data['extends'] = conf['extends'] || 'NativeObject'
   data['ptr'] = "public static class #{name}Ptr extends Ptr<#{name}, #{name}Ptr> {}"
+  data['constructors'] = "\n    protected #{name}() {}\n    "
   data
 end
 
