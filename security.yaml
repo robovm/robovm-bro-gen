@@ -62,6 +62,9 @@ functions:
     ^SSLContextGetTypeID:
         class: SSLContext
         name: getClassTypeID
+    ^SSLClose$:
+        class: SSLContext
+        name: closeContext
     ^SSL(.*)$:
         class: SSLContext
         name: "#{g[0]}"

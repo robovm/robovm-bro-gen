@@ -453,6 +453,9 @@ functions:
                 type: CFPropertyListMutabilityOptions
             options:
                 type: CFPropertyListMutabilityOptions
+    ^CFReadStream(Open|Close)$:
+        class: CFReadStream
+        name: "#{g[0]}Stream"
     ^CFReadStream(.*)$:
         class: CFReadStream
         name: "#{g[0]}"
@@ -551,6 +554,9 @@ functions:
     ^CFUUID(.*)$:
         class: CFUUID
         name: "#{g[0]}"
+    ^CFWriteStream(Open|Close)$:
+        class: CFWriteStream
+        name: "#{g[0]}Stream"
     ^CFWriteStream(.*)$:
         class: CFWriteStream
         name: "#{g[0]}"
