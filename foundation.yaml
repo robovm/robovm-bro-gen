@@ -17,13 +17,23 @@ typedefs:
     "NSString *": String
     "NSString **": "NSString.NSStringPtr"
     "BOOL *": BytePtr
-    "NSArray *": NSArray<? extends NSObject>
-    "NSArray **": "NSArray.NSArrayPtr<? extends NSObject>"
-    "NSSet *": NSSet<? extends NSObject>
-    "NSSet **": "NSSet.NSSetPtr<? extends NSObject>"
-    "NSOrderedSet *": NSOrderedSet<? extends NSObject>
-    "NSOrderedSet **": "NSOrderedSet.NSOrderedSetPtr<? extends NSObject>"
-    "NSEnumerator *": NSEnumerator<? extends NSObject>
+    "NSArray *": "NSArray<?>"
+    "NSArray **": "NSArray.NSArrayPtr<?>"
+    "NSMutableArray *": "NSMutableArray<?>"
+    "NSMutableArray **": "NSMutableArray.NSMutableArrayPtr<?>"
+    "NSDictionary *": "NSDictionary<?, ?>"
+    "NSDictionary **": "NSDictionary.NSDictionaryPtr<?>"
+    "NSMutableDictionary *": "NSMutableDictionary<?, ?>"
+    "NSMutableDictionary **": "NSMutableDictionary.NSMutableDictionaryPtr<?>"
+    "NSSet *": "NSSet<?>"
+    "NSSet **": "NSSet.NSSetPtr<?>"
+    "NSMutableSet *": "NSMutableSet<?>"
+    "NSMutableSet **": "NSMutableSet.NSMutableSetPtr<?>"
+    "NSOrderedSet *": "NSOrderedSet<?>"
+    "NSOrderedSet **": "NSOrderedSet.NSOrderedSetPtr<?>"
+    "NSMutableOrderedSet *": "NSMutableOrderedSet<?>"
+    "NSMutableOrderedSet **": "NSMutableOrderedSet.NSMutableOrderedSetPtr<?>"
+    "NSEnumerator *": "NSEnumerator<?>"
 enums:
 #    NSTextAlignment: {}
 #    NSWritingDirection: {}
@@ -144,6 +154,7 @@ classes:
                 visibility: protected
             "-objectAtIndex:":
                 visibility: protected
+                return_type: T
             "-indexOfObject:$":
                 visibility: protected
             "-subarrayWithRange:":
@@ -151,10 +162,10 @@ classes:
                 return_type: NSArray<T>
             '+arrayWithContentsOfFile:':
                 visibility: protected
-                return_type: NSArray<? extends NSObject>
+                return_type: NSArray<?>
             '+arrayWithContentsOfURL:':
                 name: read
-                return_type: NSArray<? extends NSObject>
+                return_type: NSArray<?>
             '-writeToFile:atomically:':
                 visibility: protected
             '-writeToURL:atomically:':
@@ -200,7 +211,18 @@ classes:
             '-pathsForResourcesOfType:inDirectory:$':
                 name: findResourcesPathsInSubPath
     ^NSByteCountFormatter$: {}
-    ^NSCache$: {}
+    ^NSCache$:
+        methods:
+            '-setDelegate:':
+                property: true
+                parameters:
+                    d:
+                        type: NSCacheDelegate
+            '-delegate':
+                property: true
+                return_type: NSCacheDelegate
+            '-(name|totalCostLimit|countLimit|evictsObjectsWithDiscardedContent)$':
+                property: true
     ^NSCachedURLResponse$:
         methods:
             "-storagePolicy":
@@ -221,7 +243,14 @@ classes:
             "^-waitUntilDate:$":
                 name: await
     ^NSConditionLock$: {}
-    ^NSCountedSet$: {}
+    ^NSCountedSet$:
+        methods:
+            '-countForObject:':
+                visibility: protected
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSData$:
         methods:
 
@@ -288,13 +317,13 @@ classes:
     ^NSDictionary$:
         methods:
             "+dictionaryWithContentsOfFile:":
-                name: fromFile
+                visibility: protected
                 return_type:
-                    NSDictionary
+                    NSDictionary<?, ?>
             "+dictionaryWithContentsOfURL:":
-                name: fromUrl
+                name: read
                 return_type:
-                    NSDictionary
+                    NSDictionary<?, ?>
             "-initWithDictionary:":
                 visibility: protected
                 constructor: false
@@ -305,16 +334,29 @@ classes:
                 return_type: "@Pointer long"
             "-allKeys":
                 visibility: protected
+                return_type: NSArray<K>
             "-allValues":
                 visibility: protected
+                return_type: NSArray<V>
             "-count":
                 visibility: protected
             "-objectForKey:":
                 visibility: protected
-            "-writeToFile:atomically:":
-                name: writeToFile
+                return_type: V
+                parameters:
+                    aKey:
+                        type: K
+            '-isEqualToDictionary:':
+                visibility: protected
+            '-writeToFile:atomically:':
+                visibility: protected
+            '-writeToURL:atomically:':
+                name: write
+            '-descriptionInStringsFileFormat':
+                name: toStringsFileFormat
 
-            '-init$': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSDirectoryEnumerator$: {}
     ^NSEnumerator$:
@@ -326,7 +368,10 @@ classes:
     ^NSExpression$: {}
     ^NSFileCoordinator$: {}
     ^NSFileHandle$: {}
-    ^NSFileManager$: {}
+    ^NSFileManager$:
+        methods:
+            '-ubiquityIdentityToken':
+                return_type: NSObject
     ^NSFileVersion$: {}
     ^NSFileWrapper$:
         methods:
@@ -407,12 +452,18 @@ classes:
     ^NSMethodSignature$: {}
     ^NSMutableArray$:
         methods:
+            '-initWithCapacity:':
             '-removeObjectAtIndex:':
                 visibility: protected
-            '-init$': {exclude: true}
+            '-removeAllObjects':
+                visibility: protected
+            '-replaceObjectAtIndex:withObject:':
+                visibility: protected
+            'insertObject:atIndex:':
+                visibility: protected
 
-#            '\+.*': {exclude: true}
-#            '-.*': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSMutableAttributedString$: {}
     ^NSMutableCharacterSet$: {}
@@ -467,25 +518,39 @@ classes:
                 visibility: protected
             "-initWithCapacity:":
 
-#            '\+.*': {exclude: true}
-#            '-.*': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSMutableIndexSet$: {}
     ^NSMutableOrderedSet$:
         methods:
+            '-initWithCapacity:':
+            '-removeObjectAtIndex:':
+                visibility: protected
+            '-removeAllObjects':
+                visibility: protected
+            '-replaceObjectAtIndex:withObject:':
+                visibility: protected
+            'insertObject:atIndex:':
+                visibility: protected
+            '-removeObject:':
+                visibility: protected
 
-            '-init$': {exclude: true}
-
-#            '\+.*': {exclude: true}
-#            '-.*': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSMutableSet$:
         methods:
+            '-addObject:':
+                visibility: protected
+            '-removeObject:':
+                visibility: protected
+            '-removeAllObjects':
+                visibility: protected
+            '-initWithCapacity:':
 
-            '-init$': {exclude: true}
-
-#            '\+.*': {exclude: true}
-#            '-.*': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSMutableString$: {}
     ^NSMutableURLRequest$: {}
@@ -673,6 +738,7 @@ classes:
                 visibility: protected
             "-objectAtIndex:":
                 visibility: protected
+                return_type: T
             '-objectsAtIndexes:':
                 visibility: protected
                 return_type: NSArray<T>
@@ -770,7 +836,12 @@ classes:
             '-.*': {exclude: true}
 
     ^NSSortDescriptor$: {}
-    ^NSStream$: {}
+    ^NSStream$:
+        methods:
+            '-close':
+                name: closeStream
+            '-open':
+                name: openStream
     ^NSString$:
         methods:
             "-initWithCharactersNoCopy:length:freeWhenDone:":
@@ -820,6 +891,9 @@ classes:
                 constructor: false
             '-initWithProxyHost:port:type:realm:authenticationMethod:':
                 constructor: false
+            '-(authenticationMethod|distinguishedNames|host|port|protocol|proxyType|realm|serverTrust)$':
+                property: true
+
     ^NSURLProtocol$: {}
     ^NSURLRequest$: {}
     ^NSURLResponse$: {}
@@ -832,14 +906,27 @@ classes:
     ^NSUserDefaults$:
         methods:
 
-            '-init$': {exclude: true}
+            '-init.*': {exclude: true}
 
     ^NSUUID$:
         methods:
-            "-UUIDString":
+            '-initWithUUIDString:':
+                constructor: false
+            '-initWithUUIDBytes:':
+                constructor: false
+                parameters:
+                    bytes:
+                        type: "@Pointer long"
+            '-getUUIDBytes:':
+                visibility: protected
+                parameters:
+                    uuid:
+                        type: "@Pointer long"
+            '-UUIDString':
                 name: asString
 
-            '-init$': {exclude: true}
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
 
     ^NSValue$: {}
     ^NSValueTransformer$: {}
@@ -869,6 +956,7 @@ protocols:
     ^NSNetServiceDelegate$: {}
     ^NSObject$:
         name: NSObjectProtocol
+        protocols: [ObjCProtocol]
         methods:
             "-.*":
                 exclude: true
