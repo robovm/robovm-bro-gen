@@ -189,27 +189,91 @@ classes:
     ^NSAutoreleasePool$:
         methods:
             "^-drain$": {}
-            "^+.*$": { exclude: true }
-            "^-.*$": { exclude: true }
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
     ^NSBlockOperation$: {}
     ^NSBundle$:
         methods:
-            "+mainBundle":
-                name: getMainBundle
-            "-bundlePath":
-                name: getBundlePath
-            "-resourcePath":
-                name: getResourcePath
-            "-infoDictionary":
-                name: getInfoDictionary
-            '^\+pathForResource:ofType:inDirectory:$':
+            '+(mainBundle)$':
+                property: true
+            '+(allBundles|allFrameworks)$':
+                property: true
+                return_type: NSArray<NSBundle>
+            '-(bundleURL|resourceURL|executableURL|privateFrameworksURL|sharedFrameworksURL|sharedSupportURL)$':
+                property: true
+            '-(builtInPlugInsURL|appStoreReceiptURL|bundlePath|resourcePath|executablePath|privateFrameworksPath)$':
+                property: true
+            '-(sharedFrameworksPath|sharedSupportPath|builtInPlugInsPath|bundleIdentifier|principalClass|developmentLocalization)$':
+                property: true
+            '-(infoDictionary|localizedInfoDictionary)$':
+                property: true
+            '-(preferredLocalizations|localizations)$':
+                property: true
+                return_type: NSArray<NSString>
+            '-(executableArchitectures)$':
+                property: true
+                return_type: NSArray<NSNumber>
+            '\+pathForResource:ofType:inDirectory:$':
+                name: findResourcePathInBundlePath
+            '\+pathsForResourcesOfType:inDirectory:$':
+                name: findResourcesPathsInBundlePath
+                return_type: NSArray<NSString>
+            '\+URLForResource:withExtension:subdirectory:inBundleWithURL:$':
+                name: findResourceURLInBundleURL
+            '\+URLsForResourcesWithExtension:subdirectory:inBundleWithURL:$':
+                name: findResourceURLsInBundleURL
+                return_type: NSArray<NSString>
+            '+preferredLocalizationsFromArray:.*$':
+                name: getPreferredLocalizations
+                return_type: NSArray<NSString>
+                parameters:
+                    localizationsArray:
+                        type: NSArray<NSString>
+                    preferencesArray:
+                        type: NSArray<NSString>
+            '-pathForAuxiliaryExecutable:':
+                name: findAuxiliaryExecutablePath
+            '-pathForResource:ofType:$':
                 name: findResourcePath
-            '^\+pathsForResourcesOfType:inDirectory:$':
-                name: findResourcesPaths
+            '-pathForResource:ofType:inDirectory:forLocalization:$':
+                name: findResourcePathInSubPath
             '-pathForResource:ofType:inDirectory:$':
                 name: findResourcePathInSubPath
             '-pathsForResourcesOfType:inDirectory:$':
                 name: findResourcesPathsInSubPath
+                return_type: NSArray<NSString>
+            '-pathsForResourcesOfType:inDirectory:forLocalization:':
+                name: findResourcesPathsInSubPath
+                return_type: NSArray<NSString>
+            '-classNamed:':
+                name: getClassNamed
+            '-loadAndReturnError:':
+                name: load
+            '-localizedStringForKey:value:table:':
+                name: getLocalizedString
+            '-objectForInfoDictionaryKey:':
+                name: getInfoDictionaryObject
+            '-preflightAndReturnError:':
+                name: preflight
+            '-URLForAuxiliaryExecutable:':
+                name: findAuxiliaryExecutableURL
+            '-URLForResource.*':
+                name: findResourceURLInSubPath
+            '-URLsForResources.*':
+                name: findResourceURLsInSubPath
+                return_type: NSArray<NSURL>
+
+            '+bundleForClass:$':
+                name: getBundle
+            '+bundleWithIdentifier:$':
+                name: getBundle
+            '-initWithPath:$':
+                constructor: false
+            '-initWithURL:$':
+
+            '+.*': {exclude: true}
+            '-.*': {exclude: true}
+
     ^NSByteCountFormatter$: {}
     ^NSCache$:
         methods:
