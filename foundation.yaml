@@ -188,7 +188,6 @@ classes:
     ^NSAttributedString$: {}
     ^NSAutoreleasePool$:
         methods:
-            "^-drain$": {}
             '+.*': {exclude: true}
             '-.*': {exclude: true}
     ^NSBlockOperation$: {}
@@ -734,9 +733,8 @@ classes:
         methods:
             "^\\+.*$": { exclude: true }
             "-retain":
-                visibility: protected
             "-release":
-                visibility: protected
+            "-autorelease":
             "-init":
                 visibility: private
                 constructor: false
