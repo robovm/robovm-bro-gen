@@ -1203,7 +1203,7 @@ def struct_to_java(model, data, name, struct, conf)
   constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
   constructor = constructor + constructor_body.join("\n        ")
   constructor = "#{constructor}\n    }"
-  data['constructors'] = "\n    #{constructor}\n    "
+  data['constructors'] = "\n    public #{name}() {}\n    #{constructor}\n    "
 
   data['name'] = name
   data['visibility'] = conf['visibility'] || 'public'
@@ -1504,13 +1504,15 @@ ARGV[1..-1].each do |yaml_file|
       visibility = fconf['visibility'] || 'public'
       parameters = f.parameters
       static = "static "
-      if !fconf['static'] && parameters.size >= 1 && model.resolve_type(parameters[0].type).java_name == owner
+      paramconf = fconf['parameters'] || {}
+      firstparamconf = parameters.size >= 1 ? paramconf[parameters[0].name] : nil
+      firstparamtype = (firstparamconf || {})['type']
+      if !fconf['static'] && parameters.size >= 1 && (firstparamtype == owner || model.resolve_type(parameters[0].type).java_name == owner)
         # Instance method
         parameters = parameters[1..-1]
         static = ""
       end
       java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
-      paramconf = fconf['parameters'] || {}
       java_parameters = parameters.map do |e|
         pconf = paramconf[e.name] || {}
         "#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
