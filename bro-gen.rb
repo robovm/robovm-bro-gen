@@ -262,8 +262,10 @@ module Bro
     if source.start_with?('__DARWIN_ALIAS_C') || source.start_with?('__DARWIN_ALIAS') || 
        source == 'CF_IMPLICIT_BRIDGING_ENABLED' || source.start_with?('DISPATCH_') || source.match(/^(CF|NS)_RETURNS_RETAINED/) ||
        source.match(/^(CF|NS)_INLINE$/) || source.match(/^(CF|NS)_FORMAT_FUNCTION.*/) || source.match(/^(CF|NS)_FORMAT_ARGUMENT.*/) || 
-       source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' ||
-       source == 'NS_ROOT_CLASS' || source == '__header_always_inline'
+       source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
+       source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
+       source.end_with?('_CLASS_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
+       source == 'OBJC_ROOT_CLASS'
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE'
       return UnavailableAttribute.new source
@@ -604,12 +606,15 @@ module Bro
       @instance_methods = []
       @class_methods = []
       @properties = []
+      @protocols = []
       @attributes = []
       @owner = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_obj_c_class_ref
           @owner = cursor.spelling
+        when :cursor_obj_c_protocol_ref
+          @protocols.push(cursor.spelling)
         when :cursor_obj_c_instance_method_decl
           @instance_methods.push(ObjCInstanceMethod.new(model, cursor, self))
         when :cursor_obj_c_class_method_decl
@@ -1253,7 +1258,8 @@ def property_to_java(model, owner, prop, props_conf)
     native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
-    lines = ["@Property(selector = \"#{prop.getter.name}\")", "#{[visibility,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}();"]
+    getter_selector = prop.getter ? prop.getter.name : prop.name
+    lines = ["@Property(selector = \"#{getter_selector}\")", "#{[visibility,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}();"]
     if !prop.is_readonly? && !conf['readonly']
       lines = lines + ["@Property(selector = \"#{prop.setter.name}\")", "#{[visibility,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{type[0]} v);"]
     end
