@@ -152,7 +152,7 @@ classes:
     __CFMessagePort:
         name: CFMessagePort
         extends: CFType
-    __CFMutableArray:
+    CFMutableArray:
         name: CFMutableArray
         extends: CFArray
     __CFMutableAttributedString:
@@ -300,30 +300,55 @@ functions:
     ^CF(.*)(CreateMutable.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        return_type: "CFMutable#{g[0]}"
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Add.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Append.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Exchange.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Insert.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Remove.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Replace.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(SetValue.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(Array|Bag|BitVector|Dictionary|Set)(Sort.*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
+        parameters:
+            theArray: {type: CFMutableArray}
+            theDict: {type: CFMutableDictionary}
     ^CF(BitVector)((Flip|Set).*)$:
         class: "CFMutable#{g[0]}"
         name: "#{g[1]}"
