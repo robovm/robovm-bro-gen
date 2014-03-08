@@ -695,19 +695,25 @@ module Bro
       @value = cursor.enum_value
       @type = cursor.type
       @enum = enum
+      @java_name = nil
     end
     def java_name
-      n = @name
-      if @name.start_with?(@enum.prefix)
-        n = @name[@enum.prefix.size..-1]
+      if @java_name
+        @java_name
+      else
+        n = @name
+        if @name.start_with?(@enum.prefix)
+          n = @name[@enum.prefix.size..-1]
+        end
+        if n.end_with?(@enum.suffix)
+          n = n[0..(n.size - @enum.suffix.size - 1)]
+        end
+        if n[0] >= '0' && n[0] <= '9'
+          n = "V#{n}"
+        end
+        @java_name = n
+        n
       end
-      if n.end_with?(@enum.suffix)
-        n = n[0..(n.size - @enum.suffix.size - 1)]
-      end
-      if /^[0-9].*/ =~ n
-        n = "V#{n}"
-      end
-      n
     end
   end
 
@@ -719,6 +725,7 @@ module Bro
       @type = cursor.type
       @enum_type = cursor.enum_type
       @attributes = []
+      @enum_conf = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_enum_constant_decl
@@ -740,7 +747,10 @@ module Bro
       @enum_type.kind == :type_enum ? @values.first.type.canonical : @enum_type
     end
     def enum_conf
-      (@model.conf_enums.find { |k, v| k == name || v['first'] == values.first.name } || [{}, {}])[1]
+      if !@enum_conf
+        @enum_conf = @model.conf_enums[name] || (@model.conf_enums.find { |k, v| k == name || v['first'] == values.first.name } || [{}, {}])[1]
+      end
+      @enum_conf
     end
     def suffix
         enum_conf['suffix'] || ''
@@ -895,6 +905,8 @@ module Bro
           else
             nil
           end
+        elsif name =~ /^(Class)<(.*)>$/
+          resolve_type_by_name('ObjCClass')
         else
           e = @objc_classes.find {|e| e.name == name}
           e && e.pointer
@@ -1401,10 +1413,11 @@ ARGV[1..-1].each do |yaml_file|
       data = {}
       java_name = enum.java_name
       bits = enum.is_options? || c['bits']
+      ignore = c['ignore']
       if bits
-        values = enum.values.find_all {|e| !c['ignore'] || !e.name.match(c['ignore'])}.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)" }.join(";\n    ") + ";"
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)" }.join(";\n    ") + ";"
       else
-        values = enum.values.find_all {|e| !c['ignore'] || !e.name.match(c['ignore'])}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
       end
       data['values'] = "\n    #{values}\n    "
       data['name'] = java_name
