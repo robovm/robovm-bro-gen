@@ -981,6 +981,14 @@ classes:
                 name: getDividerImage
             '-incrementImageForState:$':
                 name: getIncrementImage
+            '-setBackgroundImage:forState:$':
+                name: setBackgroundImage
+            '-setDividerImage:forLeftSegmentState:rightSegmentState:$':
+                name: setDividerImage
+            '-setIncrementImage:forState:$':
+                name: setIncrementImage
+            '-setDecrementImage:forState:$':
+                name: setDecrementImage
     ^UIStoryboard$:
         methods:
             '+storyboardWithName:bundle:$':
