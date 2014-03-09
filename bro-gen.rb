@@ -537,7 +537,7 @@ module Bro
   end
 
   class ObjCProtocol < Entity
-    attr_accessor :protocols, :instance_methods, :class_methods, :properties
+    attr_accessor :protocols, :instance_methods, :class_methods, :properties, :owner
     def initialize(model, cursor)
       super(model, cursor)
       @protocols = []
@@ -545,12 +545,15 @@ module Bro
       @class_methods = []
       @properties = []
       @opaque = false
+      @owner = nil
       @attributes = []
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_obj_c_protocol_ref
           @opaque = @name == cursor.spelling
           @protocols.push(cursor.spelling)
+        when :cursor_obj_c_class_ref
+          @owner = cursor.spelling
         when :cursor_obj_c_instance_method_decl
           @instance_methods.push(ObjCInstanceMethod.new(model, cursor, self))
         when :cursor_obj_c_class_method_decl
@@ -567,6 +570,10 @@ module Bro
           raise "Unknown cursor kind #{cursor.kind} in ObjC protocol at #{Bro::location_to_s(@location)}"
         end
         next :continue
+      end
+
+      def is_informal?
+        !!@owner
       end
 
       # Properties are also represented as instance methods in the AST. Remove any instance method
@@ -600,7 +607,7 @@ module Bro
   end
 
   class ObjCCategory < Entity
-    attr_accessor :instance_methods, :class_methods, :properties, :owner
+    attr_accessor :instance_methods, :class_methods, :properties, :owner, :protocols
     def initialize(model, cursor)
       super(model, cursor)
       @instance_methods = []
@@ -648,6 +655,11 @@ module Bro
           nil
         end
       end
+    end
+
+    def java_name
+      #name ? ((@model.get_category_conf(name) || {})['name'] || name) : ''
+      "#{@owner}Extensions"
     end
 
     def types
@@ -1108,7 +1120,14 @@ module Bro
           @objc_protocols.push ObjCProtocol.new self, cursor
           next :continue
         when :cursor_obj_c_category_decl
-          @objc_categories.push ObjCCategory.new self, cursor
+          cat = ObjCCategory.new self, cursor
+          c = get_category_conf("#{cat.name}@#{cat.owner}")
+          c = get_category_conf(cat.name) unless c
+          if c && c['protocol']
+            @objc_protocols.push ObjCProtocol.new self, cursor
+          else
+            @objc_categories.push cat
+          end
           next :continue
         else
           next :recurse
@@ -1267,13 +1286,21 @@ def property_to_java(model, owner, prop, props_conf)
     getter = type[0] == 'boolean' ? "is#{base}" : "get#{base}"
     setter = "set#{base}"
     visibility = conf['visibility'] || 'public'
-    native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
+    native = owner.is_a?(Bro::ObjCProtocol) ? "" : "native"
+    static = owner.is_a?(Bro::ObjCCategory) ? "static" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     getter_selector = prop.getter ? prop.getter.name : prop.name
-    lines = ["@Property(selector = \"#{getter_selector}\")", "#{[visibility,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}();"]
+    param_types = []
+    if owner.is_a?(Bro::ObjCCategory)
+      param_types.unshift([owner.owner, nil, 'thiz'])
+    end
+    parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+    lines = ["@Property(selector = \"#{getter_selector}\")", "#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
     if !prop.is_readonly? && !conf['readonly']
-      lines = lines + ["@Property(selector = \"#{prop.setter.name}\")", "#{[visibility,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{type[0]} v);"]
+      param_types.push([type[0], nil, 'v'])
+      parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+      lines = lines + ["@Property(selector = \"#{prop.setter.name}\")", "#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
     end
     lines
   else
@@ -1309,12 +1336,15 @@ def method_to_java(model, owner_name, owner, method, methods_conf)
       end
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
-    visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || ''
-    native = owner.is_a?(Bro::ObjCClass) ? "native" : ""
-    static = method.is_a?(Bro::ObjCClassMethod) ? "static" : ""
+    visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || owner.is_a?(Bro::ObjCCategory) && 'public' || ''
+    native = owner.is_a?(Bro::ObjCProtocol) ? "" : "native"
+    static = method.is_a?(Bro::ObjCClassMethod) || owner.is_a?(Bro::ObjCCategory) ? "static" : ""
   #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
+    if owner.is_a?(Bro::ObjCCategory)
+      param_types.unshift([owner.owner, nil, 'thiz'])
+    end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
     ret_anno = ''
     if generics_s.size > 0 && ret_type[0] =~ /^(@Pointer|@ByVal|@MachineSizedFloat|@MachineSizedSInt|@MachineSizedUInt)/
@@ -1603,17 +1633,36 @@ ARGV[1..-1].each do |yaml_file|
       properties[owner] = [(properties[owner] || [[]])[0] + cls.properties, cls, c]
     end
   end
+  unassigned_categories = []
   model.objc_categories.each do |cat|
-    c = model.get_category_conf(cat.name)
+    c = model.get_category_conf("#{cat.name}@#{cat.owner}")
+    c = model.get_category_conf(cat.name) unless c
     owner_name = c && c['owner'] || cat.owner
     owner_cls = model.objc_classes.find {|e| e.name == owner_name}
+    owner = nil
     if owner_cls
       owner_conf = model.get_class_conf(owner_cls.name)
       if owner_conf && !owner_conf['exclude']
         owner = owner_conf['name'] || owner_cls.java_name
         methods[owner] = [(methods[owner] || [[]])[0] + cat.instance_methods + cat.class_methods, owner_cls, owner_conf]
         properties[owner] = [(properties[owner] || [[]])[0] + cat.properties, owner_cls, owner_conf]
+        owner_cls.protocols = owner_cls.protocols + cat.protocols
       end
+    end
+    if !owner && model.is_included?(cat)
+      unassigned_categories.push(cat)
+    end
+  end
+  unassigned_categories.each do |cat|
+    c = model.get_category_conf("#{cat.name}@#{cat.owner}")
+    c = model.get_category_conf(cat.name) unless c
+    c = model.get_category_conf(cat.owner) unless c
+    if c && !c['exclude']
+      owner = c['name'] || cat.java_name
+      methods[owner] = [(methods[owner] || [[]])[0] + cat.instance_methods + cat.class_methods, cat, c]
+      properties[owner] = [(properties[owner] || [[]])[0] + cat.properties, cat, c]
+    else
+      $stderr.puts "WARN: Skipping category #{cat.name} for #{cat.owner}"
     end
   end
 
@@ -1693,11 +1742,19 @@ ARGV[1..-1].each do |yaml_file|
       methods_lines.concat(a[0])
       constructors_lines.concat(a[1])
     end
-    if !c['skip_skip_init_constructor']
-      constructors_lines.unshift("protected #{owner_name}(SkipInit skipInit) { super(skipInit); }")
-    end
-    if !c['skip_def_constructor']
-      constructors_lines.unshift("public #{owner_name}() {}")
+    if owner.is_a?(Bro::ObjCClass)
+      if !c['skip_skip_init_constructor']
+        constructors_lines.unshift("protected #{owner_name}(SkipInit skipInit) { super(skipInit); }")
+      end
+      if !c['skip_def_constructor']
+        constructors_lines.unshift("public #{owner_name}() {}")
+      end
+    elsif owner.is_a?(Bro::ObjCCategory)
+      constructors_lines.unshift("private #{owner_name}() {}")
+      data['annotations'] = "@Library(\"#{library}\") @Category"
+      data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
+      data['visibility'] = c['visibility'] || 'public final'
+      data['implements'] = 'implements NSObjectProtocol'
     end
     methods_s = methods_lines.flatten.join("\n    ")
     constructors_s = constructors_lines.flatten.join("\n    ")
@@ -1718,7 +1775,7 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   template_datas.each do |owner, data|
-    c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || {}
+    c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || model.get_category_conf(owner) || {}
     data['imports'] = imports_s
     data['visibility'] = c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
