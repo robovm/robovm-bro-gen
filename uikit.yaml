@@ -978,6 +978,9 @@ classes:
                 name: getDecrementImage
             '-dividerImageForLeftSegmentState:rightSegmentState:$':
                 name: getDividerImage
+                parameters:
+                    0: {name: leftState}
+                    1: {name: rightState}
             '-incrementImageForState:$':
                 name: getIncrementImage
             '-setBackgroundImage:forState:$':
@@ -1612,7 +1615,7 @@ protocols:
                 name: shouldBegin
     ^UIGuidedAccessRestrictionDelegate$: {}
     ^UIImagePickerControllerDelegate$:
-        # protocols: [UINavigationControllerDelegate]
+        protocols: [UINavigationControllerDelegate]
         methods:
             '-imagePickerController:didFinishPickingMediaWithInfo:$':
                 name: didFinishPickingMedia
@@ -1998,7 +2001,7 @@ protocols:
                 name: shouldEndEditing
     ^UIToolbarDelegate$: {}
     ^UIVideoEditorControllerDelegate$:
-        # protocols: [UINavigationControllerDelegate]
+        protocols: [UINavigationControllerDelegate]
         methods:
             '-videoEditorController:didFailWithError:$':
                 name: didFail
