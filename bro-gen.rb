@@ -907,7 +907,7 @@ module Bro
         if name =~ /^(id|NSObject)<(.*)>$/
           # Protocols
           names = $2.split(/\s*,/)
-          types = names.map {|e| @objc_protocols.find {|p| p.name == e}}
+          types = names.map {|e| resolve_type_by_name(e)}
           if types.find_all {|e| !e}.empty?
             if types.size == 1
               types[0]
@@ -1692,6 +1692,14 @@ ARGV[1..-1].each do |yaml_file|
         properties[owner] = [(properties[owner] || [[]])[0] + prot.properties, cls, c]
       end
     end
+  end
+
+  # Remove duplicate methods/properties
+  methods.keys.each do |owner|
+    methods[owner][0] = methods[owner][0].uniq {|e| (e.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + e.name}
+  end
+  properties.keys.each do |owner|
+    properties[owner][0] = properties[owner][0].uniq {|e| e.name}
   end
 
   def protocol_list(model, keyword, protocols, conf)
