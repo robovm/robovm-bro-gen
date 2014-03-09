@@ -1277,7 +1277,7 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   end
 end
 
-def property_to_java(model, owner, prop, props_conf)
+def property_to_java(model, owner, prop, props_conf, adapter = false)
   conf = model.get_conf_for_key(prop.name, props_conf) || {}
   if !conf['exclude']
     name = conf['name'] || prop.name
@@ -1285,8 +1285,12 @@ def property_to_java(model, owner, prop, props_conf)
     base = name[0, 1].upcase + name[1..-1]
     getter = type[0] == 'boolean' ? "is#{base}" : "get#{base}"
     setter = "set#{base}"
-    visibility = conf['visibility'] || 'public'
-    native = owner.is_a?(Bro::ObjCProtocol) ? "" : "native"
+    visibility = conf['visibility'] || 
+        owner.is_a?(Bro::ObjCClass) && 'public' ||
+        owner.is_a?(Bro::ObjCCategory) && 'public' ||
+        adapter && 'public' ||
+        ''
+    native = owner.is_a?(Bro::ObjCProtocol) ? "" : (adapter ? '' : "native")
     static = owner.is_a?(Bro::ObjCCategory) ? "static" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
@@ -1296,11 +1300,26 @@ def property_to_java(model, owner, prop, props_conf)
       param_types.unshift([owner.owner, nil, 'thiz'])
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
-    lines = ["@Property(selector = \"#{getter_selector}\")", "#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+    body = ';'
+    if adapter
+      body = " { throw new UnsupportedOperationException(); }"
+    end
+    lines = []
+    if adapter
+      lines.push("@NotImplemented(\"#{getter_selector}\")")
+    else
+      lines.push("@Property(selector = \"#{getter_selector}\")")
+    end
+    lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
     if !prop.is_readonly? && !conf['readonly']
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
-      lines = lines + ["@Property(selector = \"#{prop.setter.name}\")", "#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+      if adapter
+        lines.push("@NotImplemented(\"#{prop.setter.name}\")")
+      else
+        lines.push("@Property(selector = \"#{prop.setter.name}\")")
+      end
+      lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
     end
     lines
   else
@@ -1308,7 +1327,7 @@ def property_to_java(model, owner, prop, props_conf)
   end
 end
 
-def method_to_java(model, owner_name, owner, method, methods_conf)
+def method_to_java(model, owner_name, owner, method, methods_conf, adapter = false)
   conf = model.get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, methods_conf) || {}
   if method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
     param_types = method.parameters.map {|e| e.type.spelling}
@@ -1338,8 +1357,12 @@ def method_to_java(model, owner_name, owner, method, methods_conf)
       end
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
-    visibility = conf['visibility'] || owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') || owner.is_a?(Bro::ObjCCategory) && 'public' || ''
-    native = owner.is_a?(Bro::ObjCProtocol) ? "" : "native"
+    visibility = conf['visibility'] || 
+        owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') ||
+        owner.is_a?(Bro::ObjCCategory) && 'public' || 
+        adapter && 'public' ||
+        ''
+    native = owner.is_a?(Bro::ObjCProtocol) ? "" : (adapter ? '' : "native")
     static = method.is_a?(Bro::ObjCClassMethod) || owner.is_a?(Bro::ObjCCategory) ? "static" : ""
   #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
@@ -1354,7 +1377,17 @@ def method_to_java(model, owner_name, owner, method, methods_conf)
       ret_anno = $1
       ret_type[0] = ret_type[0].sub(/^@.*\s+(.*)$/, '\1')
     end
-    method_lines = ["@Method(selector = \"#{method.name}\")", "#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s});"]
+    body = ';'
+    if adapter
+      body = " { throw new UnsupportedOperationException(); }"
+    end
+    method_lines = []
+    if adapter
+      method_lines.push("@NotImplemented(\"#{method.name}\")")
+    else
+      method_lines.push("@Method(selector = \"#{method.name}\")")
+    end
+    method_lines.push("#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
     constructor_lines = []
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
@@ -1704,7 +1737,7 @@ ARGV[1..-1].each do |yaml_file|
     properties[owner][0] = properties[owner][0].uniq {|e| e.name}
   end
 
-  def protocol_list(model, keyword, protocols, conf)
+  def protocol_list(model, protocols, conf)
     l = []
     if conf['protocols']
       l = conf['protocols']
@@ -1716,6 +1749,11 @@ ARGV[1..-1].each do |yaml_file|
         end
       end
     end
+    l
+  end
+
+  def protocol_list_s(model, keyword, protocols, conf)
+    l = protocol_list(model, protocols, conf)
     l.empty? ? nil : (keyword + " " + l.join(', '))
   end
 
@@ -1728,7 +1766,7 @@ ARGV[1..-1].each do |yaml_file|
       data['visibility'] = c['visibility'] || 'public'
       data['extends'] = c['extends'] || (cls.superclass && (model.conf_classes[cls.superclass] || {})['name'] || cls.superclass) || 'ObjCObject'
       data['imports'] = imports_s
-      data['implements'] = protocol_list(model, 'implements', cls.protocols, c)
+      data['implements'] = protocol_list_s(model, 'implements', cls.protocols, c)
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
       data['annotations'] = "@Library(\"#{library}\") @NativeClass"
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
@@ -1743,10 +1781,49 @@ ARGV[1..-1].each do |yaml_file|
       data = template_datas[name] || {}
       data['name'] = name
       data['visibility'] = c['visibility'] || 'public'
-      data['implements'] = protocol_list(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
+      data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
       data['imports'] = imports_s
       data['template'] = def_protocol_template
       template_datas[name] = data
+    end
+  end
+
+  # Add methods to protocol interface adapter classes
+  methods.values.each do |(methods, owner, c)|
+    if owner.is_a?(Bro::ObjCProtocol)
+      interface_name = c['name'] || owner.java_name
+      owner_name = (interface_name) + 'Adapter'
+      data = template_datas[owner_name] || {}
+      data['name'] = owner_name
+      protocols = protocol_list(model, owner.protocols, c)
+      data['extends'] = protocols.empty? ? 'NSObject' : "#{protocols[0]}Adapter"
+      data['implements'] = "implements #{interface_name}"
+      methods_lines = []
+      methods.each do |m|
+        a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, true)
+        methods_lines.concat(a[0])
+      end
+      methods_s = methods_lines.flatten.join("\n    ")
+      data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
+      template_datas[owner_name] = data
+    end
+  end
+
+  # Add properties to protocol interface adapter classes
+  properties.values.each do |(properties, owner, c)|
+    if owner.is_a?(Bro::ObjCProtocol)
+      interface_name = c['name'] || owner.java_name
+      owner_name = (interface_name) + 'Adapter'
+      data = template_datas[owner_name] || {}
+      data['name'] = owner_name
+      protocols = protocol_list(model, owner.protocols, c)
+      data['extends'] = protocols.empty? ? 'NSObject' : "#{protocols[0]}Adapter"
+      data['implements'] = "implements #{interface_name}"
+      properties_s = properties.map do |p|
+        property_to_java(model, owner, p, c['properties'] || {}, true)
+      end.flatten.join("\n    ")
+      data['properties'] = (data['properties'] || '') + "\n    #{properties_s}\n    "
+      template_datas[owner_name] = data
     end
   end
 
