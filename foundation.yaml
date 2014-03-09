@@ -22,9 +22,9 @@ typedefs:
     "NSMutableArray *": "NSMutableArray<?>"
     "NSMutableArray **": "NSMutableArray.NSMutableArrayPtr<?>"
     "NSDictionary *": "NSDictionary<?, ?>"
-    "NSDictionary **": "NSDictionary.NSDictionaryPtr<?>"
+    "NSDictionary **": "NSDictionary.NSDictionaryPtr<?, ?>"
     "NSMutableDictionary *": "NSMutableDictionary<?, ?>"
-    "NSMutableDictionary **": "NSMutableDictionary.NSMutableDictionaryPtr<?>"
+    "NSMutableDictionary **": "NSMutableDictionary.NSMutableDictionaryPtr<?, ?>"
     "NSSet *": "NSSet<?>"
     "NSSet **": "NSSet.NSSetPtr<?>"
     "NSMutableSet *": "NSMutableSet<?>"
@@ -35,9 +35,6 @@ typedefs:
     "NSMutableOrderedSet **": "NSMutableOrderedSet.NSMutableOrderedSetPtr<?>"
     "NSEnumerator *": "NSEnumerator<?>"
 enums:
-#    NSTextAlignment: {}
-#    NSWritingDirection: {}
-
     NSActivityOptions: {}
     NSAttributedStringEnumerationOptions: {}
     NSBinarySearchingOptions: {}
