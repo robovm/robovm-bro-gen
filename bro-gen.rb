@@ -1751,10 +1751,10 @@ ARGV[1..-1].each do |yaml_file|
       end
     elsif owner.is_a?(Bro::ObjCCategory)
       constructors_lines.unshift("private #{owner_name}() {}")
-      data['annotations'] = "@Library(\"#{library}\") @Category"
+      data['annotations'] = "@Library(\"#{library}\")"
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
-      data['implements'] = 'implements NSObjectProtocol'
+      data['extends'] = 'NSCategory'
     end
     methods_s = methods_lines.flatten.join("\n    ")
     constructors_s = constructors_lines.flatten.join("\n    ")
@@ -1777,7 +1777,7 @@ ARGV[1..-1].each do |yaml_file|
   template_datas.each do |owner, data|
     c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || model.get_category_conf(owner) || {}
     data['imports'] = imports_s
-    data['visibility'] = c['visibility'] || 'public'
+    data['visibility'] = data['visibility'] || c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
     data['annotations'] = data['annotations'] || nil
     data['implements'] = data['implements'] || nil
