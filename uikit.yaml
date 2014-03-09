@@ -6,8 +6,7 @@ clang_args: ['-x', 'objective-c']
 headers:
     - /System/Library/Frameworks/UIKit.framework/Headers/UIKit.h
 typedefs:
-    NSInteger: MachineSInt
-    NSUInteger: MachineUInt
+    NSCopying: NSObject
     # UIAccelerationValue: double
     # UIBackgroundTaskIdentifier: int
     # CGPathRef: CGPath
@@ -1336,10 +1335,6 @@ classes:
                 name: getConstraints
             '-constraintsAffectingLayoutForAxis:$':
                 name: getConstraintsAffectingLayout
-            '-decodeRestorableStateWithCoder:$':
-                name: decodeRestorableState
-            '-encodeRestorableStateWithCoder:$':
-                name: encodeRestorableState
             '-frameForAlignmentRect:$':
                 name: getAlignmentRectFrame
             '-intrinsicContentSize$':
@@ -1641,7 +1636,8 @@ protocols:
                 name: didShowViewController
             '-navigationController:willShowViewController:animated:$':
                 name: willShowViewController
-    ^UIObjectRestoration$: {}
+# Has a single static mehtdo
+#    ^UIObjectRestoration$: {}
     ^UIPageViewControllerDataSource$:
         methods:
             '-pageViewController:viewControllerAfterViewController:$':
@@ -1798,7 +1794,12 @@ protocols:
                 name: willHideViewController
             '-splitViewController:willShowViewController:invalidatingBarButtonItem:$':
                 name: willShowViewController
-    ^UIStateRestoring$: {}
+    ^UIStateRestoring$:
+        methods:
+            '-decodeRestorableStateWithCoder:$':
+                name: decodeRestorableState
+            '-encodeRestorableStateWithCoder:$':
+                name: encodeRestorableState
     ^UITabBarControllerDelegate$:
         methods:
             '-tabBarController:didEndCustomizingViewControllers:changed:$':
