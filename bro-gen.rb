@@ -1321,7 +1321,9 @@ def method_to_java(model, owner_name, owner, method, methods_conf)
     ret_type = get_generic_type(model, owner, method, method.return_type, 0, conf['return_type'])
     params_conf = conf['parameters'] || {}
     param_types = method.parameters.inject([]) do |l, p|
-      l.push(get_generic_type(model, owner, method, p.type, l.size + 1, (params_conf[p.name] || {})['type'], p.name))
+      index = l.size + 1
+      pconf = params_conf[p.name] || params_conf[l.size] || {}
+      l.push(get_generic_type(model, owner, method, p.type, index, pconf['type'], pconf['name'] || p.name))
       l
     end
     name = conf['name']
