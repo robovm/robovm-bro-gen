@@ -1666,21 +1666,30 @@ ARGV[1..-1].each do |yaml_file|
     end
   end
 
+  def all_protocols(model, cls, conf)
+    result = []
+    (conf['protocols'] || cls.protocols).each do |prot_name|
+      prot = model.objc_protocols.find {|p| p.name == prot_name}
+      protc = model.get_protocol_conf(prot.name)
+      if protc && !protc['exclude']
+        result.push([prot, protc])
+        result = result + all_protocols(model, prot, protc)
+      end
+    end
+    result
+  end
+
   # Add all methods defined by protocols to all implementing classes
   model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
     c = model.get_class_conf(cls.name)
     if c && !c['exclude']
       owner = c['name'] || cls.java_name
-      (c['protocols'] || cls.protocols).each do |prot_name|
-        prot = model.objc_protocols.find {|p| p.name == prot_name}
-        protc = model.get_protocol_conf(prot.name)
-        if protc # && !protc['exclude']
-          c = c.clone
-          #c['methods'] = (c['methods'] || {}).merge(!protc['methods'] ? {} : protc['methods'])
-          #c['properties'] = (c['properties'] || {}).merge(!protc['properties'] ? {} : protc['properties'])
-          methods[owner] = [(methods[owner] || [[]])[0] + prot.instance_methods + prot.class_methods, cls, c]
-          properties[owner] = [(properties[owner] || [[]])[0] + prot.properties, cls, c]
-        end
+      c = c.clone
+      all_protocols(model, cls, c).each do |(prot, protc)|
+        c['methods'] = (c['methods'] || {}).merge(protc['methods']) unless !protc['methods']
+        c['properties'] = (c['properties'] || {}).merge(protc['properties']) unless !protc['properties']
+        methods[owner] = [(methods[owner] || [[]])[0] + prot.instance_methods + prot.class_methods, cls, c]
+        properties[owner] = [(properties[owner] || [[]])[0] + prot.properties, cls, c]
       end
     end
   end
