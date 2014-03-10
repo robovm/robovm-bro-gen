@@ -1509,9 +1509,10 @@ ARGV[1..-1].each do |yaml_file|
       end
       data['imports'] = imports_s
       merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
-    else
+    elsif model.is_included?(enum)
       # Possibly an enum with values that should be turned into constants
       potential_constant_enums.push(enum)
+      $stderr.puts "WARN: Turning the enum #{enum.name} with first value #{enum.values[0].name} into constants"
     end
   end
 
