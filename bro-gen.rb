@@ -1176,6 +1176,8 @@ module Bro
 
       # Filter out global values not defined in the framework or library we're generating code for
       @global_values = @global_values.find_all {|v| is_included?(v)}
+      # Remove duplicate global values (occurs in CoreData)
+      @global_values = @global_values.uniq {|v| v.name}
 
       # Filter out constants not defined in the framework or library we're generating code for
       @constant_values = @constant_values.find_all {|v| is_included?(v)}
