@@ -755,8 +755,12 @@ module Bro
       end
     end
     def enum_type
-      # If this is a named enum (objc_fixed_enum) we take the enum int type from the first value
-      @enum_type.kind == :type_enum ? @values.first.type.canonical : @enum_type
+      if enum_conf['type']
+        @model.resolve_type_by_name(enum_conf['type'])
+      else
+        # If this is a named enum (objc_fixed_enum) we take the enum int type from the first value
+        @enum_type.kind == :type_enum ? @model.resolve_type(@values.first.type.canonical) : @model.resolve_type(@enum_type)
+      end
     end
     def enum_conf
       if !@enum_conf
@@ -892,7 +896,7 @@ module Bro
             enum = e.is_a?(Enum) ? e : e.enum
             if type.pointee.canonical.kind == :type_enum
               # Pointer to objc_fixed_enum
-              resolve_type(enum.enum_type).pointer
+              enum.enum_type.pointer
             else
               resolve_type(type.pointee.canonical).pointer
             end
@@ -1489,7 +1493,7 @@ ARGV[1..-1].each do |yaml_file|
       if c['marshaler']
         data['annotations'] = "@Marshaler(#{c['marshaler']}.class)"
       else
-        enum_type = model.resolve_type(enum.enum_type)
+        enum_type = enum.enum_type
         if enum_type.name =~ /^Machine(.)Int$/
           if !bits
             data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSized#{$1}IntMarshaler.class)"
@@ -1509,7 +1513,7 @@ ARGV[1..-1].each do |yaml_file|
       end
       data['imports'] = imports_s
       merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
-    elsif model.is_included?(enum)
+    elsif model.is_included?(enum) && (!c || !c['exclude'])
       # Possibly an enum with values that should be turned into constants
       potential_constant_enums.push(enum)
       $stderr.puts "WARN: Turning the enum #{enum.name} with first value #{enum.values[0].name} into constants"
@@ -1622,7 +1626,7 @@ ARGV[1..-1].each do |yaml_file|
   end
   # Create ConstantValues for values in remaining enums
   potential_constant_enums.each do |enum|
-    type = [:type_longlong, :type_ulonglong].include?(enum.enum_type.kind) ? 'long' : 'int'
+    type = enum.enum_type.java_name.match(/\blong$/) ? 'long' : 'int'
     enum.type.declaration.visit_children do |cursor, parent|
       case cursor.kind
       when :cursor_enum_constant_decl
