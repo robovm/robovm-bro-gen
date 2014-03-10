@@ -49,7 +49,7 @@ module Bro
   end
 
   class Entity
-    attr_accessor :id, :location, :name, :framework
+    attr_accessor :id, :location, :name, :framework, :attributes
     def initialize(model, cursor)
       @location = cursor ? cursor.location : nil
       @id = cursor ? Bro::location_to_id(@location) : nil
@@ -58,6 +58,7 @@ module Bro
       @framework = @location ?
           "#{@location.file}".split(File::SEPARATOR).reverse.find_all {|e| e.match(/^.*\.framework$/)}.map {|e| e.sub(/(.*)\.framework/, '\1')}.first :
           nil
+      @attributes = []
     end
 
     def types
@@ -70,6 +71,16 @@ module Bro
 
     def pointer
       Pointer.new self
+    end
+
+    def is_available?(mac_version, ios_version)
+      attrib = @attributes.find {|e| e.is_a?(AvailableAttribute)}
+      if attrib
+        mac_version && attrib.mac_version && attrib.mac_version.to_f <= mac_version.to_f ||
+          ios_version && attrib.ios_version && attrib.ios_version.to_f <= ios_version.to_f || false
+      else
+        true
+      end
     end
   end
 
@@ -207,6 +218,7 @@ module Bro
     end
   end
   class AvailableAttribute < Attribute
+    attr_accessor :mac_version, :ios_version, :mac_dep_version, :ios_dep_version
     def initialize(source)
       super(source)
       s = source.sub(/^[A-Z_]+\(/, '')
@@ -382,7 +394,6 @@ module Bro
       @type = cursor.type
       @return_type = cursor.result_type
       @parameters = []
-      @attributes = []
       param_count = 0
       @inline = false
       @variadic = cursor.variadic?
@@ -479,7 +490,6 @@ module Bro
       @class_methods = []
       @properties = []
       @opaque = false
-      @attributes = []
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_obj_c_class_ref
@@ -546,7 +556,6 @@ module Bro
       @properties = []
       @opaque = false
       @owner = nil
-      @attributes = []
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_obj_c_protocol_ref
@@ -614,7 +623,6 @@ module Bro
       @class_methods = []
       @properties = []
       @protocols = []
-      @attributes = []
       @owner = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
@@ -736,7 +744,6 @@ module Bro
       @values = []
       @type = cursor.type
       @enum_type = cursor.enum_type
-      @attributes = []
       @enum_conf = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
@@ -1841,9 +1848,11 @@ ARGV[1..-1].each do |yaml_file|
     methods_lines = []
     constructors_lines = []
     methods.each do |m|
-      a = method_to_java(model, owner_name, owner, m, c['methods'] || {})
-      methods_lines.concat(a[0])
-      constructors_lines.concat(a[1])
+      if m.is_available?(nil, '7.0')
+        a = method_to_java(model, owner_name, owner, m, c['methods'] || {})
+        methods_lines.concat(a[0])
+        constructors_lines.concat(a[1])
+      end
     end
     if owner.is_a?(Bro::ObjCClass)
       if !c['skip_skip_init_constructor']
