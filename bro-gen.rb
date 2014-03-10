@@ -713,8 +713,8 @@ module Bro
       if @java_name
         @java_name
       else
-        n = @name
-        if @name.start_with?(@enum.prefix)
+        n = @enum.enum_conf[@name] || @name
+        if n.start_with?(@enum.prefix)
           n = @name[@enum.prefix.size..-1]
         end
         if n.end_with?(@enum.suffix)
