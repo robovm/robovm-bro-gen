@@ -1,5 +1,5 @@
 package: org.robovm.apple.uikit
-include: [foundation.yaml, coregraphics.yaml]
+include: [foundation.yaml, coregraphics.yaml, coredata.yaml]
 library: UIKit
 framework: UIKit
 clang_args: ['-x', 'objective-c']
@@ -25,6 +25,7 @@ enums:
     NSTextAlignment: {}
     NSTextLayoutOrientation: {}
     NSTextStorageEditActions: {}
+    NSTextWritingDirection: {}
     NSUnderlineStyle: {}
     NSWritingDirection: {}
     UIAccessibilityScrollDirection: {}
@@ -35,6 +36,7 @@ enums:
     UIAlertViewStyle: {}
     UIApplicationState: {}
     UIAttachmentBehaviorType: {}
+    UIBackgroundFetchResult: {}
     UIBackgroundRefreshStatus: {}
     UIBarButtonItemStyle: {}
     UIBarButtonSystemItem: {}
@@ -90,6 +92,7 @@ enums:
     UIPageViewControllerSpineLocation: {}
     UIPageViewControllerTransitionStyle: {}
     UIPopoverArrowDirection: {}
+    UIPrintError: {first: UIPrintingNotAvailableError, suffix: Error, UIPrintingNotAvailableError: PrintingNotAvailableError}
     UIPrintInfoDuplex: {}
     UIPrintInfoOrientation: {}
     UIPrintInfoOutputType: {}
@@ -2054,6 +2057,19 @@ values:
         name: "Value__#{g[0]}"
 
 constants:
+
+    ^NS(AttachmentCharacter)$:
+        class: NSTextAttachment
+        name: "#{g[0]}"
+
+    ^UILayout(Priority.*)$:
+        class: NSLayoutConstraint
+        name: "#{g[0]}"
+        type: float
+
+    ^UISegmentedControl(NoSegment)$:
+        class: UISegmentedControl
+        name: "#{g[0]}"
 
     # Make sure we don't miss any constants if new ones are introduced in a later UIKit
     ^(UI.*)$:
