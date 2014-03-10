@@ -1,5 +1,5 @@
 package: org.robovm.apple.uikit
-include: [foundation.yaml, coregraphics.yaml, coredata.yaml]
+include: [foundation.yaml, coregraphics.yaml, coredata.yaml, coreimage.yaml]
 library: UIKit
 framework: UIKit
 clang_args: ['-x', 'objective-c']
