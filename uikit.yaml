@@ -2041,6 +2041,12 @@ protocols:
 
 functions:
 
+    # Skip until we have CoreText support
+    ^NSTextAlignmentToCTTextAlignment$:
+        exclude: true
+    ^NSTextAlignmentFromCTTextAlignment$:
+        exclude: true
+
     # Make sure we don't miss any functions if new ones are introduced in a later UIKit
     ^(CG.*)$:
         name: "Function__#{g[0]}"
