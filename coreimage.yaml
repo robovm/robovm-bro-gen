@@ -30,6 +30,9 @@ classes:
                 property: true
             '-drawImage.*$':
                 name: drawImage
+            # Skip methods that renders to CVBuffers for now until we have CoreVideo support
+            '-render:toCVPixelBuffer:.*$':
+                exclude: true
             '-render.*$':
                 name: render
             '-createCGImage.*$':
@@ -82,6 +85,9 @@ classes:
                 name: getRegionOfInterest
             '-image(By[^:]*).*$':
                 name: "createImage#{g[0]}"
+            # Skip constructors that take a CVBuffer for now until we have CoreVideo support
+            '-initWithCVPixelBuffer:.*$':
+                exclude: true
 
     ^CIVector$:
         methods:
