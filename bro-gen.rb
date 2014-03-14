@@ -1451,6 +1451,8 @@ ARGV[1..-1].each do |yaml_file|
     # Excluded all classes in included config
     c_classes = (c['classes'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
     conf['classes'] = c_classes.merge(conf['classes'] || {})
+    c_protocols = (c['protocols'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
+    conf['protocols'] = c_protocols.merge(conf['protocols'] || {})
     c_enums = (c['enums'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
     conf['enums'] = c_enums.merge(conf['enums'] || {})
     conf['typedefs'] = (c['typedefs'] || {}).merge(conf['typedefs'] || {})
@@ -1720,7 +1722,7 @@ ARGV[1..-1].each do |yaml_file|
     (conf['protocols'] || cls.protocols).each do |prot_name|
       prot = model.objc_protocols.find {|p| p.name == prot_name}
       protc = model.get_protocol_conf(prot.name)
-      if protc && !protc['exclude']
+      if protc # && !protc['exclude']
         result.push([prot, protc])
         result = result + all_protocols(model, prot, protc)
       end
