@@ -1,5 +1,5 @@
 package: org.robovm.apple.coreanimation
-include: [coregraphics.yaml, foundation.yaml]
+include: [coregraphics.yaml, foundation.yaml, opengles.yaml]
 library: QuartzCore
 framework: QuartzCore
 clang_args: ['-x', 'objective-c']
@@ -24,7 +24,6 @@ classes:
     #         '+displayLinkWithTarget:selector:$':
     #             name: create
     ^CALayer$: {}
-    ^CAEGLLayer$: {}
     ^CAAnimation$:
         properties:
             '^delegate$':
@@ -32,7 +31,8 @@ classes:
     ^CAAnimationGroup$: {}
     ^CABasicAnimation$: {}
     ^CADisplayLink$: {}
-    ^CAEAGLLayer$: {}
+    ^CAEAGLLayer$:
+        protocols: [EAGLDrawable]
     ^CAEmitterCell$: {}
     ^CAEmitterLayer$: {}
     ^CAGradientLayer$: {}

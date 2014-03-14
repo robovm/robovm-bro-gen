@@ -1,5 +1,5 @@
 package: org.robovm.apple.coreimage
-include: [coregraphics.yaml, foundation.yaml]
+include: [coregraphics.yaml, foundation.yaml, opengles.yaml]
 library: CoreImage
 framework: CoreImage
 clang_args: ['-x', 'objective-c']
