@@ -277,7 +277,7 @@ module Bro
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
        source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
        source.end_with?('_CLASS_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
-       source == 'OBJC_ROOT_CLASS'
+       source == 'OBJC_ROOT_CLASS' || source == '__ai'
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE'
       return UnavailableAttribute.new source
@@ -729,7 +729,7 @@ module Bro
           n = n[0..(n.size - @enum.suffix.size - 1)]
         end
         if n[0] >= '0' && n[0] <= '9'
-          n = "V#{n}"
+          n = "_#{n}"
         end
         @java_name = n
         n
@@ -1046,7 +1046,7 @@ module Bro
       if type.is_a?(Struct) || type.is_a?(Typedef) && (type.struct || type.typedef_type.kind == :type_record)
         "@ByVal #{type.java_name}"
       elsif type.is_a?(Array)
-        "@Array(#{type.dimensions.join(', ')}) #{type.java_name}"
+        "@Array({#{type.dimensions.join(', ')}}) #{type.java_name}"
       else
          type.java_name
        end
@@ -1721,7 +1721,7 @@ ARGV[1..-1].each do |yaml_file|
     result = []
     (conf['protocols'] || cls.protocols).each do |prot_name|
       prot = model.objc_protocols.find {|p| p.name == prot_name}
-      protc = model.get_protocol_conf(prot.name)
+      protc = model.get_protocol_conf(prot.name) unless !prot
       if protc # && !protc['exclude']
         result.push([prot, protc])
         result = result + all_protocols(model, prot, protc)
