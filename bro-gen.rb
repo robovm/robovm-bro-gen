@@ -1806,40 +1806,46 @@ ARGV[1..-1].each do |yaml_file|
 
   # Add methods to protocol interface adapter classes
   methods.values.each do |(methods, owner, c)|
-    if owner.is_a?(Bro::ObjCProtocol)
+    if owner.is_a?(Bro::ObjCProtocol) && !c['skip_adapter']
       interface_name = c['name'] || owner.java_name
       owner_name = (interface_name) + 'Adapter'
-      data = template_datas[owner_name] || {}
-      data['name'] = owner_name
-      protocols = protocol_list(model, owner.protocols, c)
-      data['extends'] = protocols.empty? ? 'NSObject' : "#{protocols[0]}Adapter"
-      data['implements'] = "implements #{interface_name}"
       methods_lines = []
       methods.each do |m|
         a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, true)
         methods_lines.concat(a[0])
       end
-      methods_s = methods_lines.flatten.join("\n    ")
-      data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
-      template_datas[owner_name] = data
+      if !methods_lines.empty?
+        data = template_datas[owner_name] || {}
+        data['name'] = owner_name
+        protocols = protocol_list(model, owner.protocols, c)
+        data['extends'] = protocols.empty? || protocols[0] == 'NSObjectProtocol' ? 'NSObject' : "#{protocols[0]}Adapter"
+        data['implements'] = "implements #{interface_name}"
+        methods_s = methods_lines.flatten.join("\n    ")
+        data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
+        template_datas[owner_name] = data
+      end
     end
   end
 
   # Add properties to protocol interface adapter classes
   properties.values.each do |(properties, owner, c)|
-    if owner.is_a?(Bro::ObjCProtocol)
+    if owner.is_a?(Bro::ObjCProtocol) && !c['skip_adapter']
       interface_name = c['name'] || owner.java_name
       owner_name = (interface_name) + 'Adapter'
-      data = template_datas[owner_name] || {}
-      data['name'] = owner_name
-      protocols = protocol_list(model, owner.protocols, c)
-      data['extends'] = protocols.empty? ? 'NSObject' : "#{protocols[0]}Adapter"
-      data['implements'] = "implements #{interface_name}"
-      properties_s = properties.map do |p|
-        property_to_java(model, owner, p, c['properties'] || {}, true)
-      end.flatten.join("\n    ")
-      data['properties'] = (data['properties'] || '') + "\n    #{properties_s}\n    "
-      template_datas[owner_name] = data
+      properties_lines = []
+      properties.each do |p|
+        properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, true))
+      end
+      if !properties_lines.empty?
+        data = template_datas[owner_name] || {}
+        data['name'] = owner_name
+        protocols = protocol_list(model, owner.protocols, c)
+        data['extends'] = protocols.empty? || protocols[0] == 'NSObjectProtocol' ? 'NSObject' : "#{protocols[0]}Adapter"
+        data['implements'] = "implements #{interface_name}"
+        properties_s = properties_lines.flatten.join("\n    ")
+        data['properties'] = (data['properties'] || '') + "\n    #{properties_s}\n    "
+        template_datas[owner_name] = data
+      end
     end
   end
 
