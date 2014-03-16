@@ -446,29 +446,47 @@ module Bro
   end
   class ObjCClassVar < ObjCVar
   end
-  class ObjCInstanceMethod < Function
+  class ObjCMethod < Function
     attr_accessor :owner
     def initialize(model, cursor, owner)
       super(model, cursor)
       @owner = owner
     end
   end
-  class ObjCClassMethod < Function
-    attr_accessor :owner
+  class ObjCInstanceMethod < ObjCMethod
     def initialize(model, cursor, owner)
-      super(model, cursor)
-      @owner = owner
+      super(model, cursor, owner)
+    end
+  end
+  class ObjCClassMethod < ObjCMethod
+    def initialize(model, cursor, owner)
+      super(model, cursor, owner)
     end
   end
 
   class ObjCProperty < Entity
-    attr_accessor :type, :owner, :getter, :setter
+    attr_accessor :type, :owner, :getter, :setter, :attrs
     def initialize(model, cursor, owner)
       super(model, cursor)
       @type = cursor.type
       @owner = owner
       @getter = nil
       @setter = nil
+      @source = Bro::read_source_range(cursor.extent)
+      /@property\s*(\((?:[^)]+)\))/ =~ @source
+      @attrs = $1 != nil ? $1.strip.slice(1..-2).split(/,\s*/) : []
+      @attrs = @attrs.inject(Hash.new) do |h, o|
+        pair = o.split(/\s*=\s*/)
+        h[pair[0]] = pair.size > 1 ? pair[1] : true
+        h
+      end
+    end
+    def getter_name
+      @attrs['getter'] || @name
+    end
+    def setter_name
+      base = @name[0, 1].upcase + @name[1..-1]
+      @attrs['setter'] || "set#{@base}:"
     end
     def is_readonly?
       @setter == nil
@@ -478,17 +496,42 @@ module Bro
     end
   end
 
-  class ObjCClass < Entity
-    attr_accessor :superclass, :protocols, :instance_vars, :class_vars, :instance_methods, :class_methods, :properties
+  class ObjCMemberHost < Entity
+    attr_accessor :instance_methods, :class_methods, :properties
+    def initialize(model, cursor)
+      super(model, cursor)
+      @instance_methods = []
+      @class_methods = []
+      @properties = []
+    end
+
+    def resolve_property_accessors
+      # Properties are also represented as instance methods in the AST. Remove any instance method
+      # defined on the same position as a property and use the method name as getter/setter.
+      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
+        p = @properties.find {|f| f.id == m.id || f.getter_name == m.name || f.setter_name == m.name}
+        if p
+          if m.name.end_with?(':')
+            p.setter = m
+          else
+            p.getter = m
+          end
+          m
+        else
+          nil
+        end
+      end
+    end
+  end
+
+  class ObjCClass < ObjCMemberHost
+    attr_accessor :superclass, :protocols, :instance_vars, :class_vars
     def initialize(model, cursor)
       super(model, cursor)
       @superclass = nil
       @protocols = []
       @instance_vars = []
       @class_vars = []
-      @instance_methods = []
-      @class_methods = []
-      @properties = []
       @opaque = false
       cursor.visit_children do |cursor, parent|
         case cursor.kind
@@ -519,22 +562,7 @@ module Bro
         end
         next :continue
       end
-
-      # Properties are also represented as instance methods in the AST. Remove any instance method
-      # defined on the same position as a property and use the method name as getter/setter.
-      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
-        p = @properties.find {|f| f.id == m.id}
-        if p
-          if m.name.end_with?(':')
-            p.setter = m
-          else
-            p.getter = m
-          end
-          m
-        else
-          nil
-        end
-      end
+      resolve_property_accessors
     end
 
     def types
@@ -546,14 +574,11 @@ module Bro
     end
   end
 
-  class ObjCProtocol < Entity
-    attr_accessor :protocols, :instance_methods, :class_methods, :properties, :owner
+  class ObjCProtocol < ObjCMemberHost
+    attr_accessor :protocols, :owner
     def initialize(model, cursor)
       super(model, cursor)
       @protocols = []
-      @instance_methods = []
-      @class_methods = []
-      @properties = []
       @opaque = false
       @owner = nil
       cursor.visit_children do |cursor, parent|
@@ -580,26 +605,11 @@ module Bro
         end
         next :continue
       end
+      resolve_property_accessors
+    end
 
-      def is_informal?
-        !!@owner
-      end
-
-      # Properties are also represented as instance methods in the AST. Remove any instance method
-      # defined on the same position as a property and use the method name as getter/setter.
-      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
-        p = @properties.find {|f| f.id == m.id}
-        if p
-          if m.name.end_with?(':')
-            p.setter = m
-          else
-            p.getter = m
-          end
-          m
-        else
-          nil
-        end
-      end
+    def is_informal?
+      !!@owner
     end
 
     def types
@@ -615,13 +625,10 @@ module Bro
     end
   end
 
-  class ObjCCategory < Entity
-    attr_accessor :instance_methods, :class_methods, :properties, :owner, :protocols
+  class ObjCCategory < ObjCMemberHost
+    attr_accessor :owner, :protocols
     def initialize(model, cursor)
       super(model, cursor)
-      @instance_methods = []
-      @class_methods = []
-      @properties = []
       @protocols = []
       @owner = nil
       cursor.visit_children do |cursor, parent|
@@ -647,22 +654,7 @@ module Bro
         end
         next :continue
       end
-
-      # Properties are also represented as instance methods in the AST. Remove any instance method
-      # defined on the same position as a property and use the method name as getter/setter.
-      @instance_methods = @instance_methods - @instance_methods.find_all do |m|
-        p = @properties.find {|f| f.id == m.id}
-        if p
-          if m.name.end_with?(':')
-            p.setter = m
-          else
-            p.getter = m
-          end
-          m
-        else
-          nil
-        end
-      end
+      resolve_property_accessors
     end
 
     def java_name
@@ -1192,8 +1184,6 @@ module Bro
   end
 end
 
-sysroot = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk'
-
 def dump_ast(cursor, indent)
   cursor.visit_children do |cursor, parent|
     if cursor.kind != :cursor_macro_definition && cursor.kind != :cursor_macro_expansion && cursor.kind != :cursor_inclusion_directive
@@ -1413,6 +1403,9 @@ def method_to_java(model, owner_name, owner, method, methods_conf, adapter = fal
   end
 end
 
+mac_version = nil
+ios_version = '7.1'
+sysroot = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
 
 script_dir = File.expand_path(File.dirname(__FILE__))
 target_dir = ARGV[0]
@@ -1674,14 +1667,13 @@ ARGV[1..-1].each do |yaml_file|
 
 
   # Assign methods and properties to classes/protocols
-  methods = {}
-  properties = {}
+  members = {}
   (model.objc_classes + model.objc_protocols).each do |cls|
     c = cls.is_a?(Bro::ObjCClass) ? model.get_class_conf(cls.name) : model.get_protocol_conf(cls.name)
     if c && !c['exclude']
       owner = c['name'] || cls.java_name
-      methods[owner] = [(methods[owner] || [[]])[0] + cls.instance_methods + cls.class_methods, cls, c]
-      properties[owner] = [(properties[owner] || [[]])[0] + cls.properties, cls, c]
+      members[owner] = members[owner] || {owner: cls, owner_name: owner, members: [], conf: c}
+      members[owner][:members].push([cls.instance_methods + cls.class_methods + cls.properties, c])
     end
   end
   unassigned_categories = []
@@ -1695,8 +1687,8 @@ ARGV[1..-1].each do |yaml_file|
       owner_conf = model.get_class_conf(owner_cls.name)
       if owner_conf && !owner_conf['exclude']
         owner = owner_conf['name'] || owner_cls.java_name
-        methods[owner] = [(methods[owner] || [[]])[0] + cat.instance_methods + cat.class_methods, owner_cls, owner_conf]
-        properties[owner] = [(properties[owner] || [[]])[0] + cat.properties, owner_cls, owner_conf]
+        members[owner] = members[owner] || {owner: owner_cls, owner_name: owner, members: [], conf: owner_conf}
+        members[owner][:members].push([cat.instance_methods + cat.class_methods + cat.properties, owner_conf])
         owner_cls.protocols = owner_cls.protocols + cat.protocols
       end
     end
@@ -1710,47 +1702,52 @@ ARGV[1..-1].each do |yaml_file|
     c = model.get_category_conf(cat.owner) unless c
     if c && !c['exclude']
       owner = c['name'] || cat.java_name
-      methods[owner] = [(methods[owner] || [[]])[0] + cat.instance_methods + cat.class_methods, cat, c]
-      properties[owner] = [(properties[owner] || [[]])[0] + cat.properties, cat, c]
+      members[owner] = members[owner] || {owner: cat, owner_name: owner, members: [], conf: c}
+      members[owner][:members].push([cat.instance_methods + cat.class_methods + cat.properties, c])
     else
       $stderr.puts "WARN: Skipping category #{cat.name} for #{cat.owner}"
     end
   end
 
   def all_protocols(model, cls, conf)
-    result = []
-    (conf['protocols'] || cls.protocols).each do |prot_name|
-      prot = model.objc_protocols.find {|p| p.name == prot_name}
-      protc = model.get_protocol_conf(prot.name) unless !prot
-      if protc # && !protc['exclude']
-        result.push([prot, protc])
-        result = result + all_protocols(model, prot, protc)
+    def f(model, cls, conf)
+      result = []
+      (conf['protocols'] || cls.protocols).each do |prot_name|
+        prot = model.objc_protocols.find {|p| p.name == prot_name}
+        protc = model.get_protocol_conf(prot.name) unless !prot
+        if protc # && !protc['exclude']
+          result.push([prot, protc])
+          result = result + f(model, prot, protc)
+        end
       end
+      result
     end
-    result
+    def g(model, cls, conf)
+      r = []
+      if cls.superclass
+        supercls = model.objc_classes.find {|e| e.name == cls.superclass}
+        super_conf = model.get_class_conf(supercls.name)
+        r = g(model, supercls, super_conf)
+      end
+      r + f(model, cls, conf)
+    end
+    g(model, cls, conf).uniq {|e| e[0].name}
   end
 
   # Add all methods defined by protocols to all implementing classes
-  model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
+  model.objc_classes.find_all {|cls| !cls.is_opaque?}.each do |cls|
     c = model.get_class_conf(cls.name)
     if c && !c['exclude']
       owner = c['name'] || cls.java_name
-      c = c.clone
-      all_protocols(model, cls, c).each do |(prot, protc)|
-        c['methods'] = (c['methods'] || {}).merge(protc['methods']) unless !protc['methods']
-        c['properties'] = (c['properties'] || {}).merge(protc['properties']) unless !protc['properties']
-        methods[owner] = [(methods[owner] || [[]])[0] + prot.instance_methods + prot.class_methods, cls, c]
-        properties[owner] = [(properties[owner] || [[]])[0] + prot.properties, cls, c]
+      prots = all_protocols(model, cls, c)
+      if cls.superclass
+        prots = prots - all_protocols(model, model.objc_classes.find {|e| e.name == cls.superclass} , model.get_class_conf(cls.superclass))
+      end
+      prots.each do |(prot, protc)|
+        members[owner] = members[owner] || {owner: cls, owner_name: owner, members: [], conf: c}
+        members[owner][:members].push([prot.instance_methods + prot.class_methods + prot.properties, protc])
       end
     end
-  end
-
-  # Remove duplicate methods/properties
-  methods.keys.each do |owner|
-    methods[owner][0] = methods[owner][0].uniq {|e| (e.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + e.name}
-  end
-  properties.keys.each do |owner|
-    properties[owner][0] = properties[owner][0].uniq {|e| e.name}
   end
 
   def protocol_list(model, protocols, conf)
@@ -1804,44 +1801,33 @@ ARGV[1..-1].each do |yaml_file|
     end
   end
 
-  # Add methods to protocol interface adapter classes
-  methods.values.each do |(methods, owner, c)|
-    if owner.is_a?(Bro::ObjCProtocol) && !c['skip_adapter']
-      interface_name = c['name'] || owner.java_name
-      owner_name = (interface_name) + 'Adapter'
-      methods_lines = []
-      methods.each do |m|
-        a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, true)
-        methods_lines.concat(a[0])
-      end
-      if !methods_lines.empty?
+  # Add methods/properties to protocol interface adapter classes
+  members.values.each do |h|
+    owner = h[:owner]
+    if owner.is_a?(Bro::ObjCProtocol)
+      c = model.get_protocol_conf(owner.name)
+      if !c['skip_adapter']
+        interface_name = c['name'] || owner.java_name
+        owner_name = (interface_name) + 'Adapter'
+        methods_lines = []
+        properties_lines = []
+        h[:members].each do |(members, c)|
+          members.find_all {|m| !m.is_a?(Bro::ObjCProperty)}.each do |m|
+            a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, true)
+            methods_lines.concat(a[0])
+          end
+          members.find_all {|m| m.is_a?(Bro::ObjCProperty)}.each do |p|
+            properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, true))
+          end
+        end
+
         data = template_datas[owner_name] || {}
         data['name'] = owner_name
-        protocols = protocol_list(model, owner.protocols, c)
-        data['extends'] = protocols.empty? || protocols[0] == 'NSObjectProtocol' ? 'NSObject' : "#{protocols[0]}Adapter"
+        protocols = protocol_list(model, owner.protocols, c).find_all {|e| e != 'NSObjectProtocol'}
+        data['extends'] = protocols.empty? ? 'NSObject' : "#{protocols[0]}Adapter"
         data['implements'] = "implements #{interface_name}"
         methods_s = methods_lines.flatten.join("\n    ")
         data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
-        template_datas[owner_name] = data
-      end
-    end
-  end
-
-  # Add properties to protocol interface adapter classes
-  properties.values.each do |(properties, owner, c)|
-    if owner.is_a?(Bro::ObjCProtocol) && !c['skip_adapter']
-      interface_name = c['name'] || owner.java_name
-      owner_name = (interface_name) + 'Adapter'
-      properties_lines = []
-      properties.each do |p|
-        properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, true))
-      end
-      if !properties_lines.empty?
-        data = template_datas[owner_name] || {}
-        data['name'] = owner_name
-        protocols = protocol_list(model, owner.protocols, c)
-        data['extends'] = protocols.empty? || protocols[0] == 'NSObjectProtocol' ? 'NSObject' : "#{protocols[0]}Adapter"
-        data['implements'] = "implements #{interface_name}"
         properties_s = properties_lines.flatten.join("\n    ")
         data['properties'] = (data['properties'] || '') + "\n    #{properties_s}\n    "
         template_datas[owner_name] = data
@@ -1849,19 +1835,29 @@ ARGV[1..-1].each do |yaml_file|
     end
   end
 
-  methods.values.each do |(methods, owner, c)|
-    owner_name = c['name'] || owner.java_name
-    data = template_datas[owner_name] || {}
-    data['name'] = owner_name
+  members.values.each do |h|
+    owner = h[:owner]
+    c = h[:conf]
+    owner_name = h[:owner_name]
+    dups = {}
     methods_lines = []
     constructors_lines = []
-    methods.each do |m|
-      if m.is_available?(nil, '7.0')
+    properties_lines = []
+    h[:members].each do |(members, c)|
+      members.find_all {|m| !m.is_a?(Bro::ObjCProperty) && !dups[(m.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + m.name] && m.is_available?(mac_version, ios_version)}.each do |m|
         a = method_to_java(model, owner_name, owner, m, c['methods'] || {})
         methods_lines.concat(a[0])
         constructors_lines.concat(a[1])
+        dups[(m.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + m.name] = true
+      end
+      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && !dups[m.name] && m.is_available?(mac_version, ios_version)}.each do |p|
+        properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}))
+        dups[p.name] = true
       end
     end
+
+    data = template_datas[owner_name] || {}
+    data['name'] = owner_name
     if owner.is_a?(Bro::ObjCClass)
       if !c['skip_skip_init_constructor']
         constructors_lines.unshift("protected #{owner_name}(SkipInit skipInit) { super(skipInit); }")
@@ -1878,18 +1874,9 @@ ARGV[1..-1].each do |yaml_file|
     end
     methods_s = methods_lines.flatten.join("\n    ")
     constructors_s = constructors_lines.flatten.join("\n    ")
+    properties_s = properties_lines.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['constructors'] = (data['constructors'] || '') + "\n    #{constructors_s}\n    "
-    template_datas[owner_name] = data
-  end
-
-  properties.values.each do |(properties, owner, c)|
-    owner_name = c['name'] || owner.java_name
-    data = template_datas[owner_name] || {}
-    data['name'] = owner_name
-    properties_s = properties.map do |p|
-      property_to_java(model, owner, p, c['properties'] || {})
-    end.flatten.join("\n    ")
     data['properties'] = (data['properties'] || '') + "\n    #{properties_s}\n    "
     template_datas[owner_name] = data
   end
