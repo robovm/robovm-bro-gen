@@ -11,7 +11,7 @@ enums:
     EAGLRenderingAPI: {first: kEAGLRenderingAPIOpenGLES1, type: MachineUInt, prefix: kEAGLRenderingAPI}
 
 classes:
-    EAGLContext:
+    ^EAGLContext$:
         methods:
             '+currentContext$':
                 name: getCurrentContext
@@ -21,10 +21,10 @@ classes:
                 name: renderBufferStorage
             '-presentRenderbuffer:$':
                 name: presentRenderbuffer
-    EAGLSharegroup: {}
+    ^EAGLSharegroup$: {}
 
 protocols:
-    EAGLDrawable: {}
+    ^EAGLDrawable$: {}
 
 functions:
 

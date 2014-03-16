@@ -2014,7 +2014,10 @@ protocols:
                 name: didCancel
     ^UIViewControllerAnimatedTransitioning$: {}
     ^UIViewControllerContextTransitioning$: {}
-    ^UIViewControllerInteractiveTransitioning$: {}
+    ^UIViewControllerInteractiveTransitioning$:
+        methods:
+            '-completion(Speed|Curve)$':
+                property: true
 # Contains a single static method
 #    ^UIViewControllerRestoration$: {}
     ^UIViewControllerTransitionCoordinator$: {}

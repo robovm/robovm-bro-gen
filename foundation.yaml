@@ -728,27 +728,15 @@ classes:
         skip_def_constructor: true
         skip_skip_init_constructor: true
         methods:
-            "^\\+.*$": { exclude: true }
-            "-retain":
-            "-release":
-            "-autorelease":
-            "-init":
+            '-init':
                 visibility: private
                 constructor: false
-            "-description":
-                visibility: protected
-            "-isEqual:":
-                visibility: protected
-            "-hash":
-                visibility: protected
 
             '-copy':
             '-mutableCopy':
 
             '-performSelectorInBackground:withObject:':
                 name: performSelectorInBackground
-            '-performSelector.*':
-                name: performSelector
             '-cancelPreviousPerformRequests.*':
                 name: cancelPreviousPerformRequests
 
@@ -792,22 +780,6 @@ classes:
                 name: validateValueForKey
             '-validateValue:forKeyPath:error:':
                 name: validateValueForKeyPath
-
-            "-conformsToProtocol:$":
-                name: conformsToProtocol
-            '-respondsToSelector:$':
-                name: respondsToSelector
-            '-isMemberOfClass:':
-                name: isMemberOfClass
-            '-isKindOfClass:':
-                name: isKindOfClass
-
-            "-class$": { exclude: true }
-            "-superclass$": { exclude: true }
-            "-finalize$": { exclude: true }
-            "-self$": { exclude: true }
-            "-zone$": { exclude: true }
-            "-autorelease$": { exclude: true }
 
             '\+.*': { exclude: true }
             '-.*': { exclude: true }
@@ -1057,9 +1029,30 @@ protocols:
     ^NSObject$:
         name: NSObjectProtocol
         protocols: [ObjCProtocol]
+        skip_adapter: true
         methods:
-            "-.*":
-                exclude: true
+            '-retain':
+            '-release':
+            '-autorelease':
+            '-description':
+            '-isEqual:':
+                name: isEqual
+            '-hash':
+
+            '-performSelector.*':
+                name: performSelector
+
+            '-conformsToProtocol:$':
+                name: conformsToProtocol
+            '-respondsToSelector:$':
+                name: respondsToSelector
+            '-isMemberOfClass:':
+                name: isMemberOfClass
+            '-isKindOfClass:':
+                name: isKindOfClass
+
+            '\+.*': { exclude: true }
+            '-.*': { exclude: true }
     ^NSPortDelegate$: {}
 #    ^NSSecureCoding$: {}
     ^NSStreamDelegate$: {}
