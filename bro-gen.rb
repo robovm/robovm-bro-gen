@@ -1280,7 +1280,7 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   end
 end
 
-def property_to_java(model, owner, prop, props_conf, adapter = false)
+def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   conf = model.get_conf_for_key(prop.name, props_conf) || {}
   if !conf['exclude']
     name = conf['name'] || prop.name
@@ -1297,7 +1297,6 @@ def property_to_java(model, owner, prop, props_conf, adapter = false)
     static = owner.is_a?(Bro::ObjCCategory) ? "static" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
-    getter_selector = prop.getter ? prop.getter.name : prop.name
     param_types = []
     if owner.is_a?(Bro::ObjCCategory)
       param_types.unshift([owner.owner, nil, 'thiz'])
@@ -1308,13 +1307,16 @@ def property_to_java(model, owner, prop, props_conf, adapter = false)
       body = " { throw new UnsupportedOperationException(); }"
     end
     lines = []
-    if adapter
-      lines.push("@NotImplemented(\"#{getter_selector}\")")
-    else
-      lines.push("@Property(selector = \"#{getter_selector}\")")
+    if !seen["-#{prop.getter.name}"]
+      if adapter
+        lines.push("@NotImplemented(\"#{prop.getter.name}\")")
+      else
+        lines.push("@Property(selector = \"#{prop.getter.name}\")")
+      end
+      lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+      seen["-#{prop.getter.name}"] = true
     end
-    lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
-    if !prop.is_readonly? && !conf['readonly']
+    if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter.name}"]
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
       if adapter
@@ -1323,6 +1325,7 @@ def property_to_java(model, owner, prop, props_conf, adapter = false)
         lines.push("@Property(selector = \"#{prop.setter.name}\")")
       end
       lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+      seen["-#{prop.setter.name}"] = true
     end
     lines
   else
@@ -1330,9 +1333,12 @@ def property_to_java(model, owner, prop, props_conf, adapter = false)
   end
 end
 
-def method_to_java(model, owner_name, owner, method, methods_conf, adapter = false)
-  conf = model.get_conf_for_key((method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name, methods_conf) || {}
-  if method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
+def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter = false)
+  full_name = (method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name
+  conf = model.get_conf_for_key(full_name, methods_conf) || {}
+  if seen[full_name]
+    [[], []]
+  elsif method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
     param_types = method.parameters.map {|e| e.type.spelling}
     if (method.is_variadic?)
       param_types.push('...')
@@ -1385,18 +1391,19 @@ def method_to_java(model, owner_name, owner, method, methods_conf, adapter = fal
       body = " { throw new UnsupportedOperationException(); }"
     end
     method_lines = []
+    constructor_lines = []
     if adapter
       method_lines.push("@NotImplemented(\"#{method.name}\")")
     else
       method_lines.push("@Method(selector = \"#{method.name}\")")
     end
     method_lines.push("#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
-    constructor_lines = []
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
       args_s = param_types.map {|p| p[2]}.join(', ')
       constructor_lines = ["#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }"]
     end
+    seen[full_name] = true
     [method_lines, constructor_lines]
   else
     [[], []]
@@ -1812,12 +1819,12 @@ ARGV[1..-1].each do |yaml_file|
         methods_lines = []
         properties_lines = []
         h[:members].each do |(members, c)|
-          members.find_all {|m| !m.is_a?(Bro::ObjCProperty)}.each do |m|
-            a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, true)
+          members.find_all {|m| m.is_a?(Bro::ObjCMethod)}.each do |m|
+            a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, {}, true)
             methods_lines.concat(a[0])
           end
           members.find_all {|m| m.is_a?(Bro::ObjCProperty)}.each do |p|
-            properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, true))
+            properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, {}, true))
           end
         end
 
@@ -1839,20 +1846,18 @@ ARGV[1..-1].each do |yaml_file|
     owner = h[:owner]
     c = h[:conf]
     owner_name = h[:owner_name]
-    dups = {}
+    seen = {}
     methods_lines = []
     constructors_lines = []
     properties_lines = []
     h[:members].each do |(members, c)|
-      members.find_all {|m| !m.is_a?(Bro::ObjCProperty) && !dups[(m.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + m.name] && m.is_available?(mac_version, ios_version)}.each do |m|
-        a = method_to_java(model, owner_name, owner, m, c['methods'] || {})
+      members.find_all {|m| m.is_a?(Bro::ObjCMethod) && m.is_available?(mac_version, ios_version)}.each do |m|
+        a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, seen)
         methods_lines.concat(a[0])
         constructors_lines.concat(a[1])
-        dups[(m.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + m.name] = true
       end
-      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && !dups[m.name] && m.is_available?(mac_version, ios_version)}.each do |p|
-        properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}))
-        dups[p.name] = true
+      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && m.is_available?(mac_version, ios_version)}.each do |p|
+        properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, seen))
       end
     end
 
