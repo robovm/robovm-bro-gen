@@ -1,0 +1,26 @@
+TODO:
+
+FunctionPtr - DONE!
+Implement @MachineSized - DONE!
+Enum marshaler (CFOptionFlags => machine sized) - DONE!
+dispatch - DONE!
+init* -> constructors - DONE!
+ObjC classes, methods, properties - DONE!
+Notifications - DONE!
+Adapters for protocols - DONE!
+
+Do not expose FunctionPtr and ObjCBlock if possible.
+Expand macros using a preprocessor?
+
+Nested Structs
+VaArgs
+VaList
+Alignment in structs
+
+NSDecimal
+NSLocalizedString and other macros
+NSUncaughtExceptionHandler
+visibility (functions, classes, methods, properties)
+strongRef
+Categories compiler plugin
+Blocks
