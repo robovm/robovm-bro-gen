@@ -1875,7 +1875,7 @@ ARGV[1..-1].each do |yaml_file|
       data['annotations'] = "@Library(\"#{library}\")"
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
-      data['extends'] = 'NSCategory'
+      data['extends'] = 'NSExtensions'
     end
     methods_s = methods_lines.flatten.join("\n    ")
     constructors_s = constructors_lines.flatten.join("\n    ")
