@@ -1272,15 +1272,15 @@ end
 
 def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   if conf_type
-    conf_type =~ /<\s*([A-Z0-9])+\s+>/ ? [$1, conf_type, name] : [conf_type, nil, name]
+    conf_type =~ /<\s*([A-Z0-9])+\s+>/ ? [$1, conf_type, name, nil] : [conf_type, nil, name, nil]
   else
     if is_init?(owner, method) && index == 0
       # init method return type should always be '@Pointer long'
-      [Bro::builtins_by_name('Pointer').java_name, nil, name]
+      [Bro::builtins_by_name('Pointer').java_name, nil, name, nil]
     else
       resolved_type = model.resolve_type(type, false, owner, method)
       java_type = model.to_java_type(resolved_type)
-      resolved_type.is_a?(Bro::ObjCId) && ["T#{index}", "T#{index} extends Object & #{java_type}", name] || [java_type, nil, name]
+      resolved_type.is_a?(Bro::ObjCId) && ["T#{index}", "T#{index} extends Object & #{java_type}", name, resolved_type] || [java_type, nil, name, resolved_type]
     end
   end
 end
@@ -1326,6 +1326,13 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
       if adapter
         lines.push("@NotImplemented(\"#{prop.setter.name}\")")
+      elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
+        # assign is used on some properties of primitives, structs and enums which isn't needed
+        if type[0] =~ /^@(ByVal|MachineSized|Pointer)/ || type[0] =~ /\b(boolean|byte|short|char|int|long|float|double)$/ || type[3] && type[3].is_a?(Bro::Enum)
+          lines.push("@Property(selector = \"#{prop.setter.name}\")")
+        else
+          lines.push("@Property(selector = \"#{prop.setter.name}\", strongRef = true)")
+        end
       else
         lines.push("@Property(selector = \"#{prop.setter.name}\")")
       end
