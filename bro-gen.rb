@@ -856,13 +856,13 @@ module Bro
       e = e || @typedefs.find {|e| e.name == name}
       e || (orig_name != name ? Builtin.new(name) : nil)
     end
-    def resolve_type(type, owner = nil, method = nil)
+    def resolve_type(type, allow_arrays = false, owner = nil, method = nil)
       if owner && method && method.name.start_with?('init') && type.spelling == 'id'
         owner
       else
         t = @type_cache[type.spelling]
         if !t
-          t = resolve_type0(type, owner)
+          t = resolve_type0(type, allow_arrays, owner, method)
           raise "Failed to resolve type '#{type.spelling}' with kind #{type.kind} defined at #{Bro::location_to_s(type.declaration.location)}" unless t
           if t.is_a?(Typedef) && t.is_callback?
             # Callback. Map to VoidPtr for now.
@@ -875,7 +875,7 @@ module Bro
         t
       end
     end
-    def resolve_type0(type, owner = nil)
+    def resolve_type0(type, allow_arrays = false, owner = nil, method = nil)
       if !type then return Bro::builtins_by_type_kind(:type_void) end
       name = type.spelling
       name = name.gsub(/\s*\bconst\b\s*/, '')
@@ -973,7 +973,12 @@ module Bro
           dimensions.push base_type.array_size
           base_type = base_type.element_type
         end
-        Array.new(resolve_type(base_type), dimensions)
+        if allow_arrays
+          Array.new(resolve_type(base_type), dimensions)
+        else
+          # Marshal as pointer
+          (1..dimensions.size).inject(resolve_type(base_type)) {|t, i| t.pointer}
+        end
       else
         # Could still be an enum
         e = @enums.find {|e| e.name == name}
@@ -1224,7 +1229,7 @@ def struct_to_java(model, data, name, struct, conf)
   index = 0
   members = []
   struct.members.each do |e|
-    type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type))
+    type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
     members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{name} #{e.name}(#{type} #{e.name});"].join("\n    "))
     index = index + inc
   end
@@ -1235,7 +1240,7 @@ def struct_to_java(model, data, name, struct, conf)
   constructor_body = []
   struct.members.map do |e|
     type = (conf[e.name] || {})['type']
-    type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type).java_name
+    type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
     constructor_params.push "#{type} #{e.name}"
     constructor_body.push "this.#{e.name}(#{e.name});"
   end.join("\n    ")
@@ -1273,7 +1278,7 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
       # init method return type should always be '@Pointer long'
       [Bro::builtins_by_name('Pointer').java_name, nil, name]
     else
-      resolved_type = model.resolve_type(type, owner, method)
+      resolved_type = model.resolve_type(type, false, owner, method)
       java_type = model.to_java_type(resolved_type)
       resolved_type.is_a?(Bro::ObjCId) && ["T#{index}", "T#{index} extends Object & #{java_type}", name] || [java_type, nil, name]
     end
@@ -1569,7 +1574,7 @@ ARGV[1..-1].each do |yaml_file|
     methods_s = vals.map do |(v, vconf)|
       name = vconf['name'] || v.name
       #name = name[0, 1].downcase + name[1..-1]
-      java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type))
+      java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
       lines = ["@GlobalValue(symbol=\"#{v.name}\")", "#{visibility} static native #{java_type} #{name}();"]
       if !v.is_const? && !vconf['readonly']
