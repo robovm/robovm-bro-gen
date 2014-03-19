@@ -150,9 +150,13 @@ enums:
     UIWebViewNavigationType: {}
 
 categories:
-    ^CIColor$: {}
-    ^CIImage$: {}
-    ^NSAttributedString$: {}
+    ^CIColor$: {exclude: true}
+    ^CIImage$: {exclude: true}
+    ^NSAttributedString$:
+        methods:
+            '-init.*$':
+                visibility: protected
+                return_type: "@Pointer long"
     ^NSBundle$: {}
     ^NSCoder$: {}
     ^NSIndexPath$: {}

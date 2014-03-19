@@ -155,28 +155,28 @@ classes:
     CFMutableArray:
         name: CFMutableArray
         extends: CFArray
-    __CFMutableAttributedString:
+    CFMutableAttributedString:
         name: CFMutableAttributedString
         extends: CFAttributedString
-    __CFMutableBag:
+    CFMutableBag:
         name: CFMutableBag
         extends: CFBag
-    __CFMutableBitVector:
+    CFMutableBitVector:
         name: CFMutableBitVector
         extends: CFBitVector
-    __CFMutableCharacterSet:
+    CFMutableCharacterSet:
         name: CFMutableCharacterSet
         extends: CFCharacterSet
-    __CFMutableData:
+    CFMutableData:
         name: CFMutableData
         extends: CFData
-    __CFMutableDictionary:
+    CFMutableDictionary:
         name: CFMutableDictionary
         extends: CFDictionary
-    __CFMutableSet:
+    CFMutableSet:
         name: CFMutableSet
         extends: CFSet
-    __CFMutableString:
+    CFMutableString:
         name: CFMutableString
         extends: CFString
     __CFNotificationCenter:

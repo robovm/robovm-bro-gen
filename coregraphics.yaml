@@ -335,7 +335,7 @@ functions:
     ^CGDataProviderCopy(.*)$:
         class: CGDataProvider
         name: "get#{g[0]}"
-        return_type: "@org.robovm.rt.bro.annotation.Marshaler(CFType.NoRetainMarshaler.class) NSData"
+        return_type: "NSData"
     ^CGDataProvider(.*)$:
         class: CGDataProvider
         name: "#{g[0]}"
