@@ -149,6 +149,25 @@ module Bro
     end
   end
 
+  class Block < Entity
+    attr_accessor :return_type, :param_types
+    def initialize(return_type, param_types)
+      super(nil, nil)
+      @return_type = return_type
+      @param_types = param_types
+    end
+    def types
+      [@return_type.types] + @param_types.map {|e| e.types}
+    end
+    def java_name
+      if @return_type.is_a?(Builtin) && @return_type.name == 'void' && @param_types.empty?
+        "@Block Runnable"
+      else
+        "ObjCBlock"
+      end
+    end
+  end
+
   class ObjCId < Entity
     attr_accessor :protocols
     def initialize(protocols)
@@ -979,6 +998,13 @@ module Bro
           # Marshal as pointer
           (1..dimensions.size).inject(resolve_type(base_type)) {|t, i| t.pointer}
         end
+      elsif type.kind == :type_block_pointer
+        if name =~ /^void *\(\^\)\((void)?\)$/
+          Block.new(Bro::builtins_by_type_kind(:type_void), [])
+        else
+          $stderr.puts "WARN: Unknown block type #{name}. Using ObjCBlock."
+          Bro::builtins_by_type_kind(type.kind)
+        end
       else
         # Could still be an enum
         e = @enums.find {|e| e.name == name}
@@ -1435,6 +1461,7 @@ def_protocol_template = IO.read("#{script_dir}/protocol_template.java")
 global = YAML.load_file("#{script_dir}/global.yaml")
 
 ARGV[1..-1].each do |yaml_file|
+  puts "Processing #{yaml_file}..."
   conf = YAML.load_file(yaml_file)
 
   headers = []
