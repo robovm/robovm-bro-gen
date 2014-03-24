@@ -162,6 +162,9 @@ module Bro
     def java_name
       if @return_type.is_a?(Builtin) && @return_type.name == 'void' && @param_types.empty?
         "@Block Runnable"
+      elsif @return_type.is_a?(Builtin) && @return_type.name == 'void' && 
+            @param_types.size == 1 && @param_types[0].is_a?(Builtin) && @param_types[0].name == 'boolean'
+        "@Block VoidBooleanBlock"
       else
         "ObjCBlock"
       end
@@ -1001,6 +1004,8 @@ module Bro
       elsif type.kind == :type_block_pointer
         if name =~ /^void *\(\^\)\((void)?\)$/
           Block.new(Bro::builtins_by_type_kind(:type_void), [])
+        elsif name =~ /^void *\(\^\)\(BOOL\)$/
+          Block.new(Bro::builtins_by_type_kind(:type_void), [Bro::builtins_by_type_kind(:type_bool)])
         else
           $stderr.puts "WARN: Unknown block type #{name}. Using ObjCBlock."
           Bro::builtins_by_type_kind(type.kind)
