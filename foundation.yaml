@@ -34,6 +34,9 @@ typedefs:
     "NSMutableOrderedSet *": "NSMutableOrderedSet<?>"
     "NSMutableOrderedSet **": "NSMutableOrderedSet.NSMutableOrderedSetPtr<?>"
     "NSEnumerator *": "NSEnumerator<?>"
+    'void (^)(void (^)(void))': '@Block("(@Block)") VoidBlock1<Runnable>'
+    'void (^)(NSError *)': '@Block VoidBlock1<NSError>'
+
 enums:
     NSActivityOptions: {}
     NSAttributedStringEnumerationOptions: {}

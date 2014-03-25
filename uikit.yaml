@@ -7,6 +7,12 @@ headers:
     - /System/Library/Frameworks/UIKit.framework/Headers/UIKit.h
 typedefs:
     NSCopying: NSObject
+    "void (^)(UIBackgroundFetchResult)": "@Block VoidBlock1<UIBackgroundFetchResult>"
+    "void (^)(id<UIViewControllerTransitionCoordinatorContext>)": "@Block VoidBlock1<UIViewControllerTransitionCoordinatorContext>"
+    "void (^)(CGRect, CGRect, NSTextContainer *, NSRange, BOOL *)": '@Block("(@ByVal, @ByVal, , @ByVal, )") VoidBlock5<CGRect, CGRect, NSTextContainer, NSRange, BytePtr>'
+    'void (^)(CGRect, BOOL *)': '@Block("(@ByVal, )") VoidBlock2<CGRect, BytePtr>'
+    'void (^)(void (^)(void))': '@Block("(@Block)") VoidBlock1<Runnable>'
+    'void (^)(NSError *)': '@Block VoidBlock1<NSError>'
     # UIAccelerationValue: double
     # UIBackgroundTaskIdentifier: int
     # CGPathRef: CGPath
@@ -2053,6 +2059,11 @@ functions:
         exclude: true
     ^NSTextAlignmentFromCTTextAlignment$:
         exclude: true
+
+    ^UIApplication(Main)$:
+        class: UIApplication
+        visibility: protected
+        name: "#{g[0]}"
 
     # Make sure we don't miss any functions if new ones are introduced in a later UIKit
     ^(CG.*)$:
