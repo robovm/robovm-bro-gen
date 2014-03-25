@@ -1304,7 +1304,11 @@ def opaque_to_java(model, data, name, conf)
 end
 
 def is_init?(owner, method)
-  owner.is_a?(Bro::ObjCClass) && method.is_a?(Bro::ObjCInstanceMethod) && method.name.start_with?('init') && (method.return_type.spelling == 'id' || method.return_type.spelling == 'instancetype')
+  owner.is_a?(Bro::ObjCClass) && method.is_a?(Bro::ObjCInstanceMethod) && 
+      method.name.start_with?('init') && 
+        (method.return_type.spelling == 'id' || 
+         method.return_type.spelling == 'instancetype' ||
+         method.return_type.spelling == "#{owner.name} *")
 end
 
 def get_generic_type(model, owner, method, type, index, conf_type, name = nil)

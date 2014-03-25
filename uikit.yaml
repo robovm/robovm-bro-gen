@@ -337,7 +337,7 @@ classes:
         methods:
             '+buttonWithType:$':
                 return_type: UIButton
-                name: fromType
+                name: create
             '-backgroundImageForState:$':
                 name: getBackgroundImage
             '-backgroundRectForBounds:$':
@@ -358,6 +358,8 @@ classes:
                 name: getTitleRect
             '-attributedTitleForState:$':
                 name: getAttributedTitle
+            '-(set.*):forState:.*$':
+                name: "#{g[0]}"
     ^UICollectionReusableView$:
         methods:
             '-didTransitionFromLayout:toLayout:$':
@@ -500,25 +502,28 @@ classes:
 #            '+yellowColor$':
 #                name: yellow
             '+colorWithCGColor:$':
-                name: fromCGColor
+                name: createFromCGColor
             '+colorWithCIColor:$':
-                name: fromCIColor
+                name: createFromCIColor
             '+colorWithHue:saturation:brightness:alpha:$':
-                name: fromHSBA
+                name: createFromHSBA
             '+colorWithRed:green:blue:alpha:$':
-                name: fromRGBA
+                name: createFromRGBA
             '+colorWithPatternImage:$':
-                name: fromPatternImage
+                name: createFromPatternImage
             '+colorWithWhite:alpha:$':
-                name: fromWhiteAlpha
+                name: createFromWhiteAlpha
             '-colorWithAlphaComponent:$':
-                name: colorWithAlpha
+                name: addAlpha
             '-getHue:saturation:brightness:alpha:$':
                 name: getHSBA
+                visibility: protected
             '-getRed:green:blue:alpha:$':
                 name: getRGBA
+                visibility: protected
             '-getWhite:alpha:$':
                 name: getWhiteAlpha
+                visibility: protected
             '-set$':
                 name: setFillAndStroke
     ^UIControl$:
@@ -539,7 +544,16 @@ classes:
                 name: endTracking
             '-sendActionsForControlEvents:$':
                 name: sendControlEventsActions
-    ^UIDatePicker$: {}
+            '-addTarget:action:forControlEvents:$':
+                name: addTarget
+            '-removeTarget:action:forControlEvents:$':
+                name: removeTarget
+            '-sendAction:to:forEvent:$':
+                name: sendAction
+    ^UIDatePicker$:
+        methods:
+            '-setDate:animated:$':
+                name: setDate
     ^UIDevice$:
         properties:
             'identifierForVendor$':
@@ -627,8 +641,14 @@ classes:
                 name: getSystemFontSize
             '+fontWithName:size:$':
                 name: getFont
+            '+fontWithDescriptor:size:$':
+                name: getFont
+            '+preferredFontForTextStyle:$':
+                name: getPreferredFontForTextStyle
             '-fontWithSize:$':
                 name: getFontWithSize
+            '-fontDescriptor$':
+                property: true
     ^UIFontDescriptor$: {}
     ^UIGestureRecognizer$:
         methods:
@@ -1424,10 +1444,46 @@ classes:
             '-convertRect:toWindow:$':
                 name: convertRectToWindow
 protocols:
-    ^NSLayoutManagerDelegate$: {}
-    ^NSTextAttachmentContainer$: {}
+    ^NSLayoutManagerDelegate$:
+        methods:
+            '-layoutManager:shouldGenerateGlyphs:properties:characterIndexes:font:forGlyphRange:$':
+                name: shouldGenerateGlyphs
+            '-layoutManager:lineSpacingAfterGlyphAtIndex:withProposedLineFragmentRect:$':
+                name: getLineSpacingAfterGlyph
+            '-layoutManager:paragraphSpacingBeforeGlyphAtIndex:withProposedLineFragmentRect:$':
+                name: getParagraphSpacingBeforeGlyph
+            '-layoutManager:paragraphSpacingAfterGlyphAtIndex:withProposedLineFragmentRect:$':
+                name: getParagraphSpacingAfterGlyph
+            '-layoutManager:shouldUseAction:forControlCharacterAtIndex:$':
+                name: shouldUseAction
+            '-layoutManager:shouldBreakLineByWordBeforeCharacterAtIndex:$':
+                name: shouldBreakLineByWordBeforeCharacter
+            '-layoutManager:shouldBreakLineByHyphenatingBeforeCharacterAtIndex:$':
+                name: shouldBreakLineByHyphenatingBeforeCharacter
+            '-layoutManager:boundingBoxForControlGlyphAtIndex:forTextContainer:proposedLineFragment:glyphPosition:characterIndex:$':
+                name: getBoundingBoxForControlGlyph
+            '-layoutManagerDidInvalidateLayout:$':
+                name: didInvalidateLayout
+            '-layoutManager:didCompleteLayoutForTextContainer:atEnd:$':
+                name: didCompleteLayout
+            '-layoutManager:textContainer:didChangeGeometryFromSize:$':
+                name: didChangeGeometry
+
+    ^NSTextAttachmentContainer$:
+        methods:
+            '-imageForBounds:textContainer:characterIndex:$':
+                name: getImageForBounds
+            '-attachmentBoundsForTextContainer:proposedLineFragment:glyphPosition:characterIndex:$':
+                name: getAttachmentBounds
+
     ^NSTextLayoutOrientationProvider$: {}
-    ^NSTextStorageDelegate$: {}
+    ^NSTextStorageDelegate$:
+        methods:
+            '-textStorage:willProcessEditing:range:changeInLength:$':
+                name: willProcessEditing
+            '-textStorage:didProcessEditing:range:changeInLength:$':
+                name: didProcessEditing
+
     ^UIAccelerometerDelegate$:
         methods:
             '-accelerometer:didAccelerate:$':
@@ -1453,6 +1509,13 @@ protocols:
                 name: getItem
             '-activityViewControllerPlaceholderItem:$':
                 name: getPlaceholderItem
+            '-activityViewController:subjectForActivityType:$':
+                name: getSubject
+            '-activityViewController:dataTypeIdentifierForActivityType:$':
+                name: getDataTypeIdentifier
+            '-activityViewController:thumbnailImageForActivityType:suggestedSize:$':
+                name: getThumbnailImage
+
     ^UIAlertViewDelegate$:
         methods:
             '-alertView:clickedButtonAtIndex:$':
@@ -1529,8 +1592,18 @@ protocols:
                 name: willEncodeRestorableState
             '-application:willFinishLaunchingWithOptions:$':
                 name: willFinishLaunching
+            '-application:didReceiveRemoteNotification:fetchCompletionHandler:$':
+                name: didReceiveRemoteNotification
+            '-application:performFetchWithCompletionHandler:$':
+                name: performFetch
+            '-application:handleEventsForBackgroundURLSession:completionHandler:$':
+                name: handleEventsForBackgroundURLSession
     ^UIBarPositioning$: {}
-    ^UIBarPositioningDelegate$: {}
+    ^UIBarPositioningDelegate$:
+        methods:
+            '-positionForBar:$':
+                name: getPosition
+
     ^UICollectionViewDataSource$:
         methods:
             '-collectionView:cellForItemAtIndexPath:$':
@@ -1567,6 +1640,8 @@ protocols:
                 name: shouldSelectItem
             '-collectionView:shouldShowMenuForItemAtIndexPath:$':
                 name: shouldShowMenuForItem
+            '-collectionView:transitionLayoutForOldLayout:newLayout:$':
+                name: getTransitionLayout
     ^UICollectionViewDelegateFlowLayout$:
         methods:
             '-collectionView:layout:insetForSectionAtIndex:$':
@@ -1581,7 +1656,17 @@ protocols:
                 name: getSectionHeaderReferenceSize
             '-collectionView:layout:sizeForItemAtIndexPath:$':
                 name: getItemSize
-    ^UICollisionBehaviorDelegate$: {}
+    ^UICollisionBehaviorDelegate$:
+        methods:
+            '-collisionBehavior:beganContactForItem:withItem:atPoint:$':
+                name: beganContact
+            '-collisionBehavior:endedContactForItem:withItem:$':
+                name: endedContact
+            '-collisionBehavior:beganContactForItem:withBoundaryIdentifier:atPoint:$':
+                name: beganBoundaryContact
+            '-collisionBehavior:endedContactForItem:withBoundaryIdentifier:$':
+                name: endedBoundaryContact
+
     ^UIDataSourceModelAssociation$:
         methods:
             '-indexPathForElementWithModelIdentifier:inView:$':
@@ -1616,7 +1701,13 @@ protocols:
                 name: willPresentOpenInMenu
             '-documentInteractionControllerWillPresentOptionsMenu:$':
                 name: willPresentOptionsMenu
-    ^UIDynamicAnimatorDelegate$: {}
+    ^UIDynamicAnimatorDelegate$:
+        methods:
+            '-dynamicAnimatorWillResume:$':
+                name: willResume
+            '-dynamicAnimatorDidPause:$':
+                name: didPause
+
     ^UIDynamicItem$: {}
     ^UIGestureRecognizerDelegate$:
         methods:
@@ -1626,7 +1717,22 @@ protocols:
                 name: shouldRecognizeSimultaneously
             '-gestureRecognizerShouldBegin:$':
                 name: shouldBegin
-    ^UIGuidedAccessRestrictionDelegate$: {}
+            '-gestureRecognizer:shouldRequireFailureOfGestureRecognizer:$':
+                name: shouldRequireFailure
+            '-gestureRecognizer:shouldBeRequiredToFailByGestureRecognizer:$':
+                name: shouldBeRequiredToFail
+
+    ^UIGuidedAccessRestrictionDelegate$:
+        methods:
+            '-guidedAccessRestrictionIdentifiers$':
+                name: getIdentifiers
+            '-guidedAccessRestrictionWithIdentifier:didChangeState:$':
+                name: didChangeState
+            '-textForGuidedAccessRestrictionWithIdentifier:$':
+                name: getText
+            '-detailTextForGuidedAccessRestrictionWithIdentifier:$':
+                name: getDetailText
+
     ^UIImagePickerControllerDelegate$:
         protocols: [UINavigationControllerDelegate]
         methods:
@@ -1634,7 +1740,14 @@ protocols:
                 name: didFinishPickingMedia
             '-imagePickerControllerDidCancel:$':
                 name: didCancel
-    ^UIKeyInput$: {}
+            '-imagePickerController:didFinishPickingImage:editingInfo:$':
+                name: didFinishPickingImage
+
+    ^UIKeyInput$:
+        methods:
+            '-insertText:$':
+                name: insertText
+
     ^UILayoutSupport$: {}
     ^UINavigationBarDelegate$:
         methods:
@@ -1652,6 +1765,15 @@ protocols:
                 name: didShowViewController
             '-navigationController:willShowViewController:animated:$':
                 name: willShowViewController
+            '-navigationControllerSupportedInterfaceOrientations:$':
+                name: getSupportedInterfaceOrientations
+            '-navigationControllerPreferredInterfaceOrientationForPresentation:$':
+                name: getPreferredInterfaceOrientation
+            '-navigationController:interactionControllerForAnimationController:$':
+                name: getInteractionController
+            '-navigationController:animationControllerForOperation:fromViewController:toViewController:$':
+                name: getAnimationController
+
 # Has a single static mehtdo
 #    ^UIObjectRestoration$: {}
     ^UIPageViewControllerDataSource$:
@@ -1672,6 +1794,11 @@ protocols:
                 name: getSpineLocation
             '-pageViewController:willTransitionToViewControllers:$':
                 name: willTransition
+            '-pageViewControllerSupportedInterfaceOrientations:$':
+                name: getSupportedInterfaceOrientations
+            '-pageViewControllerPreferredInterfaceOrientationForPresentation:$':
+                name: getPreferredInterfaceOrientation
+
     ^UIPickerViewAccessibilityDelegate$:
         methods:
             '-pickerView:accessibilityHintForComponent:$':
@@ -1701,9 +1828,12 @@ protocols:
     ^UIPopoverControllerDelegate$:
         methods:
             '-popoverControllerDidDismissPopover:$':
-                name: didDismissPopover
+                name: didDismiss
             '-popoverControllerShouldDismissPopover:$':
-                name: shouldDismissPopover
+                name: shouldDismiss
+            '-popoverController:willRepositionPopoverToRect:inView:$':
+                name: willReposition
+
     ^UIPrintInteractionControllerDelegate$:
         methods:
             '-printInteractionController:choosePaper:$':
@@ -1722,6 +1852,9 @@ protocols:
                 name: willPresentPrinterOptions
             '-printInteractionControllerWillStartJob:$':
                 name: willStartJob
+            '-printInteractionController:cutLengthForPaper:$':
+                name: getCutLength
+
     ^UIScrollViewDelegate$:
         methods:
             '-scrollViewDidEndDecelerating:$':
@@ -1810,6 +1943,11 @@ protocols:
                 name: willHideViewController
             '-splitViewController:willShowViewController:invalidatingBarButtonItem:$':
                 name: willShowViewController
+            '-splitViewControllerSupportedInterfaceOrientations:$':
+                name: getSupportedInterfaceOrientations
+            '-splitViewControllerPreferredInterfaceOrientationForPresentation:$':
+                name:getPreferredInterfaceOrientation
+
     ^UIStateRestoring$:
         methods:
             '-decodeRestorableStateWithCoder:$':
@@ -1828,6 +1966,15 @@ protocols:
                 name: willBeginCustomizingViewControllers
             '-tabBarController:willEndCustomizingViewControllers:changed:$':
                 name: willEndCustomizingViewControllers
+            '-tabBarControllerSupportedInterfaceOrientations:$':
+                name: getSupportedInterfaceOrientations
+            '-tabBarControllerPreferredInterfaceOrientationForPresentation:$':
+                name: getPreferredInterfaceOrientation
+            '-tabBarController:interactionControllerForAnimationController:$':
+                name: getInteractionController
+            '-tabBarController:animationControllerForTransitionFromViewController:toViewController:$':
+                name: getAnimationController
+
     ^UITabBarDelegate$:
         methods:
             '-tabBar:didBeginCustomizingItems:$':
@@ -1924,6 +2071,15 @@ protocols:
                 name: willDisplayFooterView
             '-tableView:willDisplayHeaderView:forSection:$':
                 name: willDisplayHeaderView
+            '-tableView:estimatedHeightForRowAtIndexPath:$':
+                name: getEstimatedRowHeight
+            '-tableView:estimatedHeightForHeaderInSection:$':
+                name: getEstimatedSectionHeaderHeight
+            '-tableView:estimatedHeightForFooterInSection:$':
+                name: getEstimatedSectionFooterHeight
+            '-tableView:accessoryTypeForRowWithIndexPath:$':
+                name: getRowAccessoryType
+
     ^UITextFieldDelegate$:
         methods:
             '-textField:shouldChangeCharactersInRange:replacementString:$':
@@ -1984,7 +2140,28 @@ protocols:
                 name: getSelectionRects
             '-shouldChangeTextInRange:replacementText:$':
                 name: shouldChangeText
-    ^UITextInputDelegate$: {}
+            '-setMarkedText:selectedRange:$':
+                name: setMarkedText
+            '-setBaseWritingDirection:forRange:$':
+                name: setBaseWritingDirection
+            '-insertDictationResultPlaceholder$':
+                property: true
+            '-insertDictationResult:$':
+                name: insertDictationResult
+            '-removeDictationResultPlaceholder:willInsertResult:$':
+                name: removeDictationResultPlaceholder
+
+    ^UITextInputDelegate$:
+        methods:
+            '-selectionWillChange:$':
+                name: selectionWillChange
+            '-selectionDidChange:$':
+                name: selectionDidChange
+            '-textWillChange:$':
+                name: textWillChange
+            '-textDidChange:$':
+                name: textDidChange
+
     ^UITextInputTokenizer$:
         methods:
             '-positionFromPosition:toBoundary:inDirection:$':
@@ -2012,6 +2189,11 @@ protocols:
                 name: shouldBeginEditing
             '-textViewShouldEndEditing:$':
                 name: shouldEndEditing
+            '-textView:shouldInteractWithURL:inRange:$':
+                name: shouldInteractWithURL
+            '-textView:shouldInteractWithTextAttachment:inRange:$':
+                name: shouldInteractWithTextAttachment
+
     ^UIToolbarDelegate$: {}
     ^UIVideoEditorControllerDelegate$:
         protocols: [UINavigationControllerDelegate]
@@ -2022,17 +2204,66 @@ protocols:
                 name: didSave
             '-videoEditorControllerDidCancel:$':
                 name: didCancel
-    ^UIViewControllerAnimatedTransitioning$: {}
-    ^UIViewControllerContextTransitioning$: {}
+    ^UIViewControllerAnimatedTransitioning$:
+        methods:
+            '-transitionDuration:$':
+                name: getTransitionDuration
+            '-animateTransition:$':
+                name: animateTransition
+            '-animationEnded:$':
+                name: animationEnded
+
+    ^UIViewControllerContextTransitioning$:
+        methods:
+            '-(containerView|presentationStyle)$':
+                property: true
+            '-updateInteractiveTransition:$':
+                name: updateInteractiveTransition
+            '-completeTransition:$':
+                name: completeTransition
+            '-viewControllerForKey:$':
+                name: getViewController
+            '-initialFrameForViewController:$':
+                name: getInitialFrame
+            '-finalFrameForViewController:$':
+                name: getFinalFrame
+
     ^UIViewControllerInteractiveTransitioning$:
         methods:
             '-completion(Speed|Curve)$':
                 property: true
+            '-startInteractiveTransition:$':
+                name: startInteractiveTransition
+
 # Contains a single static method
 #    ^UIViewControllerRestoration$: {}
-    ^UIViewControllerTransitionCoordinator$: {}
-    ^UIViewControllerTransitionCoordinatorContext$: {}
-    ^UIViewControllerTransitioningDelegate$: {}
+    ^UIViewControllerTransitionCoordinator$:
+        methods:
+            '-animateAlongsideTransition:completion:$':
+                name: animateAlongsideTransition
+            '-animateAlongsideTransitionInView:animation:completion:$':
+                name: animateAlongsideTransition
+            '-notifyWhenInteractionEndsUsingBlock:$':
+                name: notifyWhenInteractionEnds
+
+    ^UIViewControllerTransitionCoordinatorContext$:
+        methods:
+            '-(presentationStyle|initiallyInteractive|transitionDuration|percentComplete|completionVelocity|completionCurve|containerView)$':
+                property: true
+            '-viewControllerForKey:$':
+                name: getViewController
+
+    ^UIViewControllerTransitioningDelegate$:
+        methods:
+            '-animationControllerForPresentedController:presentingController:sourceController:$':
+                name: getAnimationControllerForPresentedController
+            '-animationControllerForDismissedController:$':
+                name: getAnimationControllerForDismissedController
+            '-interactionControllerForPresentation:$':
+                name: getInteractionControllerForPresentation
+            '-interactionControllerForDismissal:$':
+                name: getInteractionControllerForDismissal
+
     ^UIWebViewDelegate$:
         methods:
             '-webView:didFailLoadWithError:$':
@@ -2046,11 +2277,49 @@ protocols:
 
     # Informal protocols (categories)
     ^UIAccessibility$: {}
-    ^UIAccessibilityAction$: {}
-    ^UIAccessibilityContainer$: {}
+    ^UIAccessibilityAction$:
+        methods:
+            '-accessibilityScroll:$':
+                name: accessibilityScroll
+    ^UIAccessibilityContainer$:
+        methods:
+            '-accessibilityElementCount$':
+                property: true
+            '-accessibilityElementAtIndex:$':
+                name: getAccessibilityElement
+            '-indexOfAccessibilityElement:$':
+                name: indexOfAccessibilityElement
+
     ^UIAccessibilityFocus$: {}
     ^UINibLoadingAdditions$: {}
-    ^UIResponderStandardEditActions$: {}
+    ^UIResponderStandardEditActions$:
+        methods:
+            '-cut:$':
+                name: cut
+            '-copy:$':
+                name: copy
+            '-paste:$':
+                name: paste
+            '-select:$':
+                name: select
+            '-selectAll:$':
+                name: selectAll
+            '-delete:$':
+                name: delete
+            '-makeTextWritingDirectionLeftToRight:$':
+                name: makeTextWritingDirectionLeftToRight
+            '-makeTextWritingDirectionRightToLeft:$':
+                name: makeTextWritingDirectionRightToLeft
+            '-toggleBoldface:$':
+                name: toggleBoldface
+            '-toggleItalics:$':
+                name: toggleItalics
+            '-toggleUnderline:$':
+                name: toggleUnderline
+            '-increaseSize:$':
+                name: increaseSize
+            '-decreaseSize:$':
+                name: decreaseSize
 
 functions:
 
