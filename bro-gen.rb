@@ -958,7 +958,13 @@ module Bro
             # Replace all [] with *
             name = name.gsub(/\[\]/, '*')
             name = name.sub(/^(id|NSObject)(<.*>)?\s*/, 'NSObject *')
-            e = resolve_type_by_name(name.sub(/^([^\s*]+).*/, '\1'))
+            base = name.sub(/^([^\s*]+).*/, '\1')
+            e = case base
+            when /^(unsigned )?char$/ then resolve_type_by_name('byte')
+            when /^long$/ then resolve_type_by_name('MachineSInt')
+            when /^unsigned long$/ then resolve_type_by_name('MachineUInt')
+            else resolve_type_by_name(base)
+            end
             if e
               # Wrap in Pointer as many times as there are *s in name
               e = (1..name.scan(/\*/).count).inject(e) {|t, i| t.pointer}
