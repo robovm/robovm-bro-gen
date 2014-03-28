@@ -1410,12 +1410,14 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     name = conf['name']
     if !name
       name = method.name.gsub(/:/, '$')
+      #name = name.sub(/\$$/, '')
       if method.parameters.empty? && method.return_type.kind != :type_void && conf['property']
         base = name[0, 1].upcase + name[1..-1]
         name = ret_type[0] == 'boolean' ? "is#{base}" : "get#{base}"
-      elsif method.name.start_with?('set') && method.name.size > 3 && method.parameters.size == 1 && method.return_type.kind == :type_void && conf['property']
-        base = name[0, 1].upcase + name[1..-2]
-        name = "set#{base}"
+      elsif method.name.start_with?('set') && method.name.size > 3 && method.parameters.size == 1 && method.return_type.kind == :type_void # && conf['property']
+        name = name.sub(/\$$/, '')
+      elsif conf['trim_after_first_colon']
+        name = name.sub(/\$.*/, '')
       end
     end
     # Default visibility is protected for init methods, public for other methods in classes and empty (public) for interface methods.
