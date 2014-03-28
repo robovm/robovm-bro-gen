@@ -264,20 +264,33 @@ classes:
             'delegate$':
                 type: UIAlertViewDelegate
     ^UIApplication$:
-        # protocols: []
+        properties:
+            windows:
+                type: "NSArray<UIWindow>"
+            scheduledLocalNotifications:
+                type: "NSArray<UILocalNotification>"
         methods:
             '+sharedApplication$':
                 name: getSharedApplication
-            '-beginBackgroundTaskWithExpirationHandler:$':
+            '+registerObjectForStateRestoration:restorationIdentifier:$':
+                trim_after_first_colon: true
+            '-beginBackgroundTaskWith.*$':
                 name: beginBackgroundTask
             '-enabledRemoteNotificationTypes$':
                 name: getEnabledRemoteNotificationTypes
-#            '-sendAction:to:from:forEvent:$':
-#                parameters:
-#                    action: 
-#                        type: Action
+            '-sendAction:to:from:forEvent:$':
+                trim_after_first_colon: true
             '-supportedInterfaceOrientationsForWindow:$':
                 name: getSupportedInterfaceOrientations
+            '-setKeepAliveTimeout:handler:$':
+                trim_after_first_colon: true
+            '-(openURL|canOpenURL|sendEvent|cancelLocalNotification|endBackgroundTask):$':
+                trim_after_first_colon: true
+            '-(presentLocalNotificationNow|registerForRemoteNotificationTypes|scheduleLocalNotification):$':
+                trim_after_first_colon: true
+            '-(setStatusBar(Hidden|Style|Orientation)).*$':
+                trim_after_first_colon: true
+
     ^UIAttachmentBehavior$: {}
     ^UIBarButtonItem$:
         methods:
@@ -918,12 +931,32 @@ classes:
         methods:
             '-init$':
                 exclude: true
-    ^UIResponder$:
+    ^UIResponder$: # DONE
+        properties:
+            keyCommands:
+                type: NSArray<UIKeyCommand>
         methods:
             '-nextResponder$':
                 name: getNextResponder
             '-remoteControlReceivedWithEvent:$':
                 name: remoteControlReceived
+            '-(touches.*):withEvent:$':
+                name: "#{g[0]}"
+                parameters:
+                    touches:
+                        type: "NSSet<UITouch>"
+            '-(motion.*):withEvent:$':
+                name: "#{g[0]}"
+                parameters:
+                    touches:
+                        type: "NSSet<UITouch>"
+            '+(clearTextInputContextIdentifier):$':
+                name: "#{g[0]}"
+            '-canPerformAction:withSender:$':
+                name: canPerformAction
+            '-targetForAction:withSender:$':
+                name: getActionTarget
+
     ^UIRotationGestureRecognizer$: {}
     ^UIScreen$:
         methods:

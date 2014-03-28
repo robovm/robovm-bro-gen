@@ -740,6 +740,7 @@ classes:
 
             '-performSelectorInBackground:withObject:':
                 name: performSelectorInBackground
+                visibility: 'public final'
             '-cancelPreviousPerformRequests.*':
                 name: cancelPreviousPerformRequests
 
@@ -1034,26 +1035,6 @@ protocols:
         protocols: [ObjCProtocol]
         skip_adapter: true
         methods:
-            '-retain':
-            '-release':
-            '-autorelease':
-            '-description':
-            '-isEqual:':
-                name: isEqual
-            '-hash':
-
-            '-performSelector.*':
-                name: performSelector
-
-            '-conformsToProtocol:$':
-                name: conformsToProtocol
-            '-respondsToSelector:$':
-                name: respondsToSelector
-            '-isMemberOfClass:':
-                name: isMemberOfClass
-            '-isKindOfClass:':
-                name: isKindOfClass
-
             '\+.*': { exclude: true }
             '-.*': { exclude: true }
     ^NSPortDelegate$: {}
