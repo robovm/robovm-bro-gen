@@ -28,3 +28,4 @@ NSLocalizedString and other macros
 NSUncaughtExceptionHandler
 visibility (functions, classes, methods, properties)
 Blocks
+UIAppearance
