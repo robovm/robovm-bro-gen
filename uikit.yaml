@@ -158,17 +158,125 @@ enums:
 categories:
     ^CIColor$: {exclude: true}
     ^CIImage$: {exclude: true}
-    ^NSAttributedString$:
+
+    ^NSAttributedString$: # DONE
         methods:
             '-init.*$':
                 visibility: protected
                 return_type: "@Pointer long"
-    ^NSBundle$: {}
-    ^NSCoder$: {}
-    ^NSIndexPath$: {}
-    ^NSMutableAttributedString$: {}
-    ^NSString$: {}
-    ^NSValue$: {}
+                parameters:
+                    options:
+                        type: "NSDictionary<NSString, ?>"
+            '+attributedStringWithAttachment:$':
+                name: createWithAttachment
+            '-boundingRectWithSize:options:context:$':
+                name: getBoundingRect
+            '-dataFromRange:documentAttributes:error:$':
+                name: getData
+            '-drawAtPoint:$':
+                name: draw
+            '-drawInRect:$':
+                name: draw
+            '-drawWithRect:options:context:$':
+                name: draw
+            '-fileWrapperFromRange:documentAttributes:error:$':
+                name: getFileWrapper
+            '-size$':
+                name: getSize
+
+    ^NSBundle$: # DONE
+        methods:
+            '-loadNibNamed:owner:options:$':
+                name: loadNib
+                parameters:
+                    options:
+                        type: "NSDictionary<NSString, ?>"
+
+    ^NSCoder$: # DONE
+        methods:
+            '-(decode.*)ForKey:$':
+                name: "#{g[0]}"
+            '-(encode.*):forKey:$':
+                name: "#{g[0]}"
+
+    ^NSIndexPath$: # DONE
+        methods:
+            '+indexPathForRow:inSection:$':
+                name: createIndexPathForRowInSection
+            '+indexPathForItem:inSection:$':
+                name: createIndexPathForItemInSection
+
+    ^NSMutableAttributedString$: # DONE
+        methods:
+            '-fixAttributesInRange:$':
+                name: fixAttributesInRange
+            '-readFromData:options:documentAttributes:error:$':
+                name: readFromData
+                parameters:
+                    opts:
+                        type: "NSDictionary<NSString, ?>"
+            '-readFromFileURL:options:documentAttributes:error:$':
+                name: readFromFileURL
+                parameters:
+                    opts:
+                        type: "NSDictionary<NSString, ?>"
+
+    ^NSString$: # DONE
+        methods:
+            '-boundingRectWithSize:options:attributes:context:$':
+                name: getBoundingRect
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-drawAtPoint:forWidth:withFont:fontSize:lineBreakMode:baselineAdjustment:$':
+                name: draw
+            '-drawAtPoint:forWidth:withFont:lineBreakMode:$':
+                name: draw
+            '-drawAtPoint:forWidth:withFont:minFontSize:actualFontSize:lineBreakMode:baselineAdjustment:$':
+                name: draw
+            '-drawAtPoint:withAttributes:$':
+                name: draw
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-drawAtPoint:withFont:$':
+                name: draw
+            '-drawInRect:withAttributes:$':
+                name: draw
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-drawInRect:withFont:$':
+                name: draw
+            '-drawInRect:withFont:lineBreakMode:$':
+                name: draw
+            '-drawInRect:withFont:lineBreakMode:alignment:$':
+                name: draw
+            '-drawWithRect:options:attributes:context:$':
+                name: draw
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-sizeWithAttributes:$':
+                name: getSize
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-sizeWithFont:$':
+                name: getSize
+            '-sizeWithFont:constrainedToSize:$':
+                name: getSize
+            '-sizeWithFont:constrainedToSize:lineBreakMode:$':
+                name: getSize
+            '-sizeWithFont:forWidth:lineBreakMode:$':
+                name: getSize
+            '-sizeWithFont:minFontSize:actualFontSize:forWidth:lineBreakMode:$':
+                name: getSize
+
+    ^NSValue$: # DONE
+        methods:
+            '+valueWith.*$':
+                name: valueOf
 
     ^UIAccessibility@NSObject$: {protocol: true}
     ^UIAccessibilityAction@NSObject$: {protocol: true}
@@ -182,27 +290,216 @@ classes:
     ^UIEdgeInsets$: {}
     ^UIOffset$: {}
 
-    ^NSLayoutConstraint$:
+    ^NSLayoutConstraint$: # DONE
          methods:
             '+constraintWithItem:attribute:relatedBy:toItem:attribute:multiplier:constant:$':
                 name: create
             '+constraintsWithVisualFormat:options:metrics:views:$':
-                name: fromVisualFormat
-    ^NSLayoutManager$: {}
-    ^NSMutableParagraphStyle$: {}
-    ^NSParagraphStyle$: {}
-    ^NSShadow$: {}
-    ^NSStringDrawingContext$: {}
-    ^NSTextAttachment$: {}
-    ^NSTextContainer$: {}
-    ^NSTextStorage$: {}
-    ^UIAcceleration$: {}
-    ^UIAccelerometer$:
+                name: createFromVisualFormat
+                return_type: "NSArray<NSLayoutConstraint>"
+                parameters:
+                    metrics:
+                        type: "NSDictionary<NSString, NSNumber>"
+                    views:
+                        type: "NSDictionary<NSString, UIView>"
+
+    ^NSLayoutManager$: # DONE
+        properties:
+            '^textContainers$':
+                type: "NSArray<NSTextContainer>"
+        methods:
+            '-addTextContainer:$':
+                trim_after_first_colon: true
+            '-insertTextContainer:atIndex:$':
+                trim_after_first_colon: true
+            '-removeTextContainerAtIndex:$':
+                name: removeTextContainer
+            '-textContainerChangedGeometry:$':
+                trim_after_first_colon: true
+            '-invalidateGlyphsForCharacterRange:changeInLength:actualCharacterRange:$':
+                name: invalidateGlyphs
+            '-invalidateLayoutForCharacterRange:actualCharacterRange:$':
+                name: invalidateLayout
+            '-invalidateDisplayForCharacterRange:$':
+                trim_after_first_colon: true
+            '-invalidateDisplayForGlyphRange:$':
+                trim_after_first_colon: true
+            '-processEditingForTextStorage:edited:range:changeInLength:invalidatedRange:$':
+                name: processEditing
+            '-ensureGlyphsForCharacterRange:$':
+                trim_after_first_colon: true
+            '-ensureGlyphsForGlyphRange:$':
+                trim_after_first_colon: true 
+            '-ensureLayoutForCharacterRange:$':
+                trim_after_first_colon: true 
+            '-ensureLayoutForGlyphRange:$':
+                trim_after_first_colon: true 
+            '-ensureLayoutForTextContainer:$':
+                trim_after_first_colon: true 
+            '-ensureLayoutForBoundingRect:inTextContainer:$':
+                trim_after_first_colon: true 
+            '-setGlyphs:properties:characterIndexes:font:forGlyphRange:$':
+                trim_after_first_colon: true 
+            '-glyphAtIndex:isValidIndex:$':
+                name: getGlyph
+            '-glyphAtIndex:$':
+                name: getGlyph
+            '-isValidGlyphIndex:$':
+                trim_after_first_colon: true
+            '-propertyForGlyphAtIndex:$':
+                name: getPropertyForGlyph
+            '-characterIndexForGlyphAtIndex:$':
+                name: getCharacterIndexForGlyph
+            '-glyphIndexForCharacterAtIndex:$':
+                name: getGlyphIndexForCharacter
+            '-getGlyphsInRange:glyphs:properties:characterIndexes:bidiLevels:$':
+                name: getGlyphs
+            '-setTextContainer:forGlyphRange:$':
+                trim_after_first_colon: true
+            '-setLineFragmentRect:forGlyphRange:usedRect:$':
+                trim_after_first_colon: true
+            '-setExtraLineFragmentRect:usedRect:textContainer:$':
+                trim_after_first_colon: true
+            '-setLocation:forStartOfGlyphRange:$':
+                trim_after_first_colon: true
+            '-setNotShownAttribute:forGlyphAtIndex:$':
+                trim_after_first_colon: true
+            '-setDrawsOutsideLineFragment:forGlyphAtIndex:$':
+                trim_after_first_colon: true
+            '-setAttachmentSize:forGlyphRange:$':
+                trim_after_first_colon: true
+            '-getFirstUnlaidCharacterIndex:glyphIndex:$':
+                trim_after_first_colon: true
+            '-firstUnlaidCharacterIndex$':
+                name: getFirstUnlaidCharacterIndex
+            '-firstUnlaidGlyphIndex$':
+                name: getFirstUnlaidGlyphIndex
+            '-textContainerForGlyphAtIndex:effectiveRange:$':
+                name: getTextContainer
+            '-usedRectForTextContainer:$':
+                name: getUsedRectForTextContainer
+            '-lineFragmentRectForGlyphAtIndex:effectiveRange:$':
+                name: getLineFragmentRect
+            '-lineFragmentUsedRectForGlyphAtIndex:effectiveRange:$':
+                name: getLineFragmentUsedRect
+            '-locationForGlyphAtIndex:$':
+                name: getLocation
+            '-notShownAttributeForGlyphAtIndex:$':
+                name: getNotShownAttribute
+            '-drawsOutsideLineFragmentForGlyphAtIndex:$':
+                name: getDrawsOutsideLineFragment
+            '-attachmentSizeForGlyphAtIndex:$':
+                name: getAttachmentSize
+            '-truncatedGlyphRangeInLineFragmentForGlyphAtIndex:$':
+                name: getTruncatedGlyphRangeInLineFragment
+            '-glyphRangeForCharacterRange:actualCharacterRange:$':
+                name: getGlyphRangeForCharacterRange
+            '-characterRangeForGlyphRange:actualGlyphRange:$':
+                name: getCharacterRangeForGlyphRange
+            '-glyphRangeForTextContainer:$':
+                trim_after_first_colon: true
+            '-rangeOfNominallySpacedGlyphsContainingIndex:$':
+                name: getRangeOfNominallySpacedGlyphsContainingIndex
+            '-boundingRectForGlyphRange:inTextContainer:$':
+                name: getBoundingRectForGlyphRange
+            '-glyphRangeForBoundingRect:inTextContainer:$':
+                name: getGlyphRangeForBoundingRect
+            '-glyphRangeForBoundingRectWithoutAdditionalLayout:inTextContainer:$':
+                name: getGlyphRangeForBoundingRectWithoutAdditionalLayout
+            '-glyphIndexForPoint:inTextContainer:fractionOfDistanceThroughGlyph:$':
+                name: getSlyphIndexForPoint
+            '-glyphIndexForPoint:inTextContainer:$':
+                name: getSlyphIndexForPoint
+            '-fractionOfDistanceThroughGlyphForPoint:inTextContainer:$':
+                name: getFractionOfDistanceThroughGlyphForPoint
+            '-characterIndexForPoint:inTextContainer:fractionOfDistanceBetweenInsertionPoints:$':
+                name: getCharacterIndexForPoint
+            '-getLineFragmentInsertionPointsForCharacterAtIndex:alternatePositions:inDisplayOrder:positions:characterIndexes:$':
+                name: getLineFragmentInsertionPoints
+            '-enumerateLineFragmentsForGlyphRange:usingBlock:$':
+                name: enumerateLineFragments
+            '-enumerateEnclosingRectsForGlyphRange:withinSelectedGlyphRange:inTextContainer:usingBlock:$':
+                name: enumerateEnclosingRects 
+            '-drawBackgroundForGlyphRange:atPoint:$':
+                name: drawBackground
+            '-drawGlyphsForGlyphRange:atPoint:$':
+                name: drawGlyphs
+            '-showCGGlyphs:positions:count:font:matrix:attributes:inContext:$':
+                trim_after_first_colon: true
+                visibility: protected
+                parameters:
+                    glyphs:
+                        type: "@Pointer long"
+            '-fillBackgroundRectArray:count:forCharacterRange:color:$':
+                name: fillBackground
+                visibility: protected
+            '-drawUnderlineForGlyphRange:underlineType:baselineOffset:lineFragmentRect:lineFragmentGlyphRange:containerOrigin:$':
+                name: drawUnderline
+            '-underlineGlyphRange:underlineType:lineFragmentRect:lineFragmentGlyphRange:containerOrigin:$':
+                name: underline
+            '-drawStrikethroughForGlyphRange:strikethroughType:baselineOffset:lineFragmentRect:lineFragmentGlyphRange:containerOrigin:$':
+                name: drawStrikethrough
+            '-strikethroughGlyphRange:strikethroughType:lineFragmentRect:lineFragmentGlyphRange:containerOrigin:$':
+                name: strikethrough
+
+    ^NSMutableParagraphStyle$: # DONE
+        properties:
+            '^tabStops$':
+                type: "NSArray<NSTextTab>"
+    ^NSParagraphStyle$: # DONE
+        properties:
+            '^tabStops$':
+                type: "NSArray<NSTextTab>"
+        methods:
+            '+defaultParagraphStyle$':
+                property: true
+            '+defaultWritingDirectionForLanguage:$':
+                name: getDefaultWritingDirection
+
+    ^NSShadow$: {} # DONE
+    ^NSStringDrawingContext$: {} # DONE
+    ^NSTextAttachment$: {} # DONE
+    ^NSTextContainer$: # DONE
+        properties:
+            '^exclusionPaths$':
+                type: "NSArray<UIBezierPath>"
+        methods:
+            '-lineFragmentRectForProposedRect:atIndex:writingDirection:remainingRect:$':
+                name: getLineFragmentRect
+    ^NSTextStorage$: # DONE
+        properties:
+            '^layoutManagers$':
+                type: "NSArray<NSLayoutManager>"
+        methods:
+            '-addLayoutManager:$':
+                name: addLayoutManager
+            '-removeLayoutManager:$':
+                name: removeLayoutManager
+            '-edited:range:changeInLength:$':
+                name: edited
+            '-invalidateAttributesInRange:$':
+                name: invalidateAttributes
+            '-ensureAttributesAreFixedInRange:$':
+                name: ensureAttributesAreFixed
+    ^NSTextTab$: # DONE
+        properties:
+            '^options$':
+                type: "NSDictionary<NSString, ?>"
+        methods:
+            '+columnTerminatorsForLocale:$':
+                name: getColumnTerminators
+            '-initWithTextAlignment:location:options:$':
+                parameters:
+                    options:
+                        type: "NSDictionary<NSString, ?>"
+
+    ^UIAcceleration$: {} # DONE
+    ^UIAccelerometer$: # DONE
         methods:
             '+sharedAccelerometer$':
                 name: getSharedAccelerometer
-    ^UIAccessibilityElement$: {}
-    ^UIActionSheet$:
+    ^UIAccessibilityElement$: {} # DONE
+    ^UIActionSheet$: # DONE
         methods:
             '-initWithTitle:delegate:cancelButtonTitle:destructiveButtonTitle:otherButtonTitles:$':
                 exclude: true
@@ -220,8 +517,12 @@ classes:
                 name: showFrom
             '-showFromToolbar:$':
                 name: showFrom
-    ^UIActivity$:
+            '-showInView:$':
+                name: showIn
+    ^UIActivity$: # DONE
         methods:
+            '+activityCategory$':
+                name: getActivityCategory
             '-activityDidFinish:$':
                 name: didFinish
             '-activityImage$':
@@ -238,20 +539,28 @@ classes:
                 name: canPerform
             '-prepareWithActivityItems:$':
                 name: prepare
-    ^UIActivityIndicatorView$: {}
-    ^UIActivityItemProvider$:
-        # protocols: []
+
+    ^UIActivityIndicatorView$: {} # DONE
+
+    ^UIActivityItemProvider$: # DONE
         methods: 
             '-item$':
                 name: getItem
-    ^UIActivityViewController$: {}
-        # properties:
-        #     'completionHandler$':
-        #         exclude: true # TODO: Enable once we know how to handle blocks
-    ^UIAlertView$:
+
+    ^UIActivityViewController$: # DONE
+        properties:
+            '^completionHandler$':
+                type: "@Block VoidBlock2<String, Boolean>"
+            '^excludedActivityTypes$':
+                type: "NSArray<NSString>"
         methods:
-            '-initWithTitle:message:delegate:cancelButtonTitle:otherButtonTitles:$':
-                exclude: true
+            '-initWithActivityItems:applicationActivities:$':
+                parameters:
+                    applicationActivities:
+                        type: "NSArray<UIActivity>"
+
+    ^UIAlertView$: # DONE
+        methods:
             '-addButtonWithTitle:$':
                 name: addButton
             '-buttonTitleAtIndex:$':
@@ -263,7 +572,8 @@ classes:
         properties:
             'delegate$':
                 type: UIAlertViewDelegate
-    ^UIApplication$:
+
+    ^UIApplication$: # DONE
         properties:
             windows:
                 type: "NSArray<UIWindow>"
@@ -291,8 +601,15 @@ classes:
             '-(setStatusBar(Hidden|Style|Orientation)).*$':
                 trim_after_first_colon: true
 
-    ^UIAttachmentBehavior$: {}
-    ^UIBarButtonItem$:
+    ^UIAttachmentBehavior$: # DONE
+        properties:
+            '^items$':
+                type: "List<UIDynamicItem>"
+
+    ^UIBarButtonItem$: # DONE
+        properties:
+            '^possibleTitles$':
+                type: "NSArray<NSString>"
         methods:
             '-backButtonBackgroundImageForState:barMetrics:$':
                 name: getBackButtonBackgroundImage
@@ -308,28 +625,48 @@ classes:
                 name: getTitlePositionAdjustment
             '-backgroundImageForState:style:barMetrics:$':
                 name: getBackgroundImage
-    ^UIBarItem$:
+            'setBackgroundImage:forState:barMetrics:$':
+                trim_after_first_colon: true
+            '-setBackgroundImage:forState:style:barMetrics:$':
+                trim_after_first_colon: true
+            '-setBackgroundVerticalPositionAdjustment:forBarMetrics:$':
+                trim_after_first_colon: true
+            '-setTitlePositionAdjustment:forBarMetrics:$':
+                trim_after_first_colon: true
+            '-setBackButtonBackgroundImage:forState:barMetrics:$':
+                trim_after_first_colon: true
+            '-setBackButtonTitlePositionAdjustment:forBarMetrics:$':
+                trim_after_first_colon: true
+            '-setBackButtonBackgroundVerticalPositionAdjustment:forBarMetrics:$':
+                trim_after_first_colon: true
+
+    ^UIBarItem$: # DONE
         methods:
             '-setTitleTextAttributes:forState:$':
                 name: setTitleTextAttributes
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
             '-titleTextAttributesForState:$':
                 name: getTitleTextAttributes
-    ^UIBezierPath$:
+                return_type: "NSDictionary<NSString, ?>"
+
+    ^UIBezierPath$: # DONE
         methods:
             '+bezierPath$':
-                name: create
+                exclude: true
             '+bezierPathWithArcCenter:radius:startAngle:endAngle:clockwise:$':
-                name: fromArc
+                name: createFromArc
             '+bezierPathWithCGPath:$':
-                name: fromPath
+                name: createFromPath
             '+bezierPathWithOvalInRect:$':
-                name: fromOval
+                name: createFromOval
             '+bezierPathWithRect:$':
-                name: fromRect
+                name: createFromRect
             '+bezierPathWithRoundedRect:byRoundingCorners:cornerRadii:$':
-                name: fromRoundedRect
+                name: createFromRoundedRect
             '+bezierPathWithRoundedRect:cornerRadius:$':
-                name: fromRoundedRect
+                name: createFromRoundedRect
             '-addArcWithCenter:radius:startAngle:endAngle:clockwise:$':
                 name: addArc
             '-addCurveToPoint:controlPoint1:controlPoint2:$':
@@ -346,7 +683,18 @@ classes:
                 name: stroke
             '-bezierPathByReversingPath$':
                 name: reverse
-    ^UIButton$:
+            '-appendPath:$':
+                trim_after_first_colon: true
+            '-applyTransform:$':
+                trim_after_first_colon: true
+            '-containsPoint:$':
+                trim_after_first_colon: true
+            '-setLineDash:count:phase:$':
+                visibility: protected
+            '-getLineDash:count:phase:$':
+                visibility: protected
+
+    ^UIButton$: # DONE
         methods:
             '+buttonWithType:$':
                 return_type: UIButton
@@ -373,18 +721,25 @@ classes:
                 name: getAttributedTitle
             '-(set.*):forState:.*$':
                 name: "#{g[0]}"
-    ^UICollectionReusableView$:
+
+    ^UICollectionReusableView$: # DONE
         methods:
             '-didTransitionFromLayout:toLayout:$':
                 name: didTransition
             '-willTransitionFromLayout:toLayout:$':
                 name: willTransition
-    ^UICollectionView$:
+            '-applyLayoutAttributes:$':
+                trim_after_first_colon: true
+
+    ^UICollectionView$: # DONE
         methods:
             '-cellForItemAtIndexPath:$':
-                name: getItemCell
+                name: getCellForItem
             '-deleteItemsAtIndexPaths:$':
                 name: deleteItems
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-dequeueReusableCellWithReuseIdentifier:forIndexPath:$':
                 name: dequeueReusableCell
             '-dequeueReusableSupplementaryViewOfKind:withReuseIdentifier:forIndexPath:$':
@@ -392,19 +747,24 @@ classes:
             '-deselectItemAtIndexPath:animated:$':
                 name: deselectItem
             '-indexPathForCell:$':
-                name: getCellIndexPath
+                name: getIndexPathForCell
             '-indexPathForItemAtPoint:$':
-                name: getItemIndexPath
+                name: getIndexPathForItem
             '-indexPathsForSelectedItems$':
-                name: getSelectedItemsIndexPaths
+                name: getIndexPathsForSelectedItems
+                return_type: "NSArray<NSIndexPath>"
             '-indexPathsForVisibleItems$':
-                name: getVisibleItemsIndexPaths
+                name: getIndexPathsForVisibleItems
+                return_type: "NSArray<NSIndexPath>"
             '-insertItemsAtIndexPaths:$':
                 name: insertItems
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-layoutAttributesForItemAtIndexPath:$':
-                name: getItemLayoutAttributes
+                name: getLayoutAttributesForItem
             '-layoutAttributesForSupplementaryElementOfKind:atIndexPath:$':
-                name: getSupplementaryElementLayoutAttributes
+                name: getLayoutAttributesForSupplementaryElement
             '-moveItemAtIndexPath:toIndexPath:$':
                 name: moveItem
             '-numberOfItemsInSection:$':
@@ -421,21 +781,39 @@ classes:
                 name: registerReusableSupplementaryViewNib
             '-reloadItemsAtIndexPaths:$':
                 name: reloadItems
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-scrollToItemAtIndexPath:atScrollPosition:animated:$':
                 name: scrollToItem
             '-selectItemAtIndexPath:animated:scrollPosition:$':
                 name: selectItem
             '-visibleCells$':
                 name: getVisibleCells
-    ^UICollectionViewCell$: {}
-    ^UICollectionViewController$: {}
-        # protocols: []
-    ^UICollectionViewFlowLayout$: {}
-    ^UICollectionViewFlowLayoutInvalidationContext$: {}
+                return_type: "NSArray<UICollectionViewCell>"
+            '-setCollectionViewLayout:animated:$':
+                trim_after_first_colon: true
+            '-setCollectionViewLayout:animated:completion:$':
+                trim_after_first_colon: true
+            '-startInteractiveTransitionToCollectionViewLayout:completion:$':
+                name: startInteractiveTransition
+            '-(insert|delete|reload)Sections:$':
+                trim_after_first_colon: true
+            '-moveSection:toSection:$':
+                trim_after_first_colon: true
+            '-performBatchUpdates:completion:$':
+                trim_after_first_colon: true
+
+    ^UICollectionViewCell$: {} # DONE
+    ^UICollectionViewController$: {} # DONE
+    ^UICollectionViewFlowLayout$: {} # DONE
+    ^UICollectionViewFlowLayoutInvalidationContext$: {} # DONE
     ^UICollectionViewLayout$:
         methods:
             '+layoutAttributesClass$':
-                name: getLayoutAttributesClass
+                property: true
+            '+invalidationContextClass$':
+                property: true
             '-collectionViewContentSize$':
                 name: getCollectionViewContentSize
             '-finalLayoutAttributesForDisappearingDecorationElementOfKind:atIndexPath:$':
@@ -464,7 +842,30 @@ classes:
                 name: registerDecorationViewNib
             '-targetContentOffsetForProposedContentOffset:withScrollingVelocity:$':
                 name: getTargetContentOffset
-    ^UICollectionViewLayoutAttributes$:
+            '-invalidateLayoutWithContext:$':
+                name: invalidateLayout
+            '-invalidationContextForBoundsChange:$':
+                name: getInvalidationContextForBoundsChange
+            '-shouldInvalidateLayoutForBoundsChange:$':
+                trim_after_first_colon: true
+            '-targetContentOffsetForProposedContentOffset:$':
+                name: getTargetContentOffset
+            '-prepareForCollectionViewUpdates:$':
+                trim_after_first_colon: true
+                parameters:
+                    updateItems:
+                        type: "NSArray<UICollectionViewUpdateItem>"
+            '-prepareForAnimatedBoundsChange:$':
+                trim_after_first_colon: true
+            '-prepareForTransitionToLayout:$':
+                trim_after_first_colon: true
+            '-prepareForTransitionFromLayout:$':
+                trim_after_first_colon: true
+            '-indexPaths(To.*For.*)OfKind:$':
+                name: "getIndexPaths#{g[0]}"
+                return_type: "NSArray<NSIndexPath>"
+
+    ^UICollectionViewLayoutAttributes$: # DONE
         methods:
             '+layoutAttributesForCellWithIndexPath:$':
                 name: createForCell
@@ -472,48 +873,53 @@ classes:
                 name: createForDecorationView
             '+layoutAttributesForSupplementaryViewOfKind:withIndexPath:$':
                 name: createForSupplementaryView
-    ^UICollectionViewLayoutInvalidationContext$: {}
-    ^UICollectionViewTransitionLayout$: {}
-    ^UICollectionViewUpdateItem$: {}
-    ^UICollisionBehavior$: {}
-    ^UIColor$:
+    ^UICollectionViewLayoutInvalidationContext$: {} # DONE
+    ^UICollectionViewTransitionLayout$: # DONE
         methods:
+            '-updateValue:forAnimatedKey:$':
+                trim_after_first_colon: true
+            '-valueForAnimatedKey:$':
+                name: getValue
+
+    ^UICollectionViewUpdateItem$: {} # DONE
+    ^UICollisionBehavior$: # DONE
+        properties:
+            '^items$':
+                type: "List<UIDynamicItem>"
+        methods:
+            '-initWithItems:$':
+                parameters:
+                    items:
+                        type: "List<UIDynamicItem>"
+            '-addItem:$':
+                trim_after_first_colon: true
+            '-removeItem:$':
+                trim_after_first_colon: true
+            '-setTranslatesReferenceBoundsIntoBoundaryWithInsets:$':
+                trim_after_first_colon: true
+            '-addBoundaryWithIdentifier:forPath:$':
+                name: addBoundary
+            '-addBoundaryWithIdentifier:fromPoint:toPoint:$':
+                name: addBoundary
+            '-removeBoundaryWithIdentifier:$':
+                name: removeBoundary
+            '-boundaryWithIdentifier:$':
+                name: getBoundary
+
+    ^UIColor$: # DONE
+        methods:
+            '+(black|darkGray|lightGray|white|gray|red|green|blue|cyan|yellow|magenta|orange)Color$':
+                name: "color#{g[0][0].upcase}#{g[0][1..-1]}"
+            '+(purple|brown|clear|lightText|darkText|groupTableViewBackground|viewFlipsideBackground)Color$':
+                name: "color#{g[0][0].upcase}#{g[0][1..-1]}"
+            '+(scrollViewTexturedBackground|underPageBackground)Color$':
+                name: "color#{g[0][0].upcase}#{g[0][1..-1]}"
             '-initWithHue:saturation:brightness:alpha:$':
                 exclude: true
             '-initWithPatternImage:$':
                 exclude: true
             '-initWithWhite:alpha:$':
                 exclude: true
-#            '+blackColor$':
-#                name: black
-#            '+blueColor$':
-#                name: blue
-#            '+brownColor$':
-#                name: brown
-#            '+clearColor$':
-#                name: clear
-#            '+blackColor$':
-#                name: black
-#            '+cyanColor$':
-#                name: cyan
-#            '+darkGrayColor$':
-#                name: darkGray
-#            '+greenColor$':
-#                name: green
-#            '+lightGrayColor$':
-#                name: lightGray
-#            '+magentaColor$':
-#                name: magenta
-#            '+orangeColor$':
-#                name: orange
-#            '+purpleColor$':
-#                name: purple
-#            '+redColor$':
-#                name: red
-#            '+whiteColor$':
-#                name: white
-#            '+yellowColor$':
-#                name: yellow
             '+colorWithCGColor:$':
                 name: createFromCGColor
             '+colorWithCIColor:$':
@@ -539,10 +945,11 @@ classes:
                 visibility: protected
             '-set$':
                 name: setFillAndStroke
-    ^UIControl$:
+    ^UIControl$: # DONE
         methods:
             '-actionsForTarget:forControlEvent:$':
                 name: getActions
+                return_type: "NSArray<NSString>"
             '-allControlEvents$':
                 name: getAllControlEvents
             '-allTargets$':
@@ -563,20 +970,21 @@ classes:
                 name: removeTarget
             '-sendAction:to:forEvent:$':
                 name: sendAction
-    ^UIDatePicker$:
+    ^UIDatePicker$: # DONE
         methods:
             '-setDate:animated:$':
                 name: setDate
-    ^UIDevice$:
-        properties:
-            'identifierForVendor$':
-                name: vendorIdentifier
+    ^UIDevice$: # DONE
         methods:
             '+currentDevice$':
-                name: getCurrentDevice
-    ^UIDictationPhrase$: {}
-    ^UIDocument$:
-        # protocols: []
+                property: true
+
+    ^UIDictationPhrase$:
+        properties:
+            '^alternativeInterpretations$':
+                type: "NSArray<NSString>"
+
+    ^UIDocument$: # DONE
         methods:
             '-savingFileType$':
                 name: getSavingFileType
@@ -586,6 +994,7 @@ classes:
                 name: close
             "-fileAttributesToWriteToURL:forSaveOperation:error:":
                 name: getFileAttributesToWrite
+                return_type: "NSDictionary<NSString, ?>"
             "-fileNameExtensionForType:saveOperation:":
                 name: getFileNameExtension
             "-openWithCompletionHandler:":
@@ -600,11 +1009,37 @@ classes:
                 name: save
             "-updateChangeCountWithToken:forSaveOperation:":
                 name: updateChangeCount
-    ^UIDocumentInteractionController$:
-        # protocols: []
+            '-loadFromContents:ofType:error:$':
+                trim_after_first_colon: true
+            '-contentsForType:error:$':
+                trim_after_first_colon: true
+            '-updateChangeCount:$':
+                trim_after_first_colon: true
+            '-changeCountTokenForSaveOperation:$':
+                name: getChangeCountToken
+            '-writeContents:andAttributes:safelyToURL:forSaveOperation:error:$':
+                trim_after_first_colon: true
+                parameters:
+                    additionalFileAttributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-writeContents:toURL:forSaveOperation:originalContentsURL:error:$':
+                trim_after_first_colon: true
+            '-handleError:userInteractionPermitted:$':
+                trim_after_first_colon: true
+            '-finishedHandlingError:recovered:$':
+                trim_after_first_colon: true
+            '-userInteractionNoLongerPermittedForError:$':
+                trim_after_first_colon: true
+
+    ^UIDocumentInteractionController$: # DONE
+        properties:
+            '^icons$':
+                type: "NSArray<UIImage>"
+            '^gestureRecognizers$':
+                type: "NSArray<UIGestureRecognizer>"
         methods:
             "+interactionControllerWithURL:":
-                name: fromURL
+                name: createFromURL
             '-dismissMenuAnimated:$':
                 name: dismissMenu
             '-dismissPreviewAnimated:$':
@@ -619,29 +1054,91 @@ classes:
                 name: presentOptionsMenu
             '-presentPreviewAnimated:$':
                 name: presentPreview
-    ^UIDynamicAnimator$: {}
-    ^UIDynamicBehavior$: {}
-    ^UIDynamicItemBehavior$: {}
-    ^UIEvent$:
+
+    ^UIDynamicAnimator$: # DONE
+        properties:
+            '^behaviors$':
+                type: "NSArray<UIDynamicBehavior>"
+        methods:
+            '-addBehavior:$':
+                trim_after_first_colon: true
+            '-removeBehavior:$':
+                trim_after_first_colon: true
+            '-updateItemUsingCurrentState:$':
+                trim_after_first_colon: true
+            '-elapsedTime$':
+                property: true
+            '-layoutAttributesForCellAtIndexPath:$':
+                name: getLayoutAttributesForCell
+            '-layoutAttributesForSupplementaryViewOfKind:atIndexPath:$':
+                name: getLayoutAttributesForSupplementaryView
+            '-layoutAttributesForDecorationViewOfKind:atIndexPath:$':
+                name: getLayoutAttributesForDecorationView
+            '-itemsInRect:$':
+                name: getItemsInRect
+                return_type: "List<UIDynamicItem>"
+
+    ^UIDynamicBehavior$: # DONE
+        properties:
+            '^childBehaviors$':
+                type: "NSArray<UIDynamicBehavior>"
+        methods:
+            '-addChildBehavior:$':
+                trim_after_first_colon: true
+            '-removeChildBehavior:$':
+                trim_after_first_colon: true
+            '-willMoveToAnimator:$':
+                trim_after_first_colon: true
+
+    ^UIDynamicItemBehavior$: # DONE
+        properties:
+            '^items$':
+                type: "List<UIDynamicItem>"
+        methods:
+            '-initWithItems:$':
+                parameters:
+                    items:
+                        type: "List<UIDynamicItem>"
+            '-addItem:$':
+                trim_after_first_colon: true
+            '-removeItem:$':
+                trim_after_first_colon: true
+            '-addLinearVelocity:forItem:$':
+                name: addLinearVelocityForItem
+            '-linearVelocityForItem:$':
+                name: getLinearVelocityForItem
+            '-addAngularVelocity:forItem:$':
+                name: addAngularVelocityForItem
+            '-angularVelocityForItem:$':
+                name: getAngularVelocityForItem
+
+    ^UIEvent$: # DONE
         methods:
             '-allTouches$':
                 name: getAllTouches
+                return_type: "NSSet<UITouch>"
             '-touchesForGestureRecognizer:$':
                 name: getTouches
+                return_type: "NSSet<UITouch>"
             '-touchesForView:$':
                 name: getTouches
+                return_type: "NSSet<UITouch>"
             '-touchesForWindow:$':
                 name: getTouches
-    ^UIFont$:
+                return_type: "NSSet<UITouch>"
+
+    ^UIFont$: # DONE
         methods:
             '+boldSystemFontOfSize:$':
                 name: getBoldSystemFont
             '+fontNamesForFamilyName:$':
                 name: getFontNamesForFamilyName
+                return_type: "NSArray<NSString>"
             '+buttonFontSize$':
                 name: getButtonFontSize
             '+familyNames$':
                 name: getFamilyNames
+                return_type: "NSArray<NSString>"
             '+italicSystemFontOfSize:$':
                 name: getItalicSystemFont
             '+labelFontSize$':
@@ -662,48 +1159,128 @@ classes:
                 name: getFontWithSize
             '-fontDescriptor$':
                 property: true
-    ^UIFontDescriptor$: {}
-    ^UIGestureRecognizer$:
+
+    ^UIFontDescriptor$: # DONE
+        methods:
+            '+fontDescriptorWithFontAttributes:$':
+                name: create
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '+fontDescriptorWithName:size:$':
+                name: create
+            '+fontDescriptorWithName:matrix:$':
+                name: create
+            '+preferredFontDescriptorWithTextStyle:$':
+                name: getPreferredFontDescriptor
+            '-objectForKey:$':
+                name: getObject
+            '-fontAttributes$':
+                property: true
+                return_type: "NSDictionary<NSString, ?>"
+            '-matchingFontDescriptorsWithMandatoryKeys:$':
+                name: getMatchingFontDescriptors
+                return_type: "NSArray<UIFontDescriptor>"
+                parameters:
+                    mandatoryKeys:
+                        type: "NSSet<NSString>"
+            '-initWithFontAttributes:$':
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-fontDescriptorByAddingAttributes:$':
+                name: createWithAttributes
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-fontDescriptorWithSymbolicTraits:$':
+                name: newWithSymbolicTraits
+            '-fontDescriptorWithSize:$':
+                name: newWithSize
+            '-fontDescriptorWithMatrix:$':
+                name: newWithMatrix
+            '-fontDescriptorWithFace:$':
+                name: newWithFace
+            '-fontDescriptorWithFamily:$':
+                name: newWithFamily
+
+    ^UIGestureRecognizer$: # DONE
         methods:
             '-locationInView:$':
-                name: getLocation
+                name: getLocationInView
             '-locationOfTouch:inView:$':
-                name: getLocation
+                name: getLocationOfTouch
             '-numberOfTouches$':
                 name: getNumberOfTouches
-    ^UIGravityBehavior$: {}
-    ^UIImage$:
+            '-addTarget:action:$':
+                trim_after_first_colon: true
+            '-removeTarget:action:$':
+                trim_after_first_colon: true
+            '-requireGestureRecognizerToFail:$':
+                trim_after_first_colon: true
+
+    ^UIGravityBehavior$: # DONE
+        properties:
+            '^items$':
+                type: "List<UIDynamicItem>"
+        methods:
+            '-initWithItems:$':
+                parameters:
+                    items:
+                        type: "List<UIDynamicItem>"
+            '-addItem:$':
+                trim_after_first_colon: true
+            '-removeItem:$':
+                trim_after_first_colon: true
+            '-setAngle:magnitude:$':
+                trim_after_first_colon: true
+
+    ^UIImage$: # DONE
+        properties:
+            '^images$':
+                type: "NSArray<UIImage>"
+            'imageOrientation$':
+                name: orientation
         methods:
             '+animatedImageNamed:duration:$':
                 name: createAnimated
             '+animatedImageWithImages:duration:$':
                 name: createAnimated
+                parameters:
+                    images:
+                        type: "NSArray<UIImage>"
             '+animatedResizableImageNamed:capInsets:duration:$':
                 name: createAnimatedResizable
             '+animatedResizableImageNamed:capInsets:resizingMode:duration:$':
                 name: createAnimatedResizable
             '+imageNamed:$':
-                name: fromBundle
+                name: createFromBundle
             '+imageWithContentsOfFile:$':
-                name: fromFile
+                name: createFromFile
             '+imageWithCGImage:$':
-                name: fromImage
+                name: createFromImage
             '+imageWithCGImage:scale:orientation:$':
-                name: fromImage
+                name: createFromImage
             '+imageWithCIImage:$':
-                name: fromImage
+                name: createFromImage
             '+imageWithData:$':
-                name: fromData
+                name: createFromData
             '+imageWithCIImage:scale:orientation:$':
-                name: fromImage
+                name: createFromImage
             '+imageWithData:scale:$':
-                name: fromData
+                name: createFromData
+            '-initWithContentsOfFile:$':
+                constructor: false
             '-resizableImageWithCapInsets:$':
-                name: copyWithCapInsets
+                name: newResizable
             '-resizableImageWithCapInsets:resizingMode:$':
-                name: copyWithCapInsets
+                name: newResizable
             '-imageWithAlignmentRectInsets:$':
-                name: copyWithAlignmentRectInsets
+                name: newWithAlignment
+            '-imageWithRenderingMode:$':
+                name: newWithRenderingMode
+            '-stretchableImageWithLeftCapWidth:topCapHeight:$':
+                name: newStretchable
             '-drawAtPoint:$':
                 name: draw
             '-drawAtPoint:blendMode:alpha:$':
@@ -714,29 +1291,53 @@ classes:
                 name: draw
             '-drawAsPatternInRect:$':
                 name: drawAsPattern
+
+    ^UIImagePickerController$: # DONE
         properties:
-            'imageOrientation$':
-                name: orientation
-    ^UIImagePickerController$:
+            '^delegate$':
+                type: UIImagePickerControllerDelegate
+            '^mediaTypes$':
+                type: "NSArray<NSString>"
         methods:
             '+availableCaptureModesForCameraDevice:$':
                 name: getAvailableCaptureModes
+                return_type: "NSArray<NSNumber>"
             '+availableMediaTypesForSourceType:$':
                 name: getAvailableMediaTypes
+                return_type: "NSArray<NSString>"
+            '+isSourceTypeAvailable:$':
+                trim_after_first_colon: true
+            '+isCameraDeviceAvailable:$':
+                trim_after_first_colon: true
+            '+isFlashAvailableForCameraDevice:$':
+                trim_after_first_colon: true
+
+    ^UIImageView$: # DONE
         properties:
-            'delegate$':
-                type: UIImagePickerControllerDelegate
-    ^UIImageView$: {}
-    ^UIInputView$: {}
-    ^UIInterpolatingMotionEffect$: {}
-    ^UIKeyCommand$: {}
-    ^UILabel$:
+            '^animationImages$':
+                type: "NSArray<UIImage>"
+            '^highlightedAnimationImages$':
+                type: "NSArray<UIImage>"
+
+    ^UIInputView$: {} # DONE
+    ^UIInterpolatingMotionEffect$: {} # DONE
+    ^UIKeyCommand$: # DONE
+        methods:
+            '+keyCommandWithInput:modifierFlags:action:$':
+                name: create
+                
+    ^UILabel$: # DONE
         methods:
             '-drawTextInRect:$':
                 name: drawText
             '-textRectForBounds:limitedToNumberOfLines:$':
                 name: getTextRect
-    ^UILocalizedIndexedCollation$:
+    ^UILocalizedIndexedCollation$: # DONE
+        properties:
+            '^sectionTitles$':
+                type: "NSArray<NSString>"
+            '^sectionIndexTitles$':
+                type: "NSArray<NSString>"
         methods:
             '+currentCollation$':
                 name: getCurrentCollation
@@ -746,9 +1347,12 @@ classes:
                 name: getSectionForSectionIndexTitle
             '-sortedArrayFromArray:collationStringSelector:$':
                 name: sortArray
-    ^UILocalNotification$: {}
-    ^UILongPressGestureRecognizer$: {}
-    ^UIManagedDocument$:
+    ^UILocalNotification$: {} # DONE
+    ^UILongPressGestureRecognizer$: {} # DONE
+    ^UIManagedDocument$: # DONE
+        properties: 
+            '^persistentStoreOptions$':
+                type: "NSDictionary<NSString, ?>"
         methods:
             "+persistentStoreName":
                 name: getPersistentStoreName
@@ -756,19 +1360,42 @@ classes:
                 name: getAdditionalContent
             "-configurePersistentStoreCoordinatorForURL:ofType:modelConfiguration:storeOptions:error:":
                 name: configurePersistentStoreCoordinator
+                parameters:
+                    storeOptions:
+                        type: "NSDictionary<NSString, ?>"
             "-persistentStoreTypeForFileType:":
                 name: getPersistentStoreType
             "-readAdditionalContentFromURL:error:":
                 name: readAdditionalContent
-    ^UIMarkupTextPrintFormatter$: {}
-    ^UIMenuController$:
+            '-writeAdditionalContent:toURL:originalContentsURL:error:$':
+                name: writeAdditionalContent
+    ^UIMarkupTextPrintFormatter$: {} # DONE
+    ^UIMenuController$: # DONE
+        properties:
+            '^menuItems$':
+                type: "NSArray<UIMenuItem>"
         methods:
             '+sharedMenuController$':
                 name: getSharedMenuController
-    ^UIMenuItem$: {}
-    ^UIMotionEffect$: {}
-    ^UIMotionEffectGroup$: {}
-    ^UINavigationBar$:
+            '-setMenuVisible:animated:$':
+                trim_after_first_colon: true
+            '-setTargetRect:inView:$':
+                trim_after_first_colon: true
+    ^UIMenuItem$: {} # DONE
+    ^UIMotionEffect$: # DONE
+        methods:
+            '-keyPathsAndRelativeValuesForViewerOffset:$':
+                name: getKeyPathsAndRelativeValues
+    ^UIMotionEffectGroup$: # DONE
+        properties:
+            '^motionEffects$':
+                type: "NSArray<UIMotionEffect>"
+    ^UINavigationBar$: # DONE
+        properties:
+            '^items$':
+                type: "NSArray<UINavigationItem>"
+            '^titleTextAttributes$':
+                type: "NSDictionary<NSString, ?>"
         methods:
             '-backgroundImageForBarMetrics:$':
                 name: getBackgroundImage
@@ -776,67 +1403,172 @@ classes:
                 name: popNavigationItem
             '-titleVerticalPositionAdjustmentForBarMetrics:$':
                 name: getTitleVerticalPositionAdjustment
-    ^UINavigationController$:
+            '-pushNavigationItem:animated:$':
+                trim_after_first_colon: true
+            '-setItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<UINavigationItem>"
+            '-setBackgroundImage:forBarPosition:barMetrics:$':
+                trim_after_first_colon: true
+            '-setBackgroundImage:forBarMetrics:$':
+                trim_after_first_colon: true
+            '-backgroundImageForBarPosition:barMetrics:$':
+                name: getBackgroundImage
+            '-setTitleVerticalPositionAdjustment:forBarMetrics:$':
+                trim_after_first_colon: true
+    ^UINavigationController$: # DONE
+        properties:
+            '^viewControllers$':
+                type: "NSArray<UIViewController>"
         methods:
+            '-pushViewController:animated:$':
+                trim_after_first_colon: true
+            '-popViewControllerAnimated:$':
+                name: popViewController
+            '-popToViewController:animated:$':
+                trim_after_first_colon: true
+                return_type: "NSArray<UIViewController>"
             '-popToRootViewControllerAnimated:$':
                 name: popToRootViewController
-#        properties:
-#            'delegate$':
-#                name: navigationControllerDelegate
-    ^UINavigationItem$: {}
-    ^UINib$:
+                return_type: "NSArray<UIViewController>"
+            '-setViewControllers:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
+            '-setNavigationBarHidden:animated:$':
+                trim_after_first_colon: true
+            '-setToolbarHidden:animated:$':
+                trim_after_first_colon: true
+
+    ^UINavigationItem$: # DONE
+        properties:
+            '^leftBarButtonItems$':
+                type: "NSArray<UIBarButtonItem>"
+            '^rightBarButtonItems$':
+                type: "NSArray<UIBarButtonItem>"
+        methods:
+            '-setHidesBackButton:animated:$':
+                trim_after_first_colon: true
+            '-setLeftBarButtonItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<UIBarButtonItem>"
+            '-setRightBarButtonItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<UIBarButtonItem>"
+            '-setLeftBarButtonItem:animated:$':
+                trim_after_first_colon: true
+            '-setRightBarButtonItem:animated:$':
+                trim_after_first_colon: true
+
+    ^UINib$: # DONE
         methods:
             '+nibWithData:bundle:$':
-                name: fromData
+                name: createFromData
             '+nibWithNibName:bundle:$':
-                name: fromName
+                name: createFromName
             '-instantiateWithOwner:options:$':
                 name: instantiate
-    ^UIPageControl$:
+                parameters:
+                    optionsOrNil:
+                        type: "NSDictionary<NSString, ?>"
+    ^UIPageControl$: # DONE
         methods:
             '-sizeForNumberOfPages:$':
                 name: getSizeForNumberOfPages
-    ^UIPageViewController$: {}
+    ^UIPageViewController$: # DONE
+        properties:
+            '^gestureRecognizers$':
+                type: "NSArray<UIGestureRecognizer>"
+            '^viewControllers$':
+                type: "NSArray<UIViewController>"
+        methods:
+            '-setViewControllers:direction:animated:completion:$':
+                trim_after_first_colon: true
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
     ^UIPanGestureRecognizer$:
         methods: 
             '-translationInView:$':
                 name: getTranslation
+            '-setTranslation:inView:$':
+                trim_after_first_colon: true
             '-velocityInView:$':
                 name: getVelocity
-    ^UIPasteboard$:
+    ^UIPasteboard$: # DONE
+        properties:
+            '^items$':
+                type: "NSArray<NSDictionary<NSString, ?>>"
+            '^images$':
+                type: "NSArray<UIImage>"
+            '^URLs$':
+                type: "NSArray<NSURL>"
+            '^colors$':
+                type: "NSArray<UIColor>"
+            '^strings$':
+                type: "NSArray<NSString>"
         methods:
             '+generalPasteboard$':
                 name: getGeneral
             '+pasteboardWithUniqueName$':
                 name: getUnique
             '+pasteboardWithName:create:$':
-                name: fromName
+                name: createFromName
             '+removePasteboardWithName:$':
                 name: remove
             '-pasteboardTypes$':
                 name: getTypes
+                return_type: "NSArray<NSString>"
             '-containsPasteboardTypes:$':
                 name: contains
+                parameters:
+                    pasteboardTypes:
+                        type: "NSArray<NSString>"
             '-containsPasteboardTypes:inItemSet:$':
                 name: contains
+                parameters:
+                    pasteboardTypes:
+                        type: "NSArray<NSString>"
             '-dataForPasteboardType:$':
                 name: getData
             '-dataForPasteboardType:inItemSet:$':
                 name: getData
+                return_type: "NSArray<NSData>"
             '-itemSetWithPasteboardTypes:$':
                 name: getItemsWithTypes
+                parameters:
+                    pasteboardTypes:
+                        type: "NSArray<NSString>"
             '-pasteboardTypesForItemSet:$':
                 name: getTypes
+                return_type: "NSArray<NSArray<NSString>>"
             '-valueForPasteboardType:$':
                 name: getValue
             '-valuesForPasteboardType:inItemSet:$':
                 name: getValues
-        properties:
-            'numberOfItems$':
-                name: count
-    ^UIPercentDrivenInteractiveTransition$: {}
-    ^UIPickerView$:
-        # protocols: []
+            '-setValue:forPasteboardType:$':
+                trim_after_first_colon: true
+            '-setData:forPasteboardType:$':
+                trim_after_first_colon: true
+            '-addItems:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<NSDictionary<NSString, ?>>"
+
+    ^UIPercentDrivenInteractiveTransition$: # DONE
+        methods:
+            '-updateInteractiveTransition:$':
+                trim_after_first_colon: true
+
+    ^UIPickerView$: # DONE
         methods:
             '-numberOfRowsInComponent:$':
                 name: getNumberOfRows
@@ -851,9 +1583,9 @@ classes:
             '-selectRow:inComponent:animated:$':
                 name: selectRow
             '-viewForRow:forComponent:$':
-                name: getRowView
-    ^UIPinchGestureRecognizer$: {}
-    ^UIPopoverBackgroundView$:
+                name: getViewForRow
+    ^UIPinchGestureRecognizer$: {} # DONE
+    ^UIPopoverBackgroundView$: # DONE
         methods:
             '+arrowBase$':
                 name: getArrowBase
@@ -861,7 +1593,10 @@ classes:
                 name: getArrowHeight
             '+contentViewInsets$':
                 name: getContentViewInsets
-    ^UIPopoverController$:
+    ^UIPopoverController$: # DONE
+        properties:
+            '^passthroughViews$':
+                type: "NSArray<UIView>"
         methods:
             '-dismissPopoverAnimated:$':
                 name: dismiss
@@ -869,21 +1604,25 @@ classes:
                 name: presentFromBarButtonItem
             '-presentPopoverFromRect:inView:permittedArrowDirections:animated:$':
                 name: presentFromRectInView
-    ^UIPrintFormatter$:
+            '-setContentViewController:animated:$':
+                trim_after_first_colon: true
+            '-setPopoverContentSize:animated:$':
+                trim_after_first_colon: true
+    ^UIPrintFormatter$: # DONE
         methods:
             '-drawInRect:forPageAtIndex:$':
                 name: draw
             '-rectForPageAtIndex:$':
                 name: getRectForPage
-    ^UIPrintInfo$:
+    ^UIPrintInfo$: # DONE
         methods:
             '+printInfo$':
                 name: getPrintInfo
             '+printInfoWithDictionary:$':
-                name: fromDictionary
+                name: createFromDictionary
             '-dictionaryRepresentation$':
                 name: toDictionary
-    ^UIPrintInteractionController$:
+    ^UIPrintInteractionController$: # DONE
         methods:
             '+canPrintData:$':
                 name: canPrint
@@ -891,19 +1630,30 @@ classes:
                 name: canPrint
             '+printableUTIs$':
                 name: getPrintableUTIs
+                return_type: "NSArray<NSString>"
             '+sharedPrintController$':
                 name: getSharedPrintController
             '-dismissAnimated:$':
                 name: dismiss
             '-presentAnimated:completionHandler:$':
                 name: present
-                exclude: true # TODO: enable once we now how to handle blocks
+                parameters:
+                    completion:
+                        type: "@Block VoidBlock3<UIPrintInteractionController, Boolean, NSError>"
             '-presentFromRect:inView:animated:completionHandler:$':
                 name: presentFromRectInView
-                exclude: true # TODO: enable once we now how to handle blocks
+                parameters:
+                    completion:
+                        type: "@Block VoidBlock3<UIPrintInteractionController, Boolean, NSError>"
             '-presentFromBarButtonItem:animated:completionHandler:$':
-                exclude: true # TODO: enable once we now how to handle blocks
-    ^UIPrintPageRenderer$:
+                name: presentFromBarButtonItem
+                parameters:
+                    completion:
+                        type: "@Block VoidBlock3<UIPrintInteractionController, Boolean, NSError>"
+    ^UIPrintPageRenderer$: # DONE
+        properties:
+            '^printFormatters$':
+                type: "NSArray<UIPrintFormatter>"
         methods:
             '-numberOfPages$':
                 name: getNumberOfPages
@@ -919,21 +1669,57 @@ classes:
                 name: drawPrintFormatter
             '-printFormattersForPageAtIndex:$':
                 name: getPrintFormatters
-    ^UIPrintPaper$:
+                return_type: "NSArray<UIPrintFormatter>"
+            '-addPrintFormatter:startingAtPageAtIndex:$':
+                trim_after_first_colon: true
+            '-prepareForDrawingPages:$':
+                trim_after_first_colon: true
+    ^UIPrintPaper$: # DONE
         methods:
             '+bestPaperForPageSize:withPapersFromArray:$':
-                name: forPageSize
-    ^UIProgressView$: {}
-    ^UIPushBehavior$: {}
-    ^UIReferenceLibraryViewController$: {}
-    ^UIRefreshControl$:
+                name: createBestForPageSize
+                parameters:
+                    paperList:
+                        type: "NSArray<UIPrintPaper>"
+            '-printRect$':
+                property: true
+    ^UIProgressView$: # DONE
+        methods:
+            '-setProgress:animated:$':
+                trim_after_first_colon: true
+    ^UIPushBehavior$: # DONE
+        properties:
+            '^items$':
+                type: "List<UIDynamicItem>"
+        methods:
+            '-initWithItems:mode:$':
+                parameters:
+                    items:
+                        type: "List<UIDynamicItem>"
+            '-addItem:$':
+                trim_after_first_colon: true
+            '-removeItem:$':
+                trim_after_first_colon: true
+            '-targetOffsetFromCenterForItem:$':
+                name: getTargetOffsetFromCenterForItem
+            '-setTargetOffsetFromCenter:forItem:$':
+                trim_after_first_colon: true
+            '-setAngle:magnitude:$':
+                name: setAngleAndMagnitude
+
+    ^UIReferenceLibraryViewController$: # DONE
+        methods:
+            '+dictionaryHasDefinitionForTerm:$':
+                trim_after_first_colon: true
+
+    ^UIRefreshControl$: # DONE
         # protocols: []
         methods:
             '-init$':
                 exclude: true
     ^UIResponder$: # DONE
         properties:
-            keyCommands:
+            '^keyCommands$':
                 type: NSArray<UIKeyCommand>
         methods:
             '-nextResponder$':
@@ -950,26 +1736,53 @@ classes:
                 parameters:
                     touches:
                         type: "NSSet<UITouch>"
-            '+(clearTextInputContextIdentifier):$':
-                name: "#{g[0]}"
+            '+clearTextInputContextIdentifier:$':
+                trim_after_first_colon: true
             '-canPerformAction:withSender:$':
-                name: canPerformAction
+                trim_after_first_colon: true
             '-targetForAction:withSender:$':
                 name: getActionTarget
 
-    ^UIRotationGestureRecognizer$: {}
-    ^UIScreen$:
+    ^UIRotationGestureRecognizer$: {} # DONE
+    ^UIScreen$: # DONE
+        properties:
+            '^availableModes$':
+                type: "NSArray<UIScreenMode>"
         methods:
             '+mainScreen$':
                 name: getMainScreen
             '+screens$':
                 name: getScreens
+                return_type: "NSArray<UIScreen>"
             '-displayLinkWithTarget:selector:$':
                 name: createDisplayLink
-    ^UIScreenEdgePanGestureRecognizer$: {}
-    ^UIScreenMode$: {}
-    ^UIScrollView$: {}
+            '-snapshotViewAfterScreenUpdates:$':
+                name: snapshotView
+
+    ^UIScreenEdgePanGestureRecognizer$: {} # DONE
+    ^UIScreenMode$: {} # DONE
+    ^UIScrollView$: # DONE
+        methods:
+            '-setContentOffset:animated:$':
+                trim_after_first_colon: true
+            '-scrollRectToVisible:animated:$':
+                trim_after_first_colon: true
+            '-touchesShouldBegin:withEvent:inContentView:$':
+                trim_after_first_colon: true
+                parameters:
+                    touches:
+                        type: "NSSet<UITouch>"
+            '-touchesShouldCancelInContentView:$':
+                trim_after_first_colon: true
+            '-setZoomScale:animated:$':
+                trim_after_first_colon: true
+            '-zoomToRect:animated:$':
+                trim_after_first_colon: true
+
     ^UISearchBar$:
+        properties:
+            '^scopeButtonTitles$':
+                type: "NSArray<NSString>"
         methods:
             '-imageForSearchBarIcon:state:$':
                 name: getImageForSearchBarIcon
@@ -981,44 +1794,93 @@ classes:
                 name: getScopeBarButtonDividerImage
             '-scopeBarButtonTitleTextAttributesForState:$':
                 name: getScopeBarButtonTitleTextAttributes
+                return_type: "NSDictionary<NSString, ?>"
             '-searchFieldBackgroundImageForState:$':
                 name: getSearchFieldBackgroundImage
             '-setImage:forSearchBarIcon:state:$':
                 name: setImageForSearchBarIcon
             '-setPositionAdjustment:forSearchBarIcon:$':
                 name: setPositionAdjustmentForSearchBarIcon
-    ^UISearchDisplayController$: {}
-    ^UISegmentedControl$:
-        methods:
-            '-backgroundImageForState:barMetrics:$':
+            '-setShowsCancelButton:animated:$':
+                trim_after_first_colon: true 
+            '-setBackgroundImage:forBarPosition:barMetrics:$':
+                trim_after_first_colon: true 
+            '-backgroundImageForBarPosition:barMetrics:$':
                 name: getBackgroundImage
-            '-contentOffsetForSegmentAtIndex:$':
-                name: getSegmentContentOffset
-            '-contentPositionAdjustmentForSegmentType:barMetrics:$':
-                name: getSegmentContentPositionAdjustment
-            '-dividerImageForLeftSegmentState:rightSegmentState:barMetrics:$':
-                name: getDividerImage
-            '-imageForSegmentAtIndex:$':
-                name: getSegmentImage
-            '-insertSegmentWithImage:atIndex:animated:$':
-                name: insertSegment
-            '-insertSegmentWithTitle:atIndex:animated:$':
-                name: insertSegment
-            '-isEnabledForSegmentAtIndex:$':
-                name: isSegmentEnabled
-            '-widthForSegmentAtIndex:$':
-                name: getSegmentWidth
-            '-titleForSegmentAtIndex:$':
-                name: getSegmentTitle
-            '-titleTextAttributesForState:$':
-                name: getTitleTextAttributes
+            '-setSearchFieldBackgroundImage:forState:$':
+                trim_after_first_colon: true 
+            '-setScopeBarButtonBackgroundImage:forState:$':
+                trim_after_first_colon: true 
+            '-setScopeBarButtonDividerImage:forLeftSegmentState:rightSegmentState:$':
+                trim_after_first_colon: true 
+            '-setScopeBarButtonTitleTextAttributes:forState:$':
+                name: setScopeBarButtonTitleTextAttributes
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+
+    ^UISearchDisplayController$: # DONE
+        methods:
+            '-setActive:animated:$':
+                name: setActive
+
+    ^UISegmentedControl$: # DONE
         properties:
             'segmentedControlStyle$':
                 name: controlStyle
             'selectedSegmentIndex$':
                 name: selectedSegment
-    ^UISimpleTextPrintFormatter$: {}
-    ^UISlider$:
+        methods:
+            '-backgroundImageForState:barMetrics:$':
+                name: getBackgroundImage
+            '-contentOffsetForSegmentAtIndex:$':
+                name: getContentOffset
+            '-contentPositionAdjustmentForSegmentType:barMetrics:$':
+                name: getContentPositionAdjustment
+            '-dividerImageForLeftSegmentState:rightSegmentState:barMetrics:$':
+                name: getDividerImage
+            '-imageForSegmentAtIndex:$':
+                name: getImage
+            '-insertSegmentWithImage:atIndex:animated:$':
+                name: insertSegment
+            '-insertSegmentWithTitle:atIndex:animated:$':
+                name: insertSegment
+            '-isEnabledForSegmentAtIndex:$':
+                name: isEnabled
+            '-widthForSegmentAtIndex:$':
+                name: getWidth
+            '-titleForSegmentAtIndex:$':
+                name: getTitle
+            '-titleTextAttributesForState:$':
+                name: getTitleTextAttributes
+                return_type: "NSDictionary<NSString, ?>"
+            '-removeSegmentAtIndex:animated:$':
+                name: removeSegment
+            '-setTitle:forSegmentAtIndex:$':
+                name: setTitle
+            '-setImage:forSegmentAtIndex:$':
+                name: setImage
+            '-setWidth:forSegmentAtIndex:$':
+                name: setWidth
+            '-setContentOffset:forSegmentAtIndex:$':
+                name: setContentOffset
+            '-setEnabled:forSegmentAtIndex:$':
+                name: setEnabled
+            '-setBackgroundImage:forState:barMetrics:$':
+                name: setBackgroundImage
+            '-setDividerImage:forLeftSegmentState:rightSegmentState:barMetrics:$':
+                name: setDividerImage
+            '-setTitleTextAttributes:forState:$':
+                name: setTitleTextAttributes
+                parameters:
+                    attributes:
+                        type: "NSDictionary<NSString, ?>"
+            '-setContentPositionAdjustment:forSegmentType:barMetrics:$':
+                name: setContentPositionAdjustment
+
+    ^UISimpleTextPrintFormatter$: {} # DONE
+
+    ^UISlider$: # DONE
         methods:
             '-maximumTrackImageForState:$':
                 name: getMaximumTrackImage
@@ -1034,9 +1896,23 @@ classes:
                 name: getThumbRect
             '-trackRectForBounds:$':
                 name: getTrackRect
-    ^UISnapBehavior$: {}
-    ^UISplitViewController$: {}
-    ^UIStepper$:
+            '-setValue:animated:$':
+                trim_after_first_colon: true
+            '-setThumbImage:forState:$':
+                trim_after_first_colon: true
+            '-setMinimumTrackImage:forState:$':
+                trim_after_first_colon: true
+            '-setMaximumTrackImage:forState:$':
+                trim_after_first_colon: true
+
+    ^UISnapBehavior$: {} # DONE
+
+    ^UISplitViewController$: # DONE
+        properties:
+            '^viewControllers$':
+                type: "NSArray<UIViewController>"
+
+    ^UIStepper$: # DONE
         methods:
             '-backgroundImageForState:$':
                 name: getBackgroundImage
@@ -1057,28 +1933,53 @@ classes:
                 name: setIncrementImage
             '-setDecrementImage:forState:$':
                 name: setDecrementImage
-    ^UIStoryboard$:
+    ^UIStoryboard$: # DONE
         methods:
             '+storyboardWithName:bundle:$':
-                name: fromName
+                name: createFromName
             '-instantiateViewControllerWithIdentifier:$':
                 name: instantiateViewController
-    ^UIStoryboardPopoverSegue$: {}
-    ^UIStoryboardSegue$:
+    ^UIStoryboardPopoverSegue$: {} # DONE
+    ^UIStoryboardSegue$: # DONE
         methods:
             '+segueWithIdentifier:source:destination:performHandler:$':
                 name: getSegue
-    ^UISwipeGestureRecognizer$: {}
-    ^UISwitch$: {}
-    ^UITabBar$:
+    ^UISwipeGestureRecognizer$: {} # DONE
+
+    ^UISwitch$: # DONE
+        methods:
+            '-setOn:animated:$':
+                trim_after_first_colon: true
+
+    ^UITabBar$: # DONE
+        properties:
+            '^items$':
+                type: "NSArray<UITabBarItem>"
         methods:
             '-beginCustomizingItems:$':
                 name: beginCustomizing
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
             '-endCustomizingAnimated:$':
                 name: endCustomizing
-    ^UITabBarController$: {}
-        # protocols: []
-    ^UITabBarItem$:
+            '-setItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
+    ^UITabBarController$: # DONE
+        properties:
+            '^viewControllers$':
+                type: "NSArray<UIViewController>"
+        methods:
+            '-setViewControllers:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
+
+    ^UITabBarItem$: # DONE
         methods:
             '-finishedSelectedImage$':
                 name: getFinishedSelectedImage
@@ -1088,12 +1989,15 @@ classes:
                 name: setFinishedImages
             '-titlePositionAdjustment$':
                 name: getTitlePositionAdjustment
-    ^UITableView$:
+    ^UITableView$: # DONE
         methods:
             '-cellForRowAtIndexPath:$':
-                name: getRowCell
+                name: getCellForRow
             '-deleteRowsAtIndexPaths:withRowAnimation:$':
                 name: deleteRows
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-dequeueReusableCellWithIdentifier:$':
                 name: dequeueReusableCell
             '-dequeueReusableCellWithIdentifier:forIndexPath:$':
@@ -1103,19 +2007,25 @@ classes:
             '-deselectRowAtIndexPath:animated:$':
                 name: deselectRow
             '-indexPathForCell:$':
-                name: getCellIndexPath
+                name: getIndexPathForCell
             '-indexPathForRowAtPoint:$':
-                name: getRowIndexPath
+                name: getIndexPathForRow
             '-indexPathForSelectedRow$':
-                name: getSelectedRowIndexPath
+                name: getIndexPathForSelectedRow
             '-indexPathsForRowsInRect:$':
-                name: getRowsIndexPaths
+                name: getIndexPathsForRowsInRect
+                return_type: "NSArray<NSIndexPath>"
             '-indexPathsForSelectedRows$':
-                name: getSelectedRowsIndexPaths
+                name: getIndexPathsForSelectedRows
+                return_type: "NSArray<NSIndexPath>"
             '-indexPathsForVisibleRows$':
-                name: getVisibleRowsIndexPaths
+                name: getIndexPathsForVisibleRows
+                return_type: "NSArray<NSIndexPath>"
             '-insertRowsAtIndexPaths:withRowAnimation:$':
                 name: insertRows
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-moveRowAtIndexPath:toIndexPath:$':
                 name: moveRow
             '-numberOfRowsInSection:$':
@@ -1123,19 +2033,22 @@ classes:
             '-numberOfSections$':
                 name: getNumberOfSections
             '-rectForFooterInSection:$':
-                name: getSectionFooterRect
+                name: getRectForFooterInSection
             '-rectForHeaderInSection:$':
-                name: getSectionHeaderRect
+                name: getRectForHeaderInSection
             '-rectForRowAtIndexPath:$':
-                name: getRowRect
+                name: getRectForRow
             '-rectForSection:$':
-                name: getSectionRect
+                name: getRectForSection
             '-registerNib:forCellReuseIdentifier:$':
                 name: registerReusableCellNib
             '-registerClass:forCellReuseIdentifier:$':
                 name: registerReusableCellClass
             '-reloadRowsAtIndexPaths:withRowAnimation:$':
                 name: reloadRows
+                parameters:
+                    indexPaths:
+                        type: "NSArray<NSIndexPath>"
             '-scrollToNearestSelectedRowAtScrollPosition:animated:$':
                 name: scrollToNearestSelectedRow
             '-scrollToRowAtIndexPath:atScrollPosition:animated:$':
@@ -1144,191 +2057,147 @@ classes:
                 name: selectRow
             '-visibleCells$':
                 name: getVisibleCells
+                return_type: "NSArray<UITableViewCell>"
             '-registerClass:forHeaderFooterViewReuseIdentifier:$':
                 name: registerReusableHeaderFooterViewClass
             '-registerNib:forHeaderFooterViewReuseIdentifier:$':
                 name: registerReusableHeaderFooterViewNib
             '-footerViewForSection:$':
-                name: getSectionFooterView
+                name: getFooterViewForSection
             '-headerViewForSection:$':
-                name: getSectionHeaderView
-    ^UITableViewCell$: {}
-        # protocols: []
-    ^UITableViewController$: {}
-        # protocols: []
-    ^UITableViewHeaderFooterView$: {}
-        # protocols: []
-    ^UITapGestureRecognizer$: {}
-    ^UITextField$:
+                name: getHeaderViewForSection
+            '-insertSections:withRowAnimation:$':
+                name: insertSections
+            '-deleteSections:withRowAnimation:$':
+                name: deleteSections
+            '-reloadSections:withRowAnimation:$':
+                name: reloadSections
+            '-moveSection:toSection:$':
+                name: moveSection
+            '-setEditing:animated:$':
+                name: setEditing
+
+    ^UITableViewCell$: # DONE
         methods:
-            '-baseWritingDirectionForPosition:inDirection:$':
-                name: getBaseWritingDirection
+            '-setSelected:animated:$':
+                trim_after_first_colon: true
+            '-setHighlighted:animated:$':
+                trim_after_first_colon: true
+            '-setEditing:animated:$':
+                trim_after_first_colon: true
+            '-willTransitionToState:$':
+                trim_after_first_colon: true
+            '-didTransitionToState:$':
+                trim_after_first_colon: true
+
+    ^UITableViewController$: {} # DONE
+
+    ^UITableViewHeaderFooterView$: {} # DONE
+
+    ^UITapGestureRecognizer$: {} # DONE
+
+    ^UITextField$: # DONE
+        properties:
+            '^defaultTextAttributes$':
+                type: "NSDictionary<NSString, ?>"
+            '^typingAttributes$':
+                type: "NSDictionary<NSString, ?>"
+        methods:
             '-borderRectForBounds:$':
                 name: getBorderRect
-            '-caretRectForPosition:$':
-                name: getCaretRect
-            '-characterOffsetOfPosition:withinRange:$':
-                name: getCharacterOffset
-            '-characterRangeAtPoint:$':
-                name: getCharacterRange
-            '-characterRangeByExtendingPosition:inDirection:$':
-                name: getCharacterRange
-            '-clearButtonRectForBounds:$':
-                name: clearButtonRect
-            '-closestPositionToPoint:$':
-                name: getClosestPosition
-            '-closestPositionToPoint:withinRange:$':
-                name: getClosestPosition
-            '-comparePosition:toPosition:$':
-                name: comparePositions
-            '-drawPlaceholderInRect:$':
-                name: drawPlaceholder
-            '-drawTextInRect:$':
-                name: drawText
-            '-editingRectForBounds:$':
-                name: getEditingRect
-            '-firstRectForRange:$':
-                name: getFirstRect
-            '-leftViewRectForBounds:$':
-                name: getLeftViewRect
-            '-offsetFromPosition:toPosition:$':
-                name: getOffset
-            '-placeholderRectForBounds:$':
-                name: getPlaceholderRect
-            '-positionFromPosition:offset:$':
-                name: getPosition
-            '-positionFromPosition:inDirection:offset:$':
-                name: getPosition
-            '-positionWithinRange:farthestInDirection:$':
-                name: getPosition
-            '-positionWithinRange:atCharacterOffset:$':
-                name: getPosition
-            '-replaceRange:withText:$':
-                name: replaceText
-            '-rightViewRectForBounds:$':
-                name: getRightViewRect
-            '-textRangeFromPosition:toPosition:$':
-                name: getTextRange
-            '-textInRange:$':
-                name: getText
             '-textRectForBounds:$':
                 name: getTextRect
-            '-textStylingAtPosition:inDirection:$':
-                name: getTextStyling
-            '-frameForDictationResultPlaceholder:$':
-                name: getDictationResultPlaceholderFrame
-            '-selectionRectsForRange:$':
-                name: getSelectionRects
-            '-shouldChangeTextInRange:replacementText:$':
-                name: shouldChangeText
-    ^UITextInputMode$:
+            '-placeholderRectForBounds:$':
+                name: getPlaceholderRect
+            '-editingRectForBounds:$':
+                name: getEditingRect
+            '-clearButtonRectForBounds:$':
+                name: getClearButtonRect
+            '-leftViewRectForBounds:$':
+                name: getLeftViewRect
+            '-rightViewRectForBounds:$':
+                name: getRightViewRect
+            '-drawTextInRect:$':
+                name: drawText
+            '-drawPlaceholderInRect:$':
+                name: drawPlaceholder
+
+    ^UITextInputMode$: # DONE
         methods:
             '+activeInputModes$':
                 name: getActiveInputModes
+                return_type: "NSArray<UITextInputMode>"
             '+currentInputMode$':
                 name: getCurrentInputMode
-    ^UITextInputStringTokenizer$:
+
+    ^UITextInputStringTokenizer$: # DONE
         methods: 
             '-initWithTextInput:$':
                 parameters:
                     textInput:
                         type: UITextInput
-            '-positionFromPosition:toBoundary:inDirection:$':
-                name: getPosition
-            '-rangeEnclosingPosition:withGranularity:inDirection:$':
-                name: getRangeEnclosingPosition
-            '-isPosition:atBoundary:inDirection:$':
-                name: isPositionAtBoundary
-            '-isPosition:withinTextUnit:inDirection:$':
-                name: isPositionWithinTextUnit
-    ^UITextPosition$: {}
-    ^UITextRange$: {}
-    ^UITextSelectionRect$:
+
+    ^UITextPosition$: {} # DONE
+    ^UITextRange$: {} # DONE
+    ^UITextSelectionRect$: # DONE
         properties:
             'isVertical$':
                 name: vertical
-    ^UITextView$:
+    ^UITextView$: # DONE
+        properties:
+            '^linkTextAttributes$':
+                type: "NSDictionary<NSString, ?>"
+            '^typingAttributes$':
+                type: "NSDictionary<NSString, ?>"
         methods:
-            '-baseWritingDirectionForPosition:inDirection:$':
-                name: getBaseWritingDirection
-            '-borderRectForBounds:$':
-                name: getBorderRect
-            '-caretRectForPosition:$':
-                name: getCaretRect
-            '-characterOffsetOfPosition:withinRange:$':
-                name: getCharacterOffset
-            '-characterRangeAtPoint:$':
-                name: getCharacterRange
-            '-characterRangeByExtendingPosition:inDirection:$':
-                name: getCharacterRange
-            '-clearButtonRectForBounds:$':
-                name: clearButtonRect
-            '-closestPositionToPoint:$':
-                name: getClosestPosition
-            '-closestPositionToPoint:withinRange:$':
-                name: getClosestPosition
-            '-comparePosition:toPosition:$':
-                name: comparePositions
-            '-drawPlaceholderInRect:$':
-                name: drawPlaceholder
-            '-drawTextInRect:$':
-                name: drawText
-            '-editingRectForBounds:$':
-                name: getEditingRect
-            '-firstRectForRange:$':
-                name: getFirstRect
-            '-leftViewRectForBounds:$':
-                name: getLeftViewRect
-            '-offsetFromPosition:toPosition:$':
-                name: getOffset
-            '-placeholderRectForBounds:$':
-                name: getPlaceholderRect
-            '-positionFromPosition:offset:$':
-                name: getPosition
-            '-positionFromPosition:inDirection:offset:$':
-                name: getPosition
-            '-positionWithinRange:farthestInDirection:$':
-                name: getPosition
-            '-positionWithinRange:atCharacterOffset:$':
-                name: getPosition
-            '-replaceRange:withText:$':
-                name: replaceText
-            '-rightViewRectForBounds:$':
-                name: getRightViewRect
-            '-textRangeFromPosition:toPosition:$':
-                name: getTextRange
-            '-textInRange:$':
-                name: getText
-            '-textRectForBounds:$':
-                name: getTextRect
-            '-textStylingAtPosition:inDirection:$':
-                name: getTextStyling
-            '-frameForDictationResultPlaceholder:$':
-                name: getDictationResultPlaceholderFrame
-            '-selectionRectsForRange:$':
-                name: getSelectionRects
-            '-shouldChangeTextInRange:replacementText:$':
-                name: shouldChangeText
-    ^UIToolbar$:
+            '-scrollRangeToVisible:$':
+                trim_after_first_colon: true
+
+    ^UIToolbar$: # DONE
+        properties:
+            '^items$':
+                type: "NSArray<UIBarButtonItem>"
         methods:
             '-backgroundImageForToolbarPosition:barMetrics:$':
                 name: getBackgroundImage
             '-shadowImageForToolbarPosition:$':
                 name: getShadowImage
-    ^UITouch$:
+            '-setItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    items:
+                        type: "NSArray<UIBarButtonItem>"
+            '-setBackgroundImage:forToolbarPosition:barMetrics:$':
+                trim_after_first_colon: true
+            '-setShadowImage:forToolbarPosition:$':
+                trim_after_first_colon: true
+
+    ^UITouch$: # DONE
+        properties:
+            '^gestureRecognizers$':
+                type: "NSArray<UIGestureRecognizer>"
         methods:
             '-locationInView:$':
                 name: getLocation
             '-previousLocationInView:$':
                 name: getPreviousLocation
-    ^UIVideoEditorController$:
-        methods:
-            '+canEditVideoAtPath:$':
-                name: canEditVideo
+
+    ^UIVideoEditorController$: # DONE
         properties:
             'delegate$':
                 type: UIVideoEditorControllerDelegate
-    ^UIView$:
+        methods:
+            '+canEditVideoAtPath:$':
+                visibility: protected
+
+    ^UIView$: # DONE
+        properties:
+            '^subviews$':
+                type: "NSArray<UIView>"
+            '^gestureRecognizers$':
+                type: "NSArray<UIGestureRecognizer>"
+            '^motionEffects$':
+                type: "NSArray<UIMotionEffect>"
         methods:
             '+animateWithDuration:animations:$':
                 name: animate
@@ -1336,24 +2205,30 @@ classes:
                 name: animate
             '+animateWithDuration:delay:options:animations:completion:$':
                 name: animate
+            '+animateWithDuration:delay:usingSpringWithDamping:initialSpringVelocity:options:animations:completion:$':
+                trim_after_first_colon: true
             '+transitionFromView:toView:duration:options:completion:$':
                 name: transition
             '+transitionWithView:duration:options:animations:completion:$':
                 name: transition
             '+layerClass$':
                 name: getLayerClass
-#            '+setAnimationDidStopSelector:$':
-#                parameters:
-#                    selector: 
-#                        type: AnimationDidStopAction
-#                        name: action
-#                name: setAnimationDidStopAction
-#            '+setAnimationWillStartSelector:$':
-#                parameters:
-#                    selector: 
-#                        type: AnimationDidStartAction
-#                        name: action
-#                name: setAnimationWillStartAction
+            '+performSystemAnimation:onViews:options:animations:completion:$':
+                trim_after_first_colon: true
+                parameters:
+                    views:
+                        type: "NSArray<UIView>"
+            '+animateKeyframesWithDuration:delay:options:animations:completion:$':
+                name: animateKeyframes
+            '+addKeyframeWithRelativeStartTime:relativeDuration:animations:$':
+                name: addKeyframe
+            '+beginAnimations:context:$':
+                trim_after_first_colon: true
+            '+setAnimationTransition:forView:cache:$':
+                trim_after_first_colon: true
+            '+performWithoutAnimation:$':
+                trim_after_first_colon: true
+
             '-convertPoint:fromView:$':
                 name: convertPointFromView
             '-convertPoint:toView:$':
@@ -1368,12 +2243,6 @@ classes:
                 name: 'insertSubviewBelow'
             '-isDescendantOfView:$':
                 name: isDescendantOf
-#            '-didAddSubview:$':
-#                name: subviewAdded
-#            '-didMoveToSuperview$':
-#                name: movedToSuperview
-#            '-didMoveToWindow$':
-#                name: movedToWindow
             '-drawRect:$':
                 name: draw
             '-exchangeSubviewAtIndex:withSubviewAtIndex:$':
@@ -1389,7 +2258,7 @@ classes:
             '-sizeToFit$':
                 name: resizeToFit
 # Renamed since it conflicts with the animationDuration property in UIImageView. 
-# The static method in UIView should not be used anymore so we rename it rather that the property in UIImageView.                
+# The static method in UIView should not be used anymore so we rename it rather than the property in UIImageView.                
             '+setAnimationDuration:$':
                 name: setDurationForAnimation
             '-contentCompressionResistancePriorityForAxis:$':
@@ -1397,24 +2266,97 @@ classes:
             '-contentHuggingPriorityForAxis:$':
                 name: getContentHuggingPriority
             '-alignmentRectForFrame:$':
-                name: getFrameAlignmentRect
+                name: getAlignmentRectForFrame
             '-alignmentRectInsets$':
                 name: getAlignmentRectInsets
             '-constraints$':
                 name: getConstraints
+                return_type: "NSArray<NSLayoutConstraint>"
             '-constraintsAffectingLayoutForAxis:$':
                 name: getConstraintsAffectingLayout
+                return_type: "NSArray<NSLayoutConstraint>"
             '-frameForAlignmentRect:$':
-                name: getAlignmentRectFrame
+                name: getFrameForAlignmentRect
             '-intrinsicContentSize$':
                 name: getIntrinsicContentSize
             '-systemLayoutSizeFittingSize:$':
                 name: getSystemLayoutSizeFittingSize
             '-translatesAutoresizingMaskIntoConstraints$':
-                name: isTranslatesAutoresizingMaskIntoConstraints
+                name: translatesAutoresizingMaskIntoConstraints
             '-viewForBaselineLayout$':
-                name: getBaselineLayoutView
-    ^UIViewController$:
+                name: getViewForBaselineLayout
+
+            '-hitTest:withEvent:$':
+                trim_after_first_colon: true
+            '-pointInside:withEvent:$':
+                name: isPointInside
+            '-insertSubview:atIndex:$':
+                trim_after_first_colon: true
+            '-addSubview:$':
+                trim_after_first_colon: true
+            '-bringSubviewToFront:$':
+                trim_after_first_colon: true
+            '-sendSubviewToBack:$':
+                trim_after_first_colon: true
+            '-didAddSubview:$':
+                trim_after_first_colon: true
+            '-willRemoveSubview:$':
+                trim_after_first_colon: true
+            '-willMoveToSuperview:$':
+                trim_after_first_colon: true
+            '-willMoveToWindow:$':
+                trim_after_first_colon: true
+            '-addGestureRecognizer:$':
+                trim_after_first_colon: true
+            '-removeGestureRecognizer:$':
+                trim_after_first_colon: true
+            '-gestureRecognizerShouldBegin:$':
+                trim_after_first_colon: true
+            '-addMotionEffect:$':
+                trim_after_first_colon: true
+            '-removeMotionEffect:$':
+                trim_after_first_colon: true
+            '-addConstraint:$':
+                trim_after_first_colon: true
+            '-addConstraints:$':
+                trim_after_first_colon: true
+                parameters:
+                    constraints:
+                        type: "NSArray<NSLayoutConstraint>"
+            '-removeConstraint:$':
+                trim_after_first_colon: true
+            '-removeConstraints:$':
+                trim_after_first_colon: true
+                parameters:
+                    constraints:
+                        type: "NSArray<NSLayoutConstraint>"
+            '-setContentHuggingPriority:forAxis:$':
+                trim_after_first_colon: true
+            '-setContentCompressionResistancePriority:forAxis:$':
+                trim_after_first_colon: true
+            '-encodeRestorableStateWithCoder:$':
+                name: encodeRestorableState
+            '-decodeRestorableStateWithCoder:$':
+                name: decodeRestorableState
+            '-snapshotViewAfterScreenUpdates:$':
+                name: snapshotView
+            '-resizableSnapshotViewFromRect:afterScreenUpdates:withCapInsets:$':
+                name: resizableSnapshotView
+            '-drawViewHierarchyInRect:afterScreenUpdates:$':
+                name: drawViewHierarchy
+            '-endEditing:$':
+                trim_after_first_colon: true
+            '-drawRect:forViewPrintFormatter:$':
+                name: draw
+
+    ^UIViewController$: # DONE
+        properties:
+            'restorationClass$':
+                type: ObjCClass
+            '^childViewControllers$':
+                type: "NSArray<UIViewController>"
+            '^toolbarItems$':
+                type: "NSArray<UIBarButtonItem>"
         methods:
             '-rotatingFooterView$':
                 name: getRotatingFooterView
@@ -1437,7 +2379,7 @@ classes:
             '-willRotateToInterfaceOrientation:duration:$':
                 name: willRotate
             '-willMoveToParentViewController:$':
-                name: willMoveToParent
+                name: willMoveToParentViewController
             '-editButtonItem$':
                 name: getEditButtonItem
             '-decodeRestorableStateWithCoder:$':
@@ -1447,25 +2389,64 @@ classes:
             '-preferredInterfaceOrientationForPresentation$':
                 name: getPreferredInterfaceOrientation
             '-segueForUnwindingToViewController:fromViewController:identifier:$':
-                name: getUnwindSegue
+                name: getSegueForUnwinding
             '-shouldPerformSegueWithIdentifier:sender:$':
                 name: shouldPerformSegue
             '-supportedInterfaceOrientations$':
                 name: getSupportedInterfaceOrientations
                 return_type: UIInterfaceOrientationMask
             '-viewControllerForUnwindSegueAction:fromViewController:withSender:$':
-                name: getUnwindSegueActionViewController
-        properties:
-            'restorationClass$':
-                type: ObjCClass
-    ^UIViewPrintFormatter$: {}
-    ^UIWebView$:
-        # protocols: []
+                name: getViewControllerForUnwind
+
+            '-addChildViewController:$':
+                trim_after_first_colon: true
+            '-beginAppearanceTransition:animated:$':
+                trim_after_first_colon: true
+            '-canPerformUnwindSegueAction:fromViewController:withSender:$':
+                name: canPerformUnwind
+            '-didAnimateFirstHalfOfRotationToInterfaceOrientation:$':
+                name: didAnimateFirstHalfOfRotation
+            '-didMoveToParentViewController:$':
+                trim_after_first_colon: true
+            '-prepareForSegue:sender:$':
+                trim_after_first_colon: true
+            '-presentModalViewController:animated:$':
+                trim_after_first_colon: true
+            '-presentViewController:animated:completion:$':
+                trim_after_first_colon: true
+            '-setEditing:animated:$':
+                trim_after_first_colon: true
+            '-setToolbarItems:animated:$':
+                trim_after_first_colon: true
+                parameters:
+                    toolbarItems:
+                        type: "NSArray<UIBarButtonItem>"
+            '-shouldAutorotateToInterfaceOrientation:$':
+                name: shouldAutorotate
+            '-viewDidAppear:$':
+                trim_after_first_colon: true
+            '-viewDidDisappear:$':
+                trim_after_first_colon: true
+            '-viewWillAppear:$':
+                trim_after_first_colon: true
+            '-viewWillDisappear:$':
+                trim_after_first_colon: true
+            '-willAnimateFirstHalfOfRotationToInterfaceOrientation:duration:$':
+                name: willAnimateFirstHalfOfRotation
+            '-willAnimateSecondHalfOfRotationFromInterfaceOrientation:duration:$':
+                name: willAnimateSecondHalfOfRotation
+
+    ^UIViewPrintFormatter$: {} # DONE
+    ^UIWebView$: # DONE
         methods:
             "-loadHTMLString:baseURL:":
                 name: loadHTML
             '-stringByEvaluatingJavaScriptFromString:$':
                 name: evaluateJavaScript
+            '-loadRequest:$':
+                trim_after_first_colon: true
+            '-loadData:MIMEType:textEncodingName:baseURL:$':
+                trim_after_first_colon: true
     ^UIWindow$:
         methods:
             '-convertPoint:fromWindow:$':
@@ -1476,6 +2457,9 @@ classes:
                 name: convertRectFromWindow
             '-convertRect:toWindow:$':
                 name: convertRectToWindow
+            '-sendEvent:$':
+                trim_after_first_colon: true
+
 protocols:
     ^NSLayoutManagerDelegate$:
         methods:

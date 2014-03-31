@@ -1014,6 +1014,8 @@ protocols:
         methods:
             "^-initWithCoder:$":
                 exclude: true
+            '-encodeWithCoder:$':
+                name: encode
 #    ^NSCopying$: {}
     ^NSDecimalNumberBehaviors$: {}
     ^NSErrorRecoveryAttempting$: {}
