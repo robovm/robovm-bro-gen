@@ -1426,13 +1426,15 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
         owner.is_a?(Bro::ObjCCategory) && 'public' || 
         adapter && 'public' ||
         ''
-    native = owner.is_a?(Bro::ObjCProtocol) ? "" : (adapter ? '' : "native")
+    native = owner.is_a?(Bro::ObjCProtocol) || (owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)) ? "" : (adapter ? '' : "native")
     static = method.is_a?(Bro::ObjCClassMethod) || owner.is_a?(Bro::ObjCCategory) ? "static" : ""
   #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     if owner.is_a?(Bro::ObjCCategory)
-      param_types.unshift([owner.owner, nil, 'thiz'])
+      if method.is_a?(Bro::ObjCInstanceMethod)
+        param_types.unshift([owner.owner, nil, 'thiz'])
+      end
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
     ret_anno = ''
@@ -1451,6 +1453,12 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
       method_lines.push("@NotImplemented(\"#{method.name}\")")
     else
       method_lines.push("@Method(selector = \"#{method.name}\")")
+    end
+    if owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)
+      new_parameters_s = (['ObjCClass clazz'] + (param_types.map {|p| "#{p[0]} #{p[2]}"})).join(', ')
+      method_lines.push("protected static native #{[ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});")
+      args_s = (["ObjCClass.getByType(#{owner.owner}.class)"] + (param_types.map {|p| p[2]})).join(', ')
+      body = " { #{ret_type[0] != 'void' ? 'return ' : ''}#{name}(#{args_s}); }"
     end
     method_lines.push("#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
