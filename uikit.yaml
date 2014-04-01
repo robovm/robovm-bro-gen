@@ -797,6 +797,9 @@ classes:
                 trim_after_first_colon: true
             '-startInteractiveTransitionToCollectionViewLayout:completion:$':
                 name: startInteractiveTransition
+                parameters:
+                    completion:
+                        type: "@Block VoidBlock2<Boolean, Boolean>"
             '-(insert|delete|reload)Sections:$':
                 trim_after_first_colon: true
             '-moveSection:toSection:$':
@@ -1325,7 +1328,7 @@ classes:
         methods:
             '+keyCommandWithInput:modifierFlags:action:$':
                 name: create
-                
+
     ^UILabel$: # DONE
         methods:
             '-drawTextInRect:$':
@@ -1489,6 +1492,10 @@ classes:
             '^viewControllers$':
                 type: "NSArray<UIViewController>"
         methods:
+            '-initWithTransitionStyle:navigationOrientation:options:$':
+                parameters:
+                    options:
+                        type: "NSDictionary<NSString, ?>"
             '-setViewControllers:direction:animated:completion:$':
                 trim_after_first_colon: true
                 parameters:
@@ -2561,6 +2568,9 @@ protocols:
                 name: didFailToRegisterForRemoteNotifications
             '-application:didFinishLaunchingWithOptions:$':
                 name: didFinishLaunching
+                parameters:
+                    launchOptions:
+                        type: "NSDictionary<NSString, ?>"
             '-applicationDidFinishLaunching:$':
                 name: didFinishLaunching
             '-application:didReceiveLocalNotification:$':
@@ -2605,10 +2615,16 @@ protocols:
                 name: getSupportedInterfaceOrientations
             '-application:viewControllerWithRestorationIdentifierPath:coder:$':
                 name: getViewController
+                parameters:
+                    identifierComponents:
+                        type: "NSArray<NSString>"
             '-application:willEncodeRestorableStateWithCoder:$':
                 name: willEncodeRestorableState
             '-application:willFinishLaunchingWithOptions:$':
                 name: willFinishLaunching
+                parameters:
+                    launchOptions:
+                        type: "NSDictionary<NSString, ?>"
             '-application:didReceiveRemoteNotification:fetchCompletionHandler:$':
                 name: didReceiveRemoteNotification
             '-application:performFetchWithCompletionHandler:$':
@@ -2743,6 +2759,7 @@ protocols:
         methods:
             '-guidedAccessRestrictionIdentifiers$':
                 name: getIdentifiers
+                return_type: "NSArray<NSString>"
             '-guidedAccessRestrictionWithIdentifier:didChangeState:$':
                 name: didChangeState
             '-textForGuidedAccessRestrictionWithIdentifier:$':
@@ -2755,10 +2772,16 @@ protocols:
         methods:
             '-imagePickerController:didFinishPickingMediaWithInfo:$':
                 name: didFinishPickingMedia
+                parameters:
+                    info:
+                        type: "NSDictionary<NSString, ?>"
             '-imagePickerControllerDidCancel:$':
                 name: didCancel
             '-imagePickerController:didFinishPickingImage:editingInfo:$':
                 name: didFinishPickingImage
+                parameters:
+                    editingInfo:
+                        type: "NSDictionary<NSString, ?>"
 
     ^UIKeyInput$:
         methods:
@@ -2807,10 +2830,16 @@ protocols:
         methods:
             '-pageViewController:didFinishAnimating:previousViewControllers:transitionCompleted:$':
                 name: didFinishAnimating
+                parameters:
+                    previousViewControllers:
+                        type: "NSArray<UIViewController>"
             '-pageViewController:spineLocationForInterfaceOrientation:$':
                 name: getSpineLocation
             '-pageViewController:willTransitionToViewControllers:$':
                 name: willTransition
+                parameters:
+                    pendingViewControllers:
+                        type: "NSArray<UIViewController>"
             '-pageViewControllerSupportedInterfaceOrientations:$':
                 name: getSupportedInterfaceOrientations
             '-pageViewControllerPreferredInterfaceOrientationForPresentation:$':
@@ -2855,6 +2884,9 @@ protocols:
         methods:
             '-printInteractionController:choosePaper:$':
                 name: choosePaper
+                parameters:
+                    paperList:
+                        type: "NSArray<UIPrintPaper>"
             '-printInteractionControllerDidDismissPrinterOptions:$':
                 name: didDismissPrinterOptions
             '-printInteractionControllerDidFinishJob:$':
@@ -2975,14 +3007,23 @@ protocols:
         methods:
             '-tabBarController:didEndCustomizingViewControllers:changed:$':
                 name: didEndCustomizingViewControllers
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
             '-tabBarController:didSelectViewController:$':
                 name: didSelectViewController
             '-tabBarController:shouldSelectViewController:$':
                 name: shouldSelectViewController
             '-tabBarController:willBeginCustomizingViewControllers:$':
                 name: willBeginCustomizingViewControllers
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
             '-tabBarController:willEndCustomizingViewControllers:changed:$':
                 name: willEndCustomizingViewControllers
+                parameters:
+                    viewControllers:
+                        type: "NSArray<UIViewController>"
             '-tabBarControllerSupportedInterfaceOrientations:$':
                 name: getSupportedInterfaceOrientations
             '-tabBarControllerPreferredInterfaceOrientationForPresentation:$':
@@ -2996,20 +3037,33 @@ protocols:
         methods:
             '-tabBar:didBeginCustomizingItems:$':
                 name: didBeginCustomizingItems
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
             '-tabBar:didEndCustomizingItems:changed:$':
                 name: didEndCustomizingItems
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
             '-tabBar:didSelectItem:$':
                 name: didSelectItem
             '-tabBar:willBeginCustomizingItems:$':
                 name: willBeginCustomizingItems
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
             '-tabBar:willEndCustomizingItems:changed:$':
                 name: willEndCustomizingItems
+                parameters:
+                    items:
+                        type: "NSArray<UITabBarItem>"
     ^UITableViewDataSource$:
         methods:
             '-numberOfSectionsInTableView:$':
                 name: getNumberOfSections
             '-sectionIndexTitlesForTableView:$':
                 name: getSectionIndexTitles
+                return_type: "NSArray<NSString>"
             '-tableView:commitEditingStyle:forRowAtIndexPath:$':
                 name: commitRowEditingStyle
             '-tableView:canMoveRowAtIndexPath:$':
@@ -3114,6 +3168,9 @@ protocols:
             '-textFieldShouldReturn:$':
                 name: shouldReturn
     ^UITextInput$:
+        properties:
+            '^markedTextStyle$':
+                type: "NSDictionary<NSString, ?>"
         methods:
             '-baseWritingDirectionForPosition:inDirection:$':
                 name: getBaseWritingDirection
@@ -3151,10 +3208,12 @@ protocols:
                 name: getTextRange
             '-textStylingAtPosition:inDirection:$':
                 name: getTextStyling
+                return_type: "NSDictionary<NSString, ?>"
             '-frameForDictationResultPlaceholder:$':
                 name: getDictationResultPlaceholderFrame
             '-selectionRectsForRange:$':
                 name: getSelectionRects
+                return_type: "NSArray<UITextSelectionRect>"
             '-shouldChangeTextInRange:replacementText:$':
                 name: shouldChangeText
             '-setMarkedText:selectedRange:$':
@@ -3165,6 +3224,9 @@ protocols:
                 property: true
             '-insertDictationResult:$':
                 name: insertDictationResult
+                parameters:
+                    dictationResult:
+                        type: "NSArray<UIDictationPhrase>"
             '-removeDictationResultPlaceholder:willInsertResult:$':
                 name: removeDictationResultPlaceholder
 
@@ -3346,10 +3408,61 @@ functions:
     ^NSTextAlignmentFromCTTextAlignment$:
         exclude: true
 
+    ^UIAccessibility(.*)$:
+        class: UIAccessibilityGlobals
+        name: "#{g[0]}"
+
     ^UIApplication(Main)$:
         class: UIApplication
         visibility: protected
         name: "#{g[0]}"
+
+    ^UIGraphics(.*)$:
+        class: UIGraphics
+        name: "#{g[0]}"
+        parameters:
+            documentInfo:
+                type: "NSDictionary<NSString, ?>"
+            pageInfo:
+                type: "NSDictionary<NSString, ?>"
+    ^UI(Rect.*)$:
+        class: UIGraphics
+        name: "#{g[0]}"
+
+    ^UIGuidedAccessRestrictionStateForIdentifier$:
+        class: UIGuidedAccessRestriction
+        name: getState
+
+    ^UIImage(.*)Representation$:
+        class: UIImage
+        name: "to#{g[0]}Data"
+    ^UIImage(WriteToSavedPhotosAlbum)$:
+        class: UIImage
+        name: saveToPhotosAlbum
+
+    ^UIVideoAtPath(IsCompatibleWithSavedPhotosAlbum)$:
+        class: UIVideo
+        visibility: protected
+        name: "#{g[0]}"
+    ^UISaveVideoAtPathToSavedPhotosAlbum$:
+        class: UIVideo
+        visibility: protected
+        name: saveToPhotosAlbum
+
+    ^NSStringFrom(UI.*)$:
+        class: "#{g[0]}"
+        name: toString
+        visibility: protected
+        static: true
+    ^(UI.*)FromString$:
+        class: "#{g[0]}"
+        name: "fromString"
+    ^NSStringFrom.*$:
+        class: UIGeometry
+        name: toString
+    ^(.*)FromString$:
+        class: UIGeometry
+        name: "stringTo#{g[0]}"
 
     # Make sure we don't miss any functions if new ones are introduced in a later UIKit
     ^(CG.*)$:
@@ -3361,7 +3474,298 @@ functions:
 
 values: 
 
+    ^NS(Font|ParagraphStyle|ForegroundColor|BackgroundColor|Ligature)AttributeName$:
+        class: NSAttributedStringExtensions
+        name: "Attribute#{g[0]}"
+        type: NSString
+    ^NS(Kern|StrikethroughStyle|UnderlineStyle|StrokeColor|StrokeWidth)AttributeName$:
+        class: NSAttributedStringExtensions
+        name: "Attribute#{g[0]}"
+        type: NSString
+    ^NS(Shadow|TextEffect|Attachment|Link|BaselineOffset|UnderlineColor)AttributeName$:
+        class: NSAttributedStringExtensions
+        name: "Attribute#{g[0]}"
+        type: NSString
+    ^NS(StrikethroughColor|Obliqueness|Expansion|WritingDirection|VerticalGlyphForm)AttributeName$:
+        class: NSAttributedStringExtensions
+        name: "Attribute#{g[0]}"
+        type: NSString
+    ^NS(.*)DocumentAttribute$:
+        class: NSAttributedStringExtensions
+        name: "DocumentAttribute#{g[0]}"
+        type: NSString
+    ^NS(TextLayoutSections)Attribute$:
+        class: NSAttributedStringExtensions
+        name: "DocumentAttribute#{g[0]}"
+        type: NSString
+    ^NS(TextLayoutSection.*)$:
+        class: NSAttributedStringExtensions
+        name: "#{g[0]}"
+        type: NSString
+    ^NS(TextEffect.*)$:
+        class: NSAttributedStringExtensions
+        name: "#{g[0]}"
+        type: NSString
+    ^NS(.*)DocumentType$:
+        class: NSAttributedStringExtensions
+        name: "DocumentType#{g[0]}"
+        type: NSString
+
+    ^UINib(.*)Key$:
+        class: NSBundleExtensions
+        name: "OptionKey#{g[0]}"
+        type: NSString
+    ^UINib(ExternalObjects)$:
+        class: NSBundleExtensions
+        name: "OptionKey#{g[0]}"
+        type: NSString
+
+    ^UIText(Attribute.*)$:
+        class: NSStringExtensions
+        name: "#{g[0]}"
+        type: NSString
+
+    ^NS(TextStorage.*)Notification$:
+        class: NSTextStorage
+        name: "Notification#{g[0]}"
+
+    ^NS(TabColumnTerminators)AttributeName$:
+        class: NSTextTab
+        name: "Attribute#{g[0]}"
+        type: NSString
+
+    ^UIAccessibility(.*)Notification$:
+        class: UIAccessibilityGlobals
+        name: "Notification#{g[0]}"
+        readonly: true
+    ^UIAccessibility(VoiceOverStatusChanged)$:
+        class: UIAccessibilityGlobals
+        name: "Notification#{g[0]}"
+        readonly: true
+    ^UIAccessibility(Speech.*)$:
+        class: UIAccessibilityGlobals
+        name: "#{g[0]}"
+        readonly: true
+        type: NSString
+    ^UIAccessibility(Trait.*)$:
+        class: UIAccessibilityGlobals
+        name: "#{g[0]}"
+        readonly: true
+    ^UIAccessibility(AnnouncementKey.*)$:
+        class: UIAccessibilityGlobals
+        name: "#{g[0]}"
+        readonly: true
+        type: NSString
+
+    ^UIActivity(Type.*)$:
+        class: UIActivity
+        name: "#{g[0]}"
+
+    ^UI(ApplicationDid.*)Notification$:
+        class: UIApplication
+        name: "Notification#{g[0]}"
+    ^UI(ApplicationWill.*)Notification$:
+        class: UIApplication
+        name: "Notification#{g[0]}"
+    ^UIApplication(.*)Notification$:
+        class: UIApplication
+        name: "Notification#{g[0]}"
+    ^UI(ContentSizeCategoryDidChange)Notification$:
+        class: UIApplication
+        name: "Notification#{g[0]}"
+    ^UIApplication(ProtectedData.*)$:
+        class: UIApplication
+        name: "Notification#{g[0]}"
+    ^UIApplication(LaunchOptions.*)$:
+        class: UIApplication
+        name: "#{g[0]}"
+        type: NSString
+    ^UIApplication(BackgroundFetchInterval.*)$:
+        class: UIApplication
+        name: "#{g[0]}"
+    ^UIApplication(.*)UserInfoKey$:
+        class: UIApplication
+        name: "UserInfoKey#{g[0]}"
+        type: NSString
+    ^UI(ContentSizeCategoryNewValue)Key$:
+        class: UIApplication
+        name: "UserInfoKey#{g[0]}"
+        type: NSString
+    ^UI(ContentSizeCategory.*)$:
+        class: UIApplication
+        name: "#{g[0]}"
+    ^UI(Tracking)RunLoopMode$:
+        class: UIApplication
+        name: "RunLoopMode#{g[0]}"
+    ^UIApplicationInvalidInterfaceOrientationException$:
+        exclude: true
+    ^UI(BackgroundTaskInvalid)$:
+        class: UIApplication
+        name: "#{g[0]}"
+    ^UI(MinimumKeepAliveTimeout)$:
+        class: UIApplication
+        name: "#{g[0]}"
+
+    ^UICollectionElement(Kind.*)$:
+        class: UICollectionViewFlowLayout
+        name: "#{g[0]}"
+
+    ^UI(Device.*)Notification$:
+        class: UIDevice
+        name: "Notification#{g[0]}"
+
+    ^UI(Document.*)Notification$:
+        class: UIDocument
+        name: "Notification#{g[0]}"
+
+    ^UIEdgeInsets(Zero)$:
+        class: UIEdgeInsets
+        name: "#{g[0]}"
+
+    ^UIFontDescriptor(.*)Attribute$:
+        class: UIFontDescriptor
+        name: "Attribute#{g[0]}"
+        type: NSString
+    ^UIFont(TextStyle.*)$:
+        class: UIFontDescriptor
+        name: "#{g[0]}"
+    ^UIFont(.*)Trait$:
+        class: UIFontDescriptor
+        name: "Trait#{g[0]}"
+        type: NSString
+    ^UIFont(Feature.*)$:
+        class: UIFontDescriptor
+        name: "#{g[0]}"
+        type: NSString
+
+    ^UIImagePickerController(.*)$:
+        class: UIImagePickerController
+        name: "EditingInfo#{g[0]}"
+        type: NSString
+
+    ^UI(KeyInput.*)$:
+        class: UIKeyCommand
+        name: "#{g[0]}"
+
+    ^UILocalNotification(DefaultSoundName)$:
+        class: UILocalNotification
+        name: "#{g[0]}"
+
+    ^UI(MenuController.*)Notification$:
+        class: UIMenuController
+        name: "Notification#{g[0]}"
+
+    ^UINavigationController(HideShowBarDuration)$:
+        class: UINavigationController
+        name: "#{g[0]}"
+
+    ^UIOffset(Zero)$:
+        class: UIOffset
+        name: "#{g[0]}"
+
+    ^UIPageViewControllerOption(.*)Key$:
+        class: UIPageViewController
+        name: "OptionKey#{g[0]}"
+        type: NSString
+
+    ^UI(Pasteboard.*)Notification$:
+        class: UIPasteboard
+        name: "Notification#{g[0]}"
+    ^UIPasteboardChanged(Types.*)Key$:
+        class: UIPasteboard
+        name: "UserInfoKey#{g[0]}"
+        type: NSString
+    ^UIPasteboard(Name.*)$:
+        class: UIPasteboard
+        name: "#{g[0]}"
+    ^UIPasteboard(Type.*)$:
+        class: UIPasteboard
+        name: "#{g[0]}"
+        readonly: true
+        type: "NSArray<NSString>"
+
+    ^UIPrint(ErrorDomain)$:
+        class: UIPrint
+        name: "#{g[0]}"
+
+    ^UI(Screen.*)Notification$:
+        class: UIScreen
+        name: "Notification#{g[0]}"
+
+    ^UIScrollView(DecelerationRate.*)$:
+        class: UIScrollView
+        name: "#{g[0]}"
+
+    ^UIApplicationStateRestoration(.*)Key$:
+        class: UIStateRestoration
+        name: "StateRestorationKey#{g[0]}"
+        type: NSString
+    ^UIStateRestoration(ViewControllerStoryboard)Key$:
+        class: UIStateRestoration
+        name: "StateRestorationKey#{g[0]}"
+        type: NSString
+
+    ^UITableViewIndex(Search)$:
+        class: UITableView
+        name: "SectionIndex#{g[0]}"
+        type: NSString
+    ^UITableView(AutomaticDimension)$:
+        class: UITableView
+        name: "#{g[0]}"
+    ^UITableView(SelectionDidChange)Notification$:
+        class: UITableView
+        name: "Notification#{g[0]}"
+
+    ^UITextInputText(.*)Key$:
+        class: UITextInputGlobals
+        name: "StyleKey#{g[0]}"
+        type: NSString
+
+    ^UITextInput(CurrentInputModeDidChange)Notification$:
+        class: UITextInputMode
+        name: "Notification#{g[0]}"
+
+    ^UITextField(.*)Notification$:
+        class: UITextField
+        name: "Notification#{g[0]}"
+
+    ^UITextView(Text.*)Notification$:
+        class: UITextView
+        name: "Notification#{g[0]}"
+
+    ^UI(LayoutFitting.*)$:
+        class: UIView
+        name: "#{g[0]}"
+    ^UIView(NoIntrinsicMetric)$:
+        class: UIView
+        name: "#{g[0]}"
+
+    ^UIViewControllerHierarchyInconsistencyException$:
+        exclude: true
+
+    ^UITransitionContext((From|To)ViewController)Key$:
+        class: UIViewControllerContextTransitioningGlobals
+        name: "TransitionKey#{g[0]}"
+        type: NSString
+
+    ^UI(Keyboard.*)UserInfoKey$:
+        class: UIWindow
+        name: "UserInfoKey#{g[0]}"
+        type: NSString
+    ^UI(WindowLevel.*)$:
+        class: UIWindow
+        name: "#{g[0]}"
+    ^UI(Window.*)Notification$:
+        class: UIWindow
+        name: "Notification#{g[0]}"
+    ^UI(Keyboard.*)Notification$:
+        class: UIWindow
+        name: "Notification#{g[0]}"
+
     # Make sure we don't miss any values if new ones are introduced in a later UIKit
+    ^(NS.*)$:
+        class: UIKit
+        name: "Value__#{g[0]}"
     ^(UI.*)$:
         class: UIKit
         name: "Value__#{g[0]}"
