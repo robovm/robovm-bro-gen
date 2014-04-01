@@ -29,3 +29,7 @@ NSUncaughtExceptionHandler
 visibility (functions, classes, methods, properties)
 Blocks
 UIAppearance
+
+Don't expose selectors
+
+equals/hashcode for Structs? Value objects?
