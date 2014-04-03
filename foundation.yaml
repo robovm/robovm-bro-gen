@@ -132,8 +132,8 @@ classes:
 
     # These classes do not exist in Foundation. We use them to hold global values related to the
     # NSKeyValueCoding and NSKeyValueObserving informal protocols.
-    ^NSKeyValueOperator$: { visibility: 'public abstract' }
-    ^NSKeyValueChangeKey$: { visibility: 'public abstract' }
+    ^NSKeyValueOperator$: { visibility: 'public final' }
+    ^NSKeyValueChangeKey$: { visibility: 'public final' }
 
     ^NS.*Internal$: { exclude: true }
 
@@ -744,10 +744,10 @@ classes:
             '-cancelPreviousPerformRequests.*':
                 name: cancelPreviousPerformRequests
 
-            '–addObserver:forKeyPath:options:context:':
-                name: addObserver
-            '-removeObserver:forKeyPath:context:':
-                name: removeObserver
+            '-addObserver:forKeyPath:options:context:$':
+                visibility: private
+            '-removeObserver:forKeyPath:context:$':
+                visibility: private
             '-didChange:values.*':
                 name: didChangeValues
             '-didChangeValue.*':
@@ -757,11 +757,8 @@ classes:
             '-willChangeValue.*':
                 name: willChangeValue
             '-observeValueForKeyPath:ofObject:change:context:':
-                name: observeValue
-#            '+automaticallyNotifiesObserversForKey':
-#                name: automaticallyNotifiesObservers
-#            '+keyPathsForValuesAffectingValueForKey:':
-#                name: getKeyPathsForValuesAffectingValue
+                # We have a non-native version of this
+                exclude: true
 
             '-setValue:forKey(.*):':
                 name: 'setValueForKey#{g[0]}'
@@ -784,6 +781,25 @@ classes:
                 name: validateValueForKey
             '-validateValue:forKeyPath:error:':
                 name: validateValueForKeyPath
+
+            '-performSelector:withObject:afterDelay:inModes:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
+            '-performSelector:withObject:afterDelay:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
+            '-performSelectorOnMainThread:withObject:waitUntilDone:modes:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
+            '-performSelectorOnMainThread:withObject:waitUntilDone:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
+            '-performSelector:onThread:withObject:waitUntilDone:modes:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
+            '-performSelector:onThread:withObject:waitUntilDone:$':
+                trim_after_first_colon: true
+                visibility: 'public final'
 
             '\+.*': { exclude: true }
             '-.*': { exclude: true }
