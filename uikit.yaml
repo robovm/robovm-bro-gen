@@ -2556,8 +2556,10 @@ protocols:
                 name: willPresent
             '-alertViewShouldEnableFirstOtherButton:$':
                 name: shouldEnableFirstOtherButton
+    # UIAppearance is bound as a class with static methods rather than an interface.
 #    ^UIAppearance$: {}
-#    ^UIAppearanceContainer$: {}
+    ^UIAppearanceContainer$:
+        skip_adapter: true
     ^UIApplicationDelegate$:
         methods:
             '-application:didChangeStatusBarFrame:$':
