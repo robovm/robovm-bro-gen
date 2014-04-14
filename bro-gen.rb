@@ -1635,9 +1635,9 @@ ARGV[1..-1].each do |yaml_file|
       #name = name[0, 1].downcase + name[1..-1]
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
-      lines = ["@GlobalValue(symbol=\"#{v.name}\")", "#{visibility} static native #{java_type} #{name}();"]
+      lines = ["@GlobalValue(symbol=\"#{v.name}\", optional=true)", "#{visibility} static native #{java_type} #{name}();"]
       if !v.is_const? && !vconf['readonly']
-        lines = lines + ["@GlobalValue(symbol=\"#{v.name}\")", "public static native void #{name}(#{java_type} v);"]
+        lines = lines + ["@GlobalValue(symbol=\"#{v.name}\", optional=true)", "public static native void #{name}(#{java_type} v);"]
       end
       lines
     end.flatten.join("\n    ")
@@ -1681,7 +1681,7 @@ ARGV[1..-1].each do |yaml_file|
         pconf = paramconf[e.name] || {}
         "#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
       end
-      ["@Bridge(symbol=\"#{f.name}\")", "#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});"]
+      ["@Bridge(symbol=\"#{f.name}\", optional=true)", "#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});"]
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
