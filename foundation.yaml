@@ -485,6 +485,7 @@ classes:
                 name: setDefaultClass
     ^NSLinguisticTagger$: {}
     ^NSLocale$:
+        skip_def_constructor: true
         methods:
             '+(autoupdatingCurrent|current|system)Locale$':
                 property: true
@@ -502,7 +503,7 @@ classes:
             '+lineDirectionForLanguage:':
                 name: getLineDirection
             '+componentsFromLocaleIdentifier:$':
-                name: getCmponentsFromLocaleIdentifier
+                name: getComponentsFromLocaleIdentifier
                 return_type: "NSDictionary<NSString, ?>"
             '+localeIdentifierFromComponents:$':
                 name: getLocaleIdentifierFromComponents
@@ -809,7 +810,29 @@ classes:
 
             '-init$': {exclude: true}
 
-    ^NSOperationQueue$: {}
+    ^NSOperationQueue$: # DONE
+        methods:
+            '+currentQueue$':
+                property: true
+                return_type: NSOperationQueue
+            '+mainQueue$':
+                property: true
+                return_type: NSOperationQueue
+            '-addOperation:$':
+                trim_after_first_colon: true
+            '-addOperations:waitUntilFinished:$':
+                trim_after_first_colon: true
+                parameters:
+                    ops:
+                        type: "NSArray<NSOperation>"
+            '-addOperationWithBlock:$':
+                name: addOperation
+            '-(name|operationCount|maxConcurrentOperationCount)$':
+                property: true
+            '-operations$':
+                property: true
+                return_type: "NSArray<NSOperation>"
+
     ^NSOrderedSet$:
         methods:
             "-initWithArray:$":
