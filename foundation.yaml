@@ -36,6 +36,8 @@ typedefs:
     "NSEnumerator *": "NSEnumerator<?>"
     'void (^)(void (^)(void))': '@Block("(@Block)") VoidBlock1<Runnable>'
     'void (^)(NSError *)': '@Block VoidBlock1<NSError>'
+    'void (^)(id, NSRange, BOOL *)': '@Block("(,@ByVal,)") VoidBlock3<NSObject, NSRange, BytePtr>'
+    'void (^)(NSDictionary *, NSRange, BOOL *)': '@Block("(,@ByVal,)") VoidBlock3<NSDictionary<NSString, ?>, NSRange, BytePtr>'
 
 enums:
     NSActivityOptions: {}
@@ -137,7 +139,7 @@ classes:
 
     ^NS.*Internal$: { exclude: true }
 
-    ^NSArray$:    
+    ^NSArray$: # DONE
         methods:
             "-initWithArray:":
                 visibility: protected
@@ -170,8 +172,6 @@ classes:
                 visibility: protected
             '-writeToURL:atomically:':
                 name: write
-            '-componentsJoinedByString:':
-                name: join
             '-firstObject$':
                 name: getFirst
             '-lastObject$':
@@ -184,10 +184,47 @@ classes:
             '+.*': {exclude: true}
             '-.*': {exclude: true}
 
-    ^NSAssertionHandler$: {}
-    ^NSAttributedString$: {}
+    ^NSAssertionHandler$: {exclude : true}
+
+    ^NSAttributedString$: # DONE
+        methods:
+            '-attribute:atIndex:effectiveRange:$':
+                name: getAttribute
+                parameters:
+                    attrName:
+                        type: NSString
+            '-attribute:atIndex:longestEffectiveRange:inRange:$':
+                name: getAttribute
+                parameters:
+                    attrName:
+                        type: NSString
+            '-attributesAtIndex:effectiveRange:$':
+                name: getAttributes
+            '-attributesAtIndex:longestEffectiveRange:inRange:$':
+                name: getAttributes
+            '-attributedSubstringFromRange:$':
+                name: substring
+            '-length$':
+                property: true
+            '-string$':
+                property: true
+            '-initWithString:attributes:$':
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-enumerateAttributesInRange:options:usingBlock:$':
+                name: enumerateAttributes
+            '-enumerateAttribute:inRange:options:usingBlock:$':
+                trim_after_first_colon: true
+                parameters:
+                    attrName:
+                        type: NSString
+            '-isEqualToAttributedString:$':
+                visibility: protected
+
     ^NSAutoreleasePool$:
         methods:
+            '-drain': {}
             '+.*': {exclude: true}
             '-.*': {exclude: true}
     ^NSBlockOperation$: {}
@@ -555,7 +592,7 @@ classes:
     ^NSMetadataQueryAttributeValueTuple$: {}
     ^NSMetadataQueryResultGroup$: {}
     ^NSMethodSignature$: {}
-    ^NSMutableArray$:
+    ^NSMutableArray$: # DONE
         methods:
             '-initWithCapacity:':
             '-removeObjectAtIndex:':
@@ -570,7 +607,43 @@ classes:
             '+.*': {exclude: true}
             '-.*': {exclude: true}
 
-    ^NSMutableAttributedString$: {}
+    ^NSMutableAttributedString$: # DONE
+        methods:
+            '-replaceCharactersInRange:withString:$':
+                name: replace
+            '-setAttributes:range:$':
+                trim_after_first_colon: true
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-mutableString$':
+                property: true
+            '-addAttribute:value:range:$':
+                trim_after_first_colon: true
+                parameters:
+                    name:
+                        type: NSString
+            '-addAttributes:range:$':
+                trim_after_first_colon: true
+                parameters:
+                    attrs:
+                        type: "NSDictionary<NSString, ?>"
+            '-removeAttribute:range:$':
+                trim_after_first_colon: true
+                parameters:
+                    name:
+                        type: NSString
+            '-replaceCharactersInRange:withAttributedString:$':
+                name: replace
+            '-insertAttributedString:atIndex:$':
+                name: insert
+            '-appendAttributedString:$':
+                name: append
+            '-deleteCharactersInRange:$':
+                name: delete
+            '-setAttributedString:$':
+                trim_after_first_colon: true
+
     ^NSMutableCharacterSet$: {}
     ^NSMutableData$:
         methods:
@@ -601,7 +674,7 @@ classes:
                     replacementBytes:
                         type: "@Pointer long"
             '-resetBytesInRange:':
-                name: resetRange
+                name: reset
             '-setData:':
                 name: setData
 
@@ -609,7 +682,7 @@ classes:
             '+.*': {exclude: true}
             '-.*': {exclude: true}
 
-    ^NSMutableDictionary$:
+    ^NSMutableDictionary$: # DONE
         skip_def_constructor: true
         methods:
             "-setObject:forKey:":
@@ -627,7 +700,7 @@ classes:
             '-.*': {exclude: true}
 
     ^NSMutableIndexSet$: {}
-    ^NSMutableOrderedSet$:
+    ^NSMutableOrderedSet$: # DONE
         methods:
             '-initWithCapacity:':
             '-removeObjectAtIndex:':
@@ -644,7 +717,7 @@ classes:
             '+.*': {exclude: true}
             '-.*': {exclude: true}
 
-    ^NSMutableSet$:
+    ^NSMutableSet$: # DONE
         methods:
             '-addObject:':
                 visibility: protected
@@ -975,12 +1048,26 @@ classes:
     ^NSTextCheckingResult$: {}
     ^NSThread$:
         methods:
-            '^\+threadPriority$': { exclude: true }
-            '^\+setThreadPriority:$': { exclude: true }
-            '^\+isMainThread$': { exclude: true }
-            '^\+callStack.*$': { exclude: true }
-
+            '+callStackReturnAddresses$': { exclude: true }
+            '+isMainThread$': { exclude: true }
+            '+threadPriority$': {exclude: true}
+            '+setThreadPriority:$': { exclude: true }
             '-init$': {exclude: true}
+
+            '+sleepForTimeInterval:$':
+                name: sleep
+            '+sleepUntilDate:$':
+                name: sleep
+            '+detachNewThreadSelector:toTarget:withObject:$':
+                name: detachNewThread
+            '+(currentThread|mainThread)$':
+                property: true
+            '+callStackSymbols$':
+                property: true
+                return_type: "NSArray<NSString>"
+
+            '-(name|stackSize|threadPriority|threadDictionary)$':
+                property: true
 
     ^NSTimer$: {}
     ^NSTimeZone$: {}
@@ -1191,9 +1278,8 @@ values:
     ^NS.*Exception$:
         exclude: true
     ^NSAssertionHandlerKey$:
-        class: NSAssertionHandler
-        type: NSString
-        name: "KeyThreadAssertionHandler"
+        exclude: true
+        
     ^NSBundle(.*)Notification$:
         class: NSBundle
         name: "Notification#{g[0]}"
