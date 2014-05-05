@@ -1,5 +1,21 @@
 #!/usr/bin/env ruby
 
+# Copyright (C) 2014 Trillian Mobile AB
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>.
+#
+
 $LOAD_PATH.unshift File.dirname(__FILE__) + "/ffi-clang/lib"
 
 require "ffi/clang"
@@ -301,7 +317,7 @@ module Bro
        source.end_with?('_CLASS_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
        source == 'OBJC_ROOT_CLASS' || source == '__ai'
       return IgnoredAttribute.new source
-    elsif source == 'NS_UNAVAILABLE'
+    elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
       return UnavailableAttribute.new source
     elsif source.match(/_AVAILABLE/) || source.match(/_DEPRECATED/) ||
           source.match(/_AVAILABLE_STARTING/) || source.match(/_AVAILABLE_BUT_DEPRECATED/)
@@ -384,7 +400,10 @@ module Bro
           model.structs.push s
           @children.push s
         when :cursor_unexposed_attr
-          $stderr.puts "WARN: #{@union ? 'union' : 'struct'} #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute #{Bro::read_attribute(cursor)}"
+          a = Bro::read_attribute(cursor)
+          if a != '?' && model.is_included?(self)
+            $stderr.puts "WARN: #{@union ? 'union' : 'struct'} #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute #{a}"
+          end
         else
           raise "Unknown cursor kind #{cursor.kind} in struct at #{Bro::location_to_s(@location)}"
         end
@@ -430,7 +449,7 @@ module Bro
           @inline = true
         when :cursor_asm_label_attr, :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
-          if attribute.is_a?(UnsupportedAttribute)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: Function #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
           end
           @attributes.push attribute
@@ -575,7 +594,7 @@ module Bro
           @properties.push(ObjCProperty.new(model, cursor, self))
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
-          if attribute.is_a?(UnsupportedAttribute)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: ObjC class #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
           end
           @attributes.push attribute
@@ -618,7 +637,7 @@ module Bro
           @properties.push(ObjCProperty.new(model, cursor, self))
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
-          if attribute.is_a?(UnsupportedAttribute)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: ObjC protocol #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
           end
           @attributes.push attribute
@@ -667,7 +686,7 @@ module Bro
           @properties.push(ObjCProperty.new(model, cursor, self))
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
-          if attribute.is_a?(UnsupportedAttribute)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: ObjC category #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
           end
           @attributes.push attribute
@@ -765,7 +784,7 @@ module Bro
           values.push EnumValue.new cursor, self
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
-          if attribute.is_a?(UnsupportedAttribute)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: enum #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute #{Bro::read_attribute(cursor)}"
           end
           @attributes.push attribute
@@ -950,6 +969,23 @@ module Bro
         end
       elsif type.kind == :type_enum
         @enums.find {|e| e.name == name}
+      elsif type.kind == :type_incomplete_array || type.kind == :type_unexposed && name.end_with?('[]')
+        # type is an unbounded array (void *[]). libclang does not expose info on such types.
+        # Replace all [] with *
+        name = name.gsub(/\[\]/, '*')
+        name = name.sub(/^(id|NSObject)(<.*>)?\s*/, 'NSObject *')
+        base = name.sub(/^([^\s*]+).*/, '\1')
+        e = case base
+        when /^(unsigned )?char$/ then resolve_type_by_name('byte')
+        when /^long$/ then resolve_type_by_name('MachineSInt')
+        when /^unsigned long$/ then resolve_type_by_name('MachineUInt')
+        else resolve_type_by_name(base)
+        end
+        if e
+          # Wrap in Pointer as many times as there are *s in name
+          e = (1..name.scan(/\*/).count).inject(e) {|t, i| t.pointer}
+        end
+        e
       elsif type.kind == :type_unexposed
         e = @structs.find {|e| e.name == name}
         if !e
@@ -1475,7 +1511,8 @@ end
 
 mac_version = nil
 ios_version = '7.1'
-sysroot = "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
+xcode_dir = `xcode-select -p`.chomp
+sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
 
 script_dir = File.expand_path(File.dirname(__FILE__))
 target_dir = ARGV[0]
@@ -1537,9 +1574,7 @@ ARGV[1..-1].each do |yaml_file|
   if conf['clang_args']
     clang_args = clang_args + conf['clang_args']
   end
-  #translation_unit = index.parse_translation_unit(header, ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-x', 'objective-c', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
   translation_unit = index.parse_translation_unit("#{sysroot}#{headers[0]}", clang_args, [], {:detailed_preprocessing_record=>true})
-  #translation_unit = index.parse_translation_unit("#{sysroot}#{header}", ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-isysroot', sysroot], [], {:detailed_preprocessing_record=>true})
   #dump_ast translation_unit.cursor, ""
   #exit
 
