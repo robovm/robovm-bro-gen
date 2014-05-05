@@ -1064,8 +1064,17 @@ module Bro
       end
     end
 
+    def match_fully(pattern, s)
+      md = s.match(pattern)
+      if md && md.begin(0) == 0 && md.end(0) == s.length
+        md
+      else
+        nil
+      end
+    end
+
     def find_conf_matching(name, conf)
-      match = conf.find {|pattern, value| name.match(pattern.sub(/^[+]/, "\\+"))}
+      match = conf.find {|pattern, value| $~ = match_fully(pattern.start_with?('+') ? "\\#{pattern}" : pattern, name)}
       if !match
         nil
       elsif !$~.captures.empty?
