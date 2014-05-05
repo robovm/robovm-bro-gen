@@ -21,6 +21,7 @@ $LOAD_PATH.unshift File.dirname(__FILE__) + "/ffi-clang/lib"
 require "ffi/clang"
 require 'yaml'
 require 'fileutils'
+require 'pathname'
 
 class String
   def camelize
@@ -1548,6 +1549,7 @@ ARGV[1..-1].each do |yaml_file|
   imports = imports + (conf['imports'] || [])
 
   (conf['include'] || []).each do |f|
+    f = Pathname.new(yaml_file).parent + f
     c = YAML.load_file(f)
     # Excluded all classes in included config
     c_classes = (c['classes'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
