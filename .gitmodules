@@ -1,0 +1,3 @@
+[submodule "ffi-clang"]
+	path = ffi-clang
+	url = git@github.com:robovm/ffi-clang.git
