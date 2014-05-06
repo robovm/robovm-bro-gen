@@ -49,7 +49,7 @@ The YAML config files are used to tell the script how to process the functions, 
 
 ###enums
 
-The keys in this hash specify enum names. The values are also hashes, usually empty but the following keys are supported:
+The keys in this hash specify enum names. Only enums that have a matching key in this hash will be generated. The values are also hashes, usually empty (`{}`) but the following keys are supported:
 
  * `first`: The name of the first member in the enum. Some enums don't specify a name in the header file. This will be used to connect an anonymous enum with a name (the key of the `enums` hash).
  * `prefix`: The prefix of the member names which should be stripped off when generating the Java member name. The script will look for the longest common prefix of the names and use that as prefix by default.
@@ -59,4 +59,37 @@ The keys in this hash specify enum names. The values are also hashes, usually em
  * `bits`: Boolean specifying whether this should be bound as a Java enum or as a Java class inheriting from Bits. Should be `true` if the C enum is a bitmask kind of enum. For Apple's header files this can usually be determined automatically by the script.
  * `exclude`: Boolean specifying whether this enum should be excluded and not generated.
  * `ignore`: Regexp matching enum members that should be ignored.
+ * `marshaler`: Specifies the `@Marshaler` to use when marhsaling this enum. E.g. `Bits.AsMachineSizedIntMarshaler`, `ValuedEnum.AsMachineSizedUIntMarshaler`. Can ususally be determined automatically by the script.
  * `<MemberName>`: Used to rename a member completely. Use the C member name as key and the Java member name as value.
+
+###classes
+
+The keys in this hash specify class/struct name regexp patterns. Only classes/structs that have a matching key in this hash will be generated. The values are also hashes with the following supported keys:
+
+ * `exclude`: Boolean specifying whether this class should be excluded and not generated.
+ * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
+ * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
+ * `extends`: The name of the Java class the generated class will derive from.
+ * `implements`: A list of Java interface names the generated class will implement.
+ * `properties`: See below.
+ * `methods`: See below.
+
+###protocols
+
+The keys in this hash specify Objective-C protocol name regexp patterns. Only protocols that have a matching key in this hash will be generated. A Java interface will be generated for each matching protocol along with an adapter class implementing all methods in the interface.
+
+The values are also hashes with the following supported keys:
+
+ * `exclude`: Boolean specifying whether this class should be excluded and not generated.
+ * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
+ * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
+ * `extends`: The name of the Java class the generated class will derive from.
+ * `implements`: A list of Java interface names the generated class will implement.
+ * `properties`: See below.
+ * `methods`: See below.
+ * `skip_adapter`: Boolean specifying whether an adapter should be generated for the Java interface. The default is `true`.
+
+###properties
+
+###methods
+
