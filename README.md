@@ -55,7 +55,7 @@ The keys in this hash specify enum names. The values are also hashes, usually em
  * `prefix`: The prefix of the member names which should be stripped off when generating the Java member name. The script will look for the longest common prefix of the names and use that as prefix by default.
  * `suffix`: A suffix which should be stripped off the end of member names if they end with this suffix.
  * `type`: The C type of the enum. This is used to determine the marshaler to use in the Java code. This can usally be determined automatically be the script.
- * `merge_with`:
+ * `merge_with`: Another enum which this enum should be merged with.
  * `bits`: Boolean specifying whether this should be bound as a Java enum or as a Java class inheriting from Bits. Should be `true` if the C enum is a bitmask kind of enum. For Apple's header files this can usually be determined automatically by the script.
  * `exclude`: Boolean specifying whether this enum should be excluded and not generated.
  * `ignore`: Regexp matching enum members that should be ignored.
