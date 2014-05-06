@@ -47,3 +47,16 @@ The YAML config files are used to tell the script how to process the functions, 
  * `values`: A hash of C global values that should be generated. See below.
  * `constants`: A hash of C constants that should be generated. See below.
 
+###enums
+
+The keys in this hash specify enum names. The values are also hashes, usually empty but the following keys are supported:
+
+ * `first`: The name of the first member in the enum. Some enums don't specify a name in the header file. This will be used to connect an anonymous enum with a name (the key of the `enums` hash).
+ * `prefix`: The prefix of the member names which should be stripped off when generating the Java member name. The script will look for the longest common prefix of the names and use that as prefix by default.
+ * `suffix`: A suffix which should be stripped off the end of member names if they end with this suffix.
+ * `type`: The C type of the enum. This is used to determine the marshaler to use in the Java code. This can usally be determined automatically be the script.
+ * `merge_with`:
+ * `bits`: Boolean specifying whether this should be bound as a Java enum or as a Java class inheriting from Bits. Should be `true` if the C enum is a bitmask kind of enum. For Apple's header files this can usually be determined automatically by the script.
+ * `exclude`: Boolean specifying whether this enum should be excluded and not generated.
+ * `ignore`: Regexp matching enum members that should be ignored.
+ * `<MemberName>`: Used to rename a member completely. Use the C member name as key and the Java member name as value.
