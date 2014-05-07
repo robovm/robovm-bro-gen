@@ -120,6 +120,17 @@ The generated method for a function will by default be an instance method if the
    * `name`: The name to use for the parameter in the Java method.
    * `type`: The Java parameter type.
 
+###values
+
+The keys in this hash specify regexps that matches C global value names. Values not matching any key in this hash will be ignored. Java doesn't have global values so each value will be convered into a getter method and a setter method (if not readonly) on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add value methods to a class named `Functions`.
+
+ * `exclude`: Boolean specifying whether this value should be excluded and not generated.
+ * `class`: The Java class the methods for this value should be added to.
+ * `visibility`: The visibility (access modifiers) of the generated methods. The default is `public`.
+ * `name`: The name of the generated methods. The default is the name of the C value.
+ * `type`: The Java type of the value. The default is determined from the values's type
+ * `readonly`: Boolean specifying whether this is a readonly value. `const` values are always readonly.
+
 ###properties
 
 ###methods
