@@ -122,14 +122,25 @@ The generated method for a function will by default be an instance method if the
 
 ###values
 
-The keys in this hash specify regexps that matches C global value names. Values not matching any key in this hash will be ignored. Java doesn't have global values so each value will be convered into a getter method and a setter method (if not readonly) on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add value methods to a class named `Functions`.
+The keys in this hash specify regexps that matches C global value names. Values not matching any key in this hash will be ignored. Java doesn't have global values so each value will be converted into a getter method and a setter method (if not readonly) on a particular class. If no class is explicitly specified they will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add value methods to a class named `Functions`.
 
  * `exclude`: Boolean specifying whether this value should be excluded and not generated.
  * `class`: The Java class the methods for this value should be added to.
  * `visibility`: The visibility (access modifiers) of the generated methods. The default is `public`.
  * `name`: The name of the generated methods. The default is the name of the C value.
- * `type`: The Java type of the value. The default is determined from the values's type
+ * `type`: The Java type of the value. The default is determined from the values's type.
  * `readonly`: Boolean specifying whether this is a readonly value. `const` values are always readonly.
+
+###constants
+
+The keys in this hash specify regexps that matches C constants (macros). Constants not matching any key in this hash will be ignored. Java doesn't have global constants so each constant will be added as a `public static final` field on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add constants to a class named `Functions`.
+
+Enums in the framework or library being generated which don't have a match in the `enums` config will be convered into constants and matched against the keys in this hash.
+
+ * `exclude`: Boolean specifying whether this constant should be excluded and not generated.
+ * `class`: The Java class the constant should be added to.
+ * `name`: The name of the generated constant. The default is the name of the C constant.
+ * `type`: The Java type of the constant. The default is determined from the constant's type.
 
 ###properties
 
