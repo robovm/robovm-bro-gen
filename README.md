@@ -42,6 +42,7 @@ The YAML config files are used to tell the script how to process the functions, 
  * `typedefs`: A hash of C/Obj-C type to Java type mappings.
  * `enums`: A hash of C enums that should be generated. See below.
  * `classes`: A hash of C structs and Obj-C classes that should be generated. See below.
+ * `categories`: A hash of Obj-C categories that should be generated. See below.
  * `protocols`: A hash of Obj-C protocols that should be generated. See below.
  * `functions`: A hash of C functions that should be generated. See below.
  * `values`: A hash of C global values that should be generated. See below.
@@ -88,6 +89,16 @@ The values are also hashes with the following supported keys:
  * `properties`: See below.
  * `methods`: See below.
  * `skip_adapter`: Boolean specifying whether an adapter should be generated for the Java interface. The default is `true`.
+
+###categories
+
+The keys in this hash specify regexps that matches Objective-C category names or Objective-C category target class names or both of them concatenated and separated by a `@`. For categories targeting classes in the current framework the default is to add the category methods to that class. For other categories the default is to create a new class with the name `<category>Extensions` that extends `NSExtensions` and that has static methods for each category method.
+
+ * `exclude`: Boolean specifying whether this category should be excluded and not generated.
+ * `protocol`: Boolean. If `true` the category will be treated as a protocol. A matching config has to exist in the `protocols` hash. Used for informal protocols.
+ * `owner`: The name of the class the category methods should be added to. If not specified the methods will be added to a new class called `<category>Extensions`, e.g. `NSValueExtensions`.
+ * `properties`: See below.
+ * `methods`: See below.
 
 ###properties
 
