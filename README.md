@@ -48,6 +48,10 @@ The YAML config files are used to tell the script how to process the functions, 
  * `values`: A hash of C global values that should be generated. See below.
  * `constants`: A hash of C constants that should be generated. See below.
 
+###About regexps
+
+Many of the keys in the YAML hashes are regexp patterns. A regexp must match the input fully to be a match so there's no need to use ^ and $ at the stared and end of the regexp. Capturing groups in the regexp pattern can be used in the values of the hash. These are referenced using Ruby style placeholders. `#{g[0]}` for the first group, `#{g[1]}` for the second and so on.
+
 ###enums
 
 The keys in this hash specify enum names. Only enums that have a matching key in this hash will be generated. The values are also hashes, usually empty (`{}`) but the following keys are supported:
