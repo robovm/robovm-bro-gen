@@ -78,6 +78,8 @@ The keys in this hash specify class/struct name regexp patterns. Only classes/st
  * `implements`: A list of Java interface names the generated class will implement.
  * `properties`: See below.
  * `methods`: See below.
+ * `<MemberName>`: A hash which can be used to specify config for a particular struct member. The value is a hash with the specified keys:
+   * `type`: The Java type of the struct member.
 
 ###protocols
 
@@ -143,6 +145,14 @@ Enums in the framework or library being generated which don't have a match in th
  * `type`: The Java type of the constant. The default is determined from the constant's type.
 
 ###properties
+
+The keys in a `properties` hash are regexp patterns matching Objective-C property names. The script will generate getter and setter (if not readonly) methods for the property. The values of the hash are hashes with the following keys:
+
+ * `exclude`: Boolean specifying whether this property should be excluded and not generated.
+ * `name`: Overrides the name of the property.
+ * `type`: Overrides the Java type of the property.
+ * `visibility`: The visibility (access modifiers) of the generated methods. The default is `public`.
+ * `readonly`: Boolean specifying whether this is a readonly property. If the property is readonly in Obj-C it will always be readonly.
 
 ###methods
 
