@@ -112,6 +112,8 @@ The keys in this hash specify regexps that matches C function names. Functions n
 
 The generated method for a function will by default be an instance method if the first parameter of the C function is a pointer to the class or struct corresponding to the Java class it will be added to. Otherwise is will be static.
 
+Note that Bro does not currently support variable parameter functions so such methods will be ignored.
+
  * `exclude`: Boolean specifying whether this function should be excluded and not generated.
  * `class`: The Java class this function should be added to.
  * `visibility`: The visibility (access modifiers) of the generated method. The default is `public`.
@@ -156,3 +158,20 @@ The keys in a `properties` hash are regexp patterns matching Objective-C propert
 
 ###methods
 
+The keys in a `methods` hash are regexp patterns matching Objective-C method (selector) names. The Obj-C selector will be prefixed with `+` for static methods and `-` for instance methods before finding a match.
+
+The script will be default use the selector with all `:` replaced by `$` as Java method name. For setter like methods the ending `:` will be dropped by default.
+
+Note that Bro does not currently support variable parameter methods so such methods will be ignored.
+
+The values of the hash are hashes with the following keys:
+
+ * `exclude`: Boolean specifying whether this method should be excluded and not generated.
+ * `visibility`: The visibility (access modifiers) of the generated method. The default is `public`.
+ * `name`: Overrides the name of the method.
+ * `property`: Boolean specifying whether the method should be convered to a Java property getter. If `true` the and the method takes 0 parameters and returns something the method name will be transformed by upcasing the first character in the Obj-C name and prefixing `get` (or `is` if it returns `boolean`).
+ * `trim_after_first_colon`: Boolean. If `true` the Java method name will be the part of the method selector name until the first `:`.
+ * `return_type`: The Java return type of the generated method. The default is determined from the Obj-C method's return type.
+ * `parameters`: A hash with parameter indexes or regexp keys matching parameter names. The values of the hash are
+   * `name`: The name to use for the parameter in the Java method.
+   * `type`: The Java parameter type.
