@@ -104,6 +104,22 @@ The keys in this hash specify regexps that matches Objective-C category names or
  * `properties`: See below.
  * `methods`: See below.
 
+###functions
+
+The keys in this hash specify regexps that matches C function names. Functions not matching any key in this hash will be ignored. Java doesn't have global functions so each function will be convered into a method on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add functions to a class named `Functions`.
+
+The generated method for a function will by default be an instance method if the first parameter of the C function is a pointer to the class or struct corresponding to the Java class it will be added to. Otherwise is will be static.
+
+ * `exclude`: Boolean specifying whether this function should be excluded and not generated.
+ * `class`: The Java class this function should be added to.
+ * `visibility`: The visibility (access modifiers) of the generated method. The default is `public`.
+ * `name`: The name of the generated method. The default is the name of the C function.
+ * `static`: Boolean. If `true` the generated method will always be static.
+ * `return_type`: The Java return type of the generated method. The default is determined from the function's return type.
+ * `parameters`: A hash with regexp keys matching parameter names. The values of the hash are
+   * `name`: The name to use for the parameter in the Java method.
+   * `type`: The Java parameter type.
+
 ###properties
 
 ###methods
