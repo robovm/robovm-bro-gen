@@ -1065,12 +1065,10 @@ module Bro
     end
 
     def match_fully(pattern, s)
-      md = s.match(pattern)
-      if md && md.begin(0) == 0 && md.end(0) == s.length
-        md
-      else
-        nil
-      end
+      pattern = pattern[1..-1] if pattern.start_with?('^')
+      pattern = pattern.chop if pattern.end_with?('$')
+      pattern = "^#{pattern}$"
+      s.match(pattern)
     end
 
     def find_conf_matching(name, conf)
