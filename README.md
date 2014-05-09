@@ -76,6 +76,8 @@ The keys in this hash specify class/struct name regexp patterns. Only classes/st
  * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
  * `extends`: The name of the Java class the generated class will derive from.
  * `implements`: A list of Java interface names the generated class will implement.
+ * `skip_skip_init_constructor`: Boolean. If `true` no `protected Foo(SkipInit)` constructor will be generated for an Obj-C class.
+ * `skip_def_constructor`: Boolean. If `true` no default constructor will be generated for an Obj-C class.
  * `properties`: See below.
  * `methods`: See below.
  * `<MemberName>`: A hash which can be used to specify config for a particular struct member. The value is a hash with the specified keys:
