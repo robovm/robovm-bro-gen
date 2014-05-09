@@ -1601,6 +1601,8 @@ ARGV[1..-1].each do |yaml_file|
   library = conf['library'] || ''
   default_class = conf['default_class'] || conf['framework'] || 'Functions'
 
+  template_datas = {}
+
   potential_constant_enums = []
   model.enums.each do |enum|
     c = model.get_enum_conf(enum.name)
@@ -1617,36 +1619,36 @@ ARGV[1..-1].each do |yaml_file|
       data['values'] = "\n    #{values}\n    "
       data['name'] = java_name
       if c['marshaler']
-        data['annotations'] = "@Marshaler(#{c['marshaler']}.class)"
+        data['annotations'] = (data['annotations'] || []).push("@Marshaler(#{c['marshaler']}.class)")
       else
         enum_type = enum.enum_type
         if enum_type.name =~ /^Machine(.)Int$/
           if !bits
-            data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSized#{$1}IntMarshaler.class)"
+            data['annotations'] = (data['annotations'] || []).push("@Marshaler(ValuedEnum.AsMachineSized#{$1}IntMarshaler.class)")
           else
-            data['annotations'] = "@Marshaler(Bits.AsMachineSizedIntMarshaler.class)"
+            data['annotations'] = (data['annotations'] || []).push("@Marshaler(Bits.AsMachineSizedIntMarshaler.class)")
           end
         else
           typedefedas = model.typedefs.find {|e| e.name == java_name}
           if typedefedas
             if typedefedas.typedef_type.spelling == 'CFIndex'
-              data['annotations'] = "@Marshaler(ValuedEnum.AsMachineSizedSIntMarshaler.class)"
+              data['annotations'] = (data['annotations'] || []).push("@Marshaler(ValuedEnum.AsMachineSizedSIntMarshaler.class)")
             elsif typedefedas.typedef_type.spelling == 'CFOptionFlags'
-              data['annotations'] = "@Marshaler(Bits.AsMachineSizedIntMarshaler.class)"
+              data['annotations'] = (data['annotations'] || []).push("@Marshaler(Bits.AsMachineSizedIntMarshaler.class)")
             end
           end
         end
       end
       data['imports'] = imports_s
-      merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
+      data['template'] = bits ? def_bits_template : def_enum_template
+      template_datas[java_name] = data
+#      merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
     elsif model.is_included?(enum) && (!c || !c['exclude'])
       # Possibly an enum with values that should be turned into constants
       potential_constant_enums.push(enum)
       $stderr.puts "WARN: Turning the enum #{enum.name} with first value #{enum.values[0].name} into constants"
     end
   end
-
-  template_datas = {}
 
   model.structs.find_all {|e| e.name.size > 0 }.each do |struct|
     c = model.get_class_conf(struct.name)
@@ -1694,7 +1696,7 @@ ARGV[1..-1].each do |yaml_file|
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = "@Library(\"#{library}\")"
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -1736,7 +1738,7 @@ ARGV[1..-1].each do |yaml_file|
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = "@Library(\"#{library}\")"
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -1903,7 +1905,7 @@ ARGV[1..-1].each do |yaml_file|
       data['imports'] = imports_s
       data['implements'] = protocol_list_s(model, 'implements', cls.protocols, c)
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
-      data['annotations'] = "@Library(\"#{library}\") @NativeClass"
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")").push("@NativeClass")
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
       template_datas[name] = data
     end
@@ -1987,7 +1989,7 @@ ARGV[1..-1].each do |yaml_file|
       end
     elsif owner.is_a?(Bro::ObjCCategory)
       constructors_lines.unshift("private #{owner_name}() {}")
-      data['annotations'] = "@Library(\"#{library}\")"
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
       data['extends'] = 'NSExtensions'
@@ -2002,11 +2004,11 @@ ARGV[1..-1].each do |yaml_file|
   end
 
   template_datas.each do |owner, data|
-    c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || model.get_category_conf(owner) || {}
+    c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || model.get_category_conf(owner) || model.get_enum_conf(owner) || {}
     data['imports'] = imports_s
     data['visibility'] = data['visibility'] || c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
-    data['annotations'] = data['annotations'] || nil
+    data['annotations'] = data['annotations'] ? data['annotations'].uniq.join(' ') : nil
     data['implements'] = data['implements'] || nil
     data['properties'] = data['properties'] || nil
     data['constructors'] = data['constructors'] || nil

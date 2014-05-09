@@ -27,6 +27,13 @@ public enum /*<name>*/ TheName /*</name>*/ implements ValuedEnum {
     /*<values>*/
     /*</values>*/
 
+    /*<bind>*/
+    /*</bind>*/
+    /*<constants>*/
+    /*</constants>*/
+    /*<methods>*/
+    /*</methods>*/
+
     private final long n;
 
     private /*<name>*/ TheName /*</name>*/(long n) { this.n = n; }

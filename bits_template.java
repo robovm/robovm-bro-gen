@@ -23,9 +23,17 @@ package org.robovm.foo;
  */
 /*<annotations>*/
 /*</annotations>*/
+@Marshaler(NSString.AsStringMarshaler.class)
 public final class /*<name>*/ TheName /*</name>*/ extends Bits</*<name>*/ TheName /*</name>*/> {
     /*<values>*/
     /*</values>*/
+
+    /*<bind>*/
+    /*</bind>*/
+    /*<constants>*/
+    /*</constants>*/
+    /*<methods>*/
+    /*</methods>*/
 
     private static final /*<name>*/ TheName /*</name>*/[] values = _values(/*<name>*/ TheName /*</name>*/.class);
 
