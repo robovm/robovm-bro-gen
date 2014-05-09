@@ -272,8 +272,14 @@ module Bro
       elsif source.match(/_AVAILABLE_MAC\(/)
         @mac_version = args[0].sub(/_/, '.')
       elsif source.match(/_AVAILABLE\(/)
-        @mac_version = args[0].sub(/_/, '.')
-        @ios_version = args[1].sub(/_/, '.')
+        if args.length == 1
+          # E.g. MP_EXTERN_CLASS_AVAILABLE(version) = NS_CLASS_AVAILABLE(NA, version).
+          # Just set both versions to the specified value
+          @mac_version = @ios_version = args[0].sub(/_/, '.')
+        else
+          @mac_version = args[0].sub(/_/, '.')
+          @ios_version = args[1].sub(/_/, '.')
+        end
       elsif source.match(/_DEPRECATED_MAC\(/)
         @mac_version = args[0].sub(/_/, '.')
         @mac_dep_version = args[1].sub(/_/, '.')
@@ -949,6 +955,7 @@ module Bro
         @structs.find {|e| e.name == name}
       elsif type.kind == :type_obj_c_object_pointer
         name = type.pointee.spelling
+        name = name.gsub(/\s*\bconst\b\s*/, '')
         if name =~ /^(id|NSObject)<(.*)>$/
           # Protocols
           names = $2.split(/\s*,/)
