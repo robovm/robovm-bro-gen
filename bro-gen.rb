@@ -99,6 +99,24 @@ module Bro
         true
       end
     end
+
+    def since
+      attrib = @attributes.find {|e| e.is_a?(AvailableAttribute)}
+      if attrib
+        attrib.ios_version
+      else
+        nil
+      end
+    end
+
+    def deprecated
+      attrib = @attributes.find {|e| e.is_a?(AvailableAttribute)}
+      if attrib
+        attrib.ios_dep_version
+      else
+        nil
+      end
+    end
   end
 
   class Pointer < Entity
@@ -720,6 +738,21 @@ module Bro
     def initialize(model, cursor)
       super(model, cursor)
       @type = cursor.type
+      cursor.visit_children do |cursor, parent|
+        case cursor.kind
+        when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref
+          # Ignored
+        when :cursor_unexposed_attr
+          attribute = Bro::parse_attribute(cursor)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
+            $stderr.puts "WARN: Global value #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
+          end
+          @attributes.push attribute
+        else
+          raise "Unknown cursor kind #{cursor.kind} in global value #{@name} at #{Bro::location_to_s(@location)}"
+        end
+        next :continue
+      end
     end
 
     def is_const?
@@ -748,14 +781,28 @@ module Bro
     end
   end
 
-  class EnumValue
+  class EnumValue < Entity
     attr_accessor :name, :value, :type, :enum
-    def initialize(cursor, enum)
+    def initialize(model, cursor, enum)
+      super(model, cursor)
       @name = cursor.spelling
       @value = cursor.enum_value
       @type = cursor.type
       @enum = enum
       @java_name = nil
+      cursor.visit_children do |cursor, parent|
+        case cursor.kind
+        when :cursor_unexposed_attr
+          attribute = Bro::parse_attribute(cursor)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
+            $stderr.puts "WARN: Enum value #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
+          end
+          @attributes.push attribute
+        else
+          # Ignored
+        end
+        next :continue
+      end
     end
     def java_name
       if @java_name
@@ -788,7 +835,7 @@ module Bro
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_enum_constant_decl
-          values.push EnumValue.new cursor, self
+          values.push EnumValue.new model, cursor, self
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
           if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
@@ -1341,6 +1388,7 @@ def struct_to_java(model, data, name, struct, conf)
   data['visibility'] = conf['visibility'] || 'public'
   data['extends'] = "Struct<#{name}>"
   data['ptr'] = "public static class #{name}Ptr extends Ptr<#{name}, #{name}Ptr> {}"
+  data['javadoc'] = "\n" + push_availability(model, struct).join("\n") + "\n"
   data
 end
 
@@ -1377,6 +1425,19 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   end
 end
 
+def push_availability(model, entity, lines = [])
+  since = entity.since
+  deprecated = entity.deprecated
+  if since || deprecated
+    lines.push('/**')
+    lines.push(" * @since Available in iOS #{since} and later.") if since
+    lines.push(" * @deprecated Deprecated in iOS #{deprecated}.") if deprecated
+    lines.push(' */')
+    lines.push('@Deprecated') if deprecated
+  end
+  lines
+end
+
 def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   conf = model.get_conf_for_key(prop.name, props_conf) || {}
   if !conf['exclude']
@@ -1410,6 +1471,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       else
         lines.push("@Property(selector = \"#{prop.getter.name}\")")
       end
+      push_availability(model, prop, lines)
       lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.getter.name}"] = true
     end
@@ -1428,6 +1490,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       else
         lines.push("@Property(selector = \"#{prop.setter.name}\")")
       end
+      push_availability(model, prop, lines)
       lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.setter.name}"] = true
     end
@@ -1500,6 +1563,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     method_lines = []
     constructor_lines = []
+    push_availability(model, method, method_lines)
     if adapter
       method_lines.push("@NotImplemented(\"#{method.name}\")")
     else
@@ -1515,7 +1579,8 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
       args_s = param_types.map {|p| p[2]}.join(', ')
-      constructor_lines = ["#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }"]
+      push_availability(model, method, constructor_lines)
+      constructor_lines.push("#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }")
     end
     seen[full_name] = true
     [method_lines, constructor_lines]
@@ -1611,10 +1676,16 @@ ARGV[1..-1].each do |yaml_file|
       java_name = enum.java_name
       bits = enum.is_options? || c['bits']
       ignore = c['ignore']
+      values =  enum.values.find_all {|v| v.is_available?(mac_version, ios_version)}
       if bits
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)" }.join(";\n    ") + ";"
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map do |e|
+          push_availability(model, e).push("public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)").join("\n    ")
+        end.join(";\n    ") + ";"
       else
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
+#        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map do |e|
+          push_availability(model, e).push("#{e.java_name}(#{e.value}L)").join("\n    ")
+        end.join(",\n    ") + ";"
       end
       data['values'] = "\n    #{values}\n    "
       data['name'] = java_name
@@ -1640,6 +1711,7 @@ ARGV[1..-1].each do |yaml_file|
         end
       end
       data['imports'] = imports_s
+      data['javadoc'] = "\n" + push_availability(model, enum).join("\n") + "\n"
       data['template'] = bits ? def_bits_template : def_enum_template
       template_datas[java_name] = data
 #      merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
@@ -1671,7 +1743,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign global values to classes
   values = {}
-  model.global_values.each do |v|
+  model.global_values.find_all {|v| v.is_available?(mac_version, ios_version)}.each do |v|
     vconf = model.get_value_conf(v.name)
     if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
@@ -1688,8 +1760,12 @@ ARGV[1..-1].each do |yaml_file|
       #name = name[0, 1].downcase + name[1..-1]
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
-      lines = ["@GlobalValue(symbol=\"#{v.name}\", optional=true)", "#{visibility} static native #{java_type} #{name}();"]
+      lines = []
+      push_availability(model, v, lines)
+      lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+      lines.push("#{visibility} static native #{java_type} #{name}();")
       if !v.is_const? && !vconf['readonly']
+        push_availability(model, v, lines)
         lines = lines + ["@GlobalValue(symbol=\"#{v.name}\", optional=true)", "public static native void #{name}(#{java_type} v);"]
       end
       lines
@@ -1703,7 +1779,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign functions to classes
   functions = {}
-  model.functions.each do |f|
+  model.functions.find_all {|f| f.is_available?(mac_version, ios_version)}.each do |f|
     fconf = model.get_function_conf(f.name)
     if fconf && !fconf['exclude']
       owner = fconf['class'] || default_class
@@ -1734,7 +1810,11 @@ ARGV[1..-1].each do |yaml_file|
         pconf = paramconf[e.name] || {}
         "#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
       end
-      ["@Bridge(symbol=\"#{f.name}\", optional=true)", "#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});"]
+      lines = []
+      push_availability(model, f, lines)
+      lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
+      lines.push("#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});")
+      lines
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
@@ -1907,6 +1987,7 @@ ARGV[1..-1].each do |yaml_file|
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
       data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")").push("@NativeClass")
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
+      data['javadoc'] = "\n" + push_availability(model, cls).join("\n") + "\n"
       template_datas[name] = data
     end
   end
@@ -1921,6 +2002,7 @@ ARGV[1..-1].each do |yaml_file|
       data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
       data['imports'] = imports_s
       data['template'] = def_protocol_template
+      data['javadoc'] = "\n" + push_availability(model, prot).join("\n") + "\n"
       template_datas[name] = data
     end
   end

@@ -18,9 +18,8 @@ package org.robovm.foo;
 /*<imports>*/
 /*</imports>*/
 
-/**
- * <div class="javadoc"></div>
- */
+/*<javadoc>*/
+/*</javadoc>*/
 /*<annotations>*/
 /*</annotations>*/
 public enum /*<name>*/ TheName /*</name>*/ implements ValuedEnum {

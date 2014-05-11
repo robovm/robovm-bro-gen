@@ -18,10 +18,8 @@ package org.robovm.foo;
 /*<imports>*/
 /*</imports>*/
 
-/**
- *
- * <div class="javadoc"></div>
- */
+/*<javadoc>*/
+/*</javadoc>*/
 /*<annotations>*/
 /*</annotations>*/
 /*<visibility>*/ public /*</visibility>*/ class /*<name>*/ TheName /*</name>*/ 
