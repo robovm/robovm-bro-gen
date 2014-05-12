@@ -18,12 +18,10 @@ package org.robovm.foo;
 /*<imports>*/
 /*</imports>*/
 
-/**
- * <div class="javadoc"></div>
- */
+/*<javadoc>*/
+/*</javadoc>*/
 /*<annotations>*/
 /*</annotations>*/
-@Marshaler(NSString.AsStringMarshaler.class)
 public final class /*<name>*/ TheName /*</name>*/ extends Bits</*<name>*/ TheName /*</name>*/> {
     /*<values>*/
     /*</values>*/

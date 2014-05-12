@@ -278,50 +278,52 @@ module Bro
     attr_accessor :mac_version, :ios_version, :mac_dep_version, :ios_dep_version
     def initialize(source)
       super(source)
-      s = source.sub(/^[A-Z_]+\(/, '')
+      s = source.sub(/^[A-Z_]+\s*\(/, '')
       s = s.sub(/\)$/, '')
       args = s.split(/\s*,\s*/)
       @mac_version = nil
       @ios_version = nil
       @mac_dep_version = nil
       @ios_dep_version = nil
-      if source.match(/_AVAILABLE_IOS\(/)
-        @ios_version = args[0].sub(/_/, '.')
-      elsif source.match(/_AVAILABLE_MAC\(/)
-        @mac_version = args[0].sub(/_/, '.')
-      elsif source.match(/_AVAILABLE\(/)
+      args = args.map {|e| e.sub(/^[A-Z_]+/, '')}
+      args = args.map {|e| e.gsub(/_/, '.')}
+      if source.match(/_AVAILABLE_IOS\s*\(/)
+        @ios_version = args[0]
+      elsif source.match(/_AVAILABLE_MAC\s*\(/)
+        @mac_version = args[0]
+      elsif source.match(/_AVAILABLE\s*\(/)
         if args.length == 1
           # E.g. MP_EXTERN_CLASS_AVAILABLE(version) = NS_CLASS_AVAILABLE(NA, version).
           # Just set both versions to the specified value
-          @mac_version = @ios_version = args[0].sub(/_/, '.')
+          @mac_version = @ios_version = args[0]
         else
-          @mac_version = args[0].sub(/_/, '.')
-          @ios_version = args[1].sub(/_/, '.')
+          @mac_version = args[0]
+          @ios_version = args[1]
         end
-      elsif source.match(/_DEPRECATED_MAC\(/)
-        @mac_version = args[0].sub(/_/, '.')
-        @mac_dep_version = args[1].sub(/_/, '.')
-      elsif source.match(/_DEPRECATED_IOS\(/)
-        @ios_version = args[0].sub(/_/, '.')
-        @ios_dep_version = args[1].sub(/_/, '.')
-      elsif source.match(/_DEPRECATED\(/)
-        @mac_version = args[0].sub(/_/, '.')
-        @mac_dep_version = args[1].sub(/_/, '.')
-        @ios_version = args[2].sub(/_/, '.')
-        @ios_dep_version = args[3].sub(/_/, '.')
-      elsif source.match(/_AVAILABLE_STARTING\(/)
-        @mac_version = args[0].sub(/^__MAC_/, '').sub(/_/, '.')
-        @ios_version = args[1].sub(/^__IPHONE_/, '').sub(/_/, '.')
-      elsif source.match(/_AVAILABLE_BUT_DEPRECATED\(/)
-        @mac_version = args[0].sub(/^__MAC_/, '').sub(/_/, '.')
-        @mac_dep_version = args[1].sub(/^__MAC_/, '').sub(/_/, '.')
-        @ios_version = args[2].sub(/^__IPHONE_/, '').sub(/_/, '.')
-        @ios_dep_version = args[3].sub(/^__IPHONE_/, '').sub(/_/, '.')
+      elsif source.match(/_DEPRECATED_MAC\s*\(/)
+        @mac_version = args[0]
+        @mac_dep_version = args[1]
+      elsif source.match(/_DEPRECATED_IOS\s*\(/)
+        @ios_version = args[0]
+        @ios_dep_version = args[1]
+      elsif source.match(/_AVAILABLE_STARTING\s*\(/)
+        @mac_version = args[0]
+        @ios_version = args[1]
+      elsif source.match(/_AVAILABLE_BUT_DEPRECATED\s*\(/)
+        @mac_version = args[0]
+        @mac_dep_version = args[1]
+        @ios_version = args[2]
+        @ios_dep_version = args[3]
+      elsif source.match(/_DEPRECATED\s*\(/)
+        @mac_version = args[0]
+        @mac_dep_version = args[1]
+        @ios_version = args[2]
+        @ios_dep_version = args[3]
       end
-      @mac_version = @mac_version == 'NA' ? nil : @mac_version
-      @mac_dep_version = @mac_version == 'NA' ? nil : @mac_dep_version
-      @ios_version = @ios_version == 'NA' ? nil : @ios_version
-      @ios_dep_version = @ios_version == 'NA' ? nil : @ios_dep_version
+      @mac_version = @mac_version == '' ? nil : @mac_version
+      @mac_dep_version = @mac_version == '' ? nil : @mac_dep_version
+      @ios_version = @ios_version == '' ? nil : @ios_version
+      @ios_dep_version = @ios_version == '' ? nil : @ios_dep_version
     end
   end
   class UnavailableAttribute < Attribute
@@ -339,7 +341,7 @@ module Bro
        source.match(/^(CF|NS)_INLINE$/) || source.match(/^(CF|NS)_FORMAT_FUNCTION.*/) || source.match(/^(CF|NS)_FORMAT_ARGUMENT.*/) || 
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
        source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
-       source.end_with?('_CLASS_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
+       source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
        source == 'OBJC_ROOT_CLASS' || source == '__ai'
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
