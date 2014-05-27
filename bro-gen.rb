@@ -1483,18 +1483,19 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     end
     lines = []
     if !seen["-#{prop.getter.name}"]
+      push_availability(model, prop, lines)
       if adapter
         lines.push("@NotImplemented(\"#{prop.getter.name}\")")
       else
         lines.push("@Property(selector = \"#{prop.getter.name}\")")
       end
-      push_availability(model, prop, lines)
       lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.getter.name}"] = true
     end
     if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter.name}"]
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+      push_availability(model, prop, lines)
       if adapter
         lines.push("@NotImplemented(\"#{prop.setter.name}\")")
       elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
@@ -1507,7 +1508,6 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       else
         lines.push("@Property(selector = \"#{prop.setter.name}\")")
       end
-      push_availability(model, prop, lines)
       lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.setter.name}"] = true
     end
