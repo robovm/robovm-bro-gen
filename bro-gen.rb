@@ -548,6 +548,21 @@ module Bro
         h[pair[0]] = pair.size > 1 ? pair[1] : true
         h
       end
+      cursor.visit_children do |cursor, parent|
+        case cursor.kind
+        when :cursor_type_ref, :cursor_parm_decl, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_iboutlet_attr
+          # Ignored
+        when :cursor_unexposed_attr
+          attribute = Bro::parse_attribute(cursor)
+          if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
+            $stderr.puts "WARN: ObjC property #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
+          end
+          @attributes.push attribute
+        else
+          raise "Unknown cursor kind #{cursor.kind} in ObjC property #{@name} at #{Bro::location_to_s(@location)}"
+        end
+        next :continue
+      end
     end
     def getter_name
       @attrs['getter'] || @name
