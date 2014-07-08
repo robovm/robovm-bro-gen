@@ -1819,6 +1819,8 @@ ARGV[1..-1].each do |yaml_file|
     methods_s = funcs.map do |(f, fconf)|
       name = fconf['name'] || f.name
       name = name[0, 1].downcase + name[1..-1]
+      lines = []
+      push_availability(model, f, lines)
       visibility = fconf['visibility'] || 'public'
       parameters = f.parameters
       static = "static "
@@ -1827,16 +1829,32 @@ ARGV[1..-1].each do |yaml_file|
       firstparamtype = (firstparamconf || {})['type']
       if !fconf['static'] && parameters.size >= 1 && (firstparamtype == owner || model.resolve_type(parameters[0].type).java_name == owner)
         # Instance method
-        parameters = parameters[1..-1]
-        static = ""
+        java_type = model.to_java_type(model.resolve_type(parameters[0].type))
+        if !firstparamtype && java_type.include?('@ByVal')
+          # If the instance is passed @ByVal we need to make a wrapper method and keep the @Bridge method static
+          java_ret = fconf['return_type'] || model.resolve_type(f.return_type).java_name
+          java_parameters = parameters[1..-1].map do |e|
+            pconf = paramconf[e.name] || {}
+            "#{pconf['type'] || model.resolve_type(e.type).java_name} #{pconf['name'] || e.name}"
+          end
+          args = parameters[1..-1].map do |e|
+            pconf = paramconf[e.name] || {}
+            pconf['name'] || e.name
+          end
+          args.unshift('this')
+          lines.push("#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }")
+          # Alter the visibility for the @Bridge method to private
+          visibility = 'private'
+        else
+          parameters = parameters[1..-1]
+          static = ""
+        end
       end
       java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
       java_parameters = parameters.map do |e|
         pconf = paramconf[e.name] || {}
         "#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
       end
-      lines = []
-      push_availability(model, f, lines)
       lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
       lines.push("#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});")
       lines
