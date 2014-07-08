@@ -1330,6 +1330,14 @@ module Bro
         end
       end
 
+      # Filter out duplicate functions
+      uniq_functions = @functions.uniq {|f| f.name}
+      (@functions - uniq_functions).each do |f|
+        definition = f.type.spelling.sub(/\(/, "#{f.name}(")
+        $stderr.puts "WARN: Ignoring duplicate function '#{definition}' at #{Bro::location_to_s(f.location)}"
+      end
+      @functions = uniq_functions
+
       # Filter out global values not defined in the framework or library we're generating code for
       @global_values = @global_values.find_all {|v| is_included?(v)}
       # Remove duplicate global values (occurs in CoreData)
