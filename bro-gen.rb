@@ -426,7 +426,7 @@ module Bro
           s = Struct.new model, cursor, self, cursor.kind == :cursor_union
           model.structs.push s
           @children.push s
-        when :cursor_unexposed_attr
+        when :cursor_unexposed_attr, :cursor_packed_attr
           a = Bro::read_attribute(cursor)
           if a != '?' && model.is_included?(self)
             $stderr.puts "WARN: #{@union ? 'union' : 'struct'} #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute #{a}"
@@ -1933,6 +1933,9 @@ ARGV[1..-1].each do |yaml_file|
   def all_protocols(model, cls, conf)
     def f(model, cls, conf)
       result = []
+      if (conf == nil)
+        return result
+      end
       (conf['protocols'] || cls.protocols).each do |prot_name|
         prot = model.objc_protocols.find {|p| p.name == prot_name}
         protc = model.get_protocol_conf(prot.name) unless !prot
