@@ -72,13 +72,14 @@ The keys in this hash specify enum names. Only enums that have a matching key in
 The keys in this hash specify class/struct name regexp patterns. Only classes/structs that have a matching key in this hash will be generated. The values are also hashes with the following supported keys:
 
  * `exclude`: Boolean specifying whether this class should be excluded and not generated.
- * `annotations`: Class level annotations to be added to the generated class.
+ * `annotations`: List of class level annotations to be added to the generated class.
  * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
  * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
  * `extends`: The name of the Java class the generated class will derive from.
  * `implements`: A list of Java interface names the generated class will implement.
  * `skip_skip_init_constructor`: Boolean. If `true` no `protected Foo(SkipInit)` constructor will be generated for an Obj-C class.
  * `skip_def_constructor`: Boolean. If `true` no default constructor will be generated for an Obj-C class.
+ * `add_ptr`: Boolean. If `true` an inner Ptr class will be created even if the type doesn't resolve to a struct or Obj-C class. Not needed in most cases.
  * `properties`: See below.
  * `methods`: See below.
  * `<MemberName>`: A hash which can be used to specify config for a particular struct member. The value is a hash with the specified keys:
