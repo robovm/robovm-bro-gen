@@ -2144,6 +2144,9 @@ ARGV[1..-1].each do |yaml_file|
     data['members'] = data['members'] || nil
     data['methods'] = data['methods'] || nil
     data['constants'] = data['constants'] || nil
+    if c['add_ptr']
+      data['ptr'] = "public static class #{owner}Ptr extends Ptr<#{owner}, #{owner}Ptr> {}"
+    end
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
   end
 
