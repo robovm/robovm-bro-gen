@@ -342,7 +342,7 @@ module Bro
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
        source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
        source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
-       source == 'OBJC_ROOT_CLASS' || source == '__ai'
+       source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK')
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
       return UnavailableAttribute.new source
