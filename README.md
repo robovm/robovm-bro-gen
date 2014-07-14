@@ -72,6 +72,7 @@ The keys in this hash specify enum names. Only enums that have a matching key in
 The keys in this hash specify class/struct name regexp patterns. Only classes/structs that have a matching key in this hash will be generated. The values are also hashes with the following supported keys:
 
  * `exclude`: Boolean specifying whether this class should be excluded and not generated.
+ * `annotations`: Class level annotations to be added to the generated class.
  * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
  * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
  * `extends`: The name of the Java class the generated class will derive from.
