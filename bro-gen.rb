@@ -2133,7 +2133,8 @@ ARGV[1..-1].each do |yaml_file|
     data['imports'] = imports_s
     data['visibility'] = data['visibility'] || c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
-    data['annotations'] = data['annotations'] ? data['annotations'].uniq.join(' ') : nil
+    data['annotations'] = (data['annotations'] || []).concat(c['annotations'] || [])
+    data['annotations'] = data['annotations'] && !data['annotations'].empty? ? data['annotations'].uniq.join(' ') : nil
     data['implements'] = data['implements'] || nil
     data['properties'] = data['properties'] || nil
     data['constructors'] = data['constructors'] || nil
