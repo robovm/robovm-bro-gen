@@ -39,7 +39,8 @@ The YAML config files are used to tell the script how to process the functions, 
  * `path_match`: A regexp matching header files which contains entities that should be included in the generated output.
  * `clang_args`: List of extra arguments to pass to CLang when parsing the header files. If you generate code for an Objective-C framework you should specify `['-x', 'objective-c']`.
  * `headers`: A list of header files that should be processed relative to the sysroot.
- * `typedefs`: A hash of C/Obj-C type to Java type mappings.
+ * `typedefs`: A hash of C/Obj-C type to Java type mappings. These are inherited when including other YAML files.
+ * `private_typedefs`: A hash of C/Obj-C type to Java type mappings. These don't get inherited when including other YAML files.
  * `enums`: A hash of C enums that should be generated. See below.
  * `classes`: A hash of C structs and Obj-C classes that should be generated. See below.
  * `categories`: A hash of Obj-C categories that should be generated. See below.
