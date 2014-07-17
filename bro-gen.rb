@@ -1637,7 +1637,7 @@ ARGV[1..-1].each do |yaml_file|
   abort("Required 'header' or 'headers' value missing in #{yaml_file}") unless !headers.empty?
 
   conf = global.merge conf
-  conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {})
+  conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {}).merge(conf['private_typedefs'] || {})
 
   imports = []
   imports << "java.io.*"
