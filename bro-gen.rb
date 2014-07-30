@@ -1389,8 +1389,9 @@ def struct_to_java(model, data, name, struct, conf)
   index = 0
   members = []
   struct.members.each do |e|
+    member_name = (conf[e.name] || {})['name'] || e.name
     type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
-    members.push(["@StructMember(#{index}) public native #{type} #{e.name}();", "@StructMember(#{index}) public native #{name} #{e.name}(#{type} #{e.name});"].join("\n    "))
+    members.push(["@StructMember(#{index}) public native #{type} #{member_name}();", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});"].join("\n    "))
     index = index + inc
   end
   members = members.join("\n    ")
@@ -1399,10 +1400,11 @@ def struct_to_java(model, data, name, struct, conf)
   constructor_params = []
   constructor_body = []
   struct.members.map do |e|
+    member_name = (conf[e.name] || {})['name'] || e.name
     type = (conf[e.name] || {})['type']
     type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
-    constructor_params.push "#{type} #{e.name}"
-    constructor_body.push "this.#{e.name}(#{e.name});"
+    constructor_params.push "#{type} #{member_name}"
+    constructor_body.push "this.#{member_name}(#{member_name});"
   end.join("\n    ")
   constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
   constructor = constructor + constructor_body.join("\n        ")
