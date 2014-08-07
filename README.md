@@ -140,6 +140,7 @@ The keys in this hash specify regexps that matches C global value names. Values 
  * `name`: The name of the generated methods. The default is the name of the C value.
  * `type`: The Java type of the value. The default is determined from the values's type.
  * `readonly`: Boolean specifying whether this is a readonly value. `const` values are always readonly.
+ * `dereference`: Boolean specifying whether the address of the looked up symbol should be dereferenced (the default) or used as is. The default is `true`.
 
 ###constants
 
