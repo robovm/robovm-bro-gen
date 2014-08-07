@@ -1789,7 +1789,11 @@ ARGV[1..-1].each do |yaml_file|
       visibility = vconf['visibility'] || 'public'
       lines = []
       push_availability(model, v, lines)
-      lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+      if vconf.has_key?('dereference') && !vconf['dereference']
+        lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
+      else
+        lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+      end
       lines.push("#{visibility} static native #{java_type} #{name}();")
       if !v.is_const? && !vconf['readonly']
         push_availability(model, v, lines)
