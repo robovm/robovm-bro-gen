@@ -83,7 +83,8 @@ The keys in this hash specify class/struct name regexp patterns. Only classes/st
  * `add_ptr`: Boolean. If `true` an inner Ptr class will be created even if the type doesn't resolve to a struct or Obj-C class. Not needed in most cases.
  * `properties`: See below.
  * `methods`: See below.
- * `<MemberName>`: A hash which can be used to specify config for a particular struct member. The value is a hash with the specified keys:
+ * `<MemberName>`: A hash which can be used to specify config for a particular struct member. The value is a hash with the following keys:
+   * `name`: The name of the struct member. Allows renaming of struct members.
    * `type`: The Java type of the struct member.
 
 ###protocols
