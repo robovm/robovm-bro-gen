@@ -969,23 +969,19 @@ module Bro
       e || (orig_name != name ? Builtin.new(name) : nil)
     end
     def resolve_type(type, allow_arrays = false, owner = nil, method = nil)
-      if owner && method && method.name.start_with?('init') && type.spelling == 'id'
-        owner
-      else
-        t = @type_cache[type.spelling]
-        if !t
-          t = resolve_type0(type, allow_arrays, owner, method)
-          raise "Failed to resolve type '#{type.spelling}' with kind #{type.kind} defined at #{Bro::location_to_s(type.declaration.location)}" unless t
-          if t.is_a?(Typedef) && t.is_callback?
-            # Callback. Map to VoidPtr for now.
-            t = Bro::builtins_by_name("FunctionPtr")
-          end
-          if type.spelling != 'instancetype'
-            @type_cache[type.spelling] = t
-          end
+      t = @type_cache[type.spelling]
+      if !t
+        t = resolve_type0(type, allow_arrays, owner, method)
+        raise "Failed to resolve type '#{type.spelling}' with kind #{type.kind} defined at #{Bro::location_to_s(type.declaration.location)}" unless t
+        if t.is_a?(Typedef) && t.is_callback?
+          # Callback. Map to VoidPtr for now.
+          t = Bro::builtins_by_name("FunctionPtr")
         end
-        t
+        if type.spelling != 'instancetype'
+          @type_cache[type.spelling] = t
+        end
       end
+      t
     end
     def resolve_type0(type, allow_arrays = false, owner = nil, method = nil)
       if !type then return Bro::builtins_by_type_kind(:type_void) end
