@@ -77,7 +77,7 @@ The keys in this hash specify class/struct name regexp patterns. Only classes/st
  * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
  * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
  * `extends`: The name of the Java class the generated class will derive from.
- * `implements`: A list of Java interface names the generated class will implement.
+ * `protocols`: A list of Java interface names the generated class will implement.
  * `skip_skip_init_constructor`: Boolean. If `true` no `protected Foo(SkipInit)` constructor will be generated for an Obj-C class.
  * `skip_def_constructor`: Boolean. If `true` no default constructor will be generated for an Obj-C class.
  * `add_ptr`: Boolean. If `true` an inner Ptr class will be created even if the type doesn't resolve to a struct or Obj-C class. Not needed in most cases.
@@ -97,7 +97,7 @@ The values are also hashes with the following supported keys:
  * `visibility`: The visibility (access modifiers) of the generated class. The default is `public`.
  * `name`: The name of the generated Java class. If not specified the C/Objective-C name will be used.
  * `extends`: The name of the Java class the generated class will derive from.
- * `implements`: A list of Java interface names the generated class will implement.
+ * `protocols`: A list of Java interface names the generated class will implement.
  * `properties`: See below.
  * `methods`: See below.
  * `skip_adapter`: Boolean specifying whether an adapter should be generated for the Java interface. The default is `true`.
