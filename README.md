@@ -41,6 +41,7 @@ The YAML config files are used to tell the script how to process the functions, 
  * `headers`: A list of header files that should be processed relative to the sysroot.
  * `typedefs`: A hash of C/Obj-C type to Java type mappings. These are inherited when including other YAML files.
  * `private_typedefs`: A hash of C/Obj-C type to Java type mappings. These don't get inherited when including other YAML files.
+ * `annotations`: Global annotations to be added to every generated class.
  * `enums`: A hash of C enums that should be generated. See below.
  * `classes`: A hash of C structs and Obj-C classes that should be generated. See below.
  * `categories`: A hash of Obj-C categories that should be generated. See below.
@@ -63,6 +64,7 @@ The keys in this hash specify enum names. Only enums that have a matching key in
  * `type`: The C type of the enum. This is used to determine the marshaler to use in the Java code. This can usally be determined automatically be the script.
  * `merge_with`: Another enum which this enum should be merged with.
  * `bits`: Boolean specifying whether this should be bound as a Java enum or as a Java class inheriting from Bits. Should be `true` if the C enum is a bitmask kind of enum. For Apple's header files this can usually be determined automatically by the script.
+ * `skip_none`: Bits subclasses will by default get a `None` value with no bits set unless a `None` value already exists in the C enum. Set this to `true` to prevent a `None` value to be added.
  * `exclude`: Boolean specifying whether this enum should be excluded and not generated.
  * `ignore`: Regexp matching enum members that should be ignored.
  * `marshaler`: Specifies the `@Marshaler` to use when marhsaling this enum. E.g. `Bits.AsMachineSizedIntMarshaler`, `ValuedEnum.AsMachineSizedUIntMarshaler`. Can ususally be determined automatically by the script.
