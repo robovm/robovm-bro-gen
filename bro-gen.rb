@@ -1661,6 +1661,7 @@ ARGV[1..-1].each do |yaml_file|
     c_enums = (c['enums'] || {}).inject({}) {|h, (k, v)| v = v || {}; v['exclude'] = true; h[k] = v; h}
     conf['enums'] = c_enums.merge(conf['enums'] || {})
     conf['typedefs'] = (c['typedefs'] || {}).merge(conf['typedefs'] || {})
+    conf['annotations'] = (c['annotations'] || []).concat(conf['annotations'] || [])
     if c['package']
       imports.push("#{c['package']}.*")
     end
@@ -2138,7 +2139,7 @@ ARGV[1..-1].each do |yaml_file|
     data['imports'] = imports_s
     data['visibility'] = data['visibility'] || c['visibility'] || 'public'
     data['extends'] = data['extends'] || c['extends'] || 'Object'
-    data['annotations'] = (data['annotations'] || []).concat(c['annotations'] || [])
+    data['annotations'] = (data['annotations'] || []).concat(c['annotations'] || []).concat(conf['annotations'] || [])
     data['annotations'] = data['annotations'] && !data['annotations'].empty? ? data['annotations'].uniq.join(' ') : nil
     data['implements'] = data['implements'] || nil
     data['properties'] = data['properties'] || nil
