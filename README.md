@@ -146,7 +146,7 @@ The keys in this hash specify regexps that matches C global value names. Values 
 
 ###constants
 
-The keys in this hash specify regexps that matches C constants (macros). Constants not matching any key in this hash will be ignored. Java doesn't have global constants so each constant will be added as a `public static final` field on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add constants to a class named `Functions`.
+The keys in this hash specify regexps that matches C constants (macros). Constants not matching any key in this hash will be ignored. Java doesn't have global constants so each constant will be added as a `static final` field on a particular class. If no class is explicitly specified it will be assigned to a class named the same as the framework code is being generated for. If not generating code for a framework the default is to add constants to a class named `Functions`.
 
 Enums in the framework or library being generated which don't have a match in the `enums` config will be convered into constants and matched against the keys in this hash.
 
@@ -154,6 +154,7 @@ Enums in the framework or library being generated which don't have a match in th
  * `class`: The Java class the constant should be added to.
  * `name`: The name of the generated constant. The default is the name of the C constant.
  * `type`: The Java type of the constant. The default is determined from the constant's type.
+ * `visibility`: The visibility (access modifiers) of the generated field. The default is `public`.
 
 ###properties
 

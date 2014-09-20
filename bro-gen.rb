@@ -1910,8 +1910,9 @@ ARGV[1..-1].each do |yaml_file|
     constants_s = vals.map do |(v, vconf)|
       name = vconf['name'] || v.name
       # TODO: Determine type more intelligently?
+      visibility = vconf['visibility'] || 'public'
       java_type = vconf['type'] || v.type || 'double'
-      ["public static final #{java_type} #{name} = #{v.value};"]
+      ["#{visibility} static final #{java_type} #{name} = #{v.value};"]
     end.flatten.join("\n    ")
     data['constants'] = (data['constants'] || '') + "\n    #{constants_s}\n    "
     data['imports'] = imports_s
