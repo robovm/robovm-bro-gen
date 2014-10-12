@@ -165,6 +165,7 @@ The keys in a `properties` hash are regexp patterns matching Objective-C propert
  * `type`: Overrides the Java type of the property.
  * `visibility`: The visibility (access modifiers) of the generated methods. The default is `public`.
  * `readonly`: Boolean specifying whether this is a readonly property. If the property is readonly in Obj-C it will always be readonly.
+ * `omit_prefix`: Boolean specifying whether Java Bean style `set`, `get`/`is` should be removed from the name of the property.
 
 ###methods
 

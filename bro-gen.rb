@@ -1474,9 +1474,10 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   if !conf['exclude']
     name = conf['name'] || prop.name
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
-    base = name[0, 1].upcase + name[1..-1]
-    getter = type[0] == 'boolean' ? "is#{base}" : "get#{base}"
-    setter = "set#{base}"
+    omit_prefix = conf['omit_prefix'] || false
+    base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
+    getter = omit_prefix ? "#{base}" : (type[0] == 'boolean' ? "is#{base}" : "get#{base}")
+    setter = omit_prefix ? "#{base}" : "set#{base}"
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && 'public' ||
         owner.is_a?(Bro::ObjCCategory) && 'public' ||
