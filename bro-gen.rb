@@ -420,13 +420,15 @@ module Bro
       @union = union
       cursor.visit_children do |cursor, parent|
         case cursor.kind
+        when :cursor_unexposed_expr
+        	# ignored
         when :cursor_field_decl
           @members.push StructMember.new cursor
         when :cursor_struct, :cursor_union
           s = Struct.new model, cursor, self, cursor.kind == :cursor_union
           model.structs.push s
           @children.push s
-        when :cursor_unexposed_attr, :cursor_packed_attr
+        when :cursor_unexposed_attr, :cursor_packed_attr, :cursor_annotate_attr
           a = Bro::read_attribute(cursor)
           if a != '?' && model.is_included?(self)
             $stderr.puts "WARN: #{@union ? 'union' : 'struct'} #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute #{a}"
@@ -467,14 +469,14 @@ module Bro
       @variadic = cursor.variadic?
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref
+        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr
           # Ignored
         when :cursor_parm_decl
           @parameters.push FunctionParameter.new cursor, "p#{param_count}"
           param_count = param_count + 1
         when :cursor_compound_stmt
           @inline = true
-        when :cursor_asm_label_attr, :cursor_unexposed_attr
+        when :cursor_asm_label_attr, :cursor_unexposed_attr, :cursor_annotate_attr
           attribute = Bro::parse_attribute(cursor)
           if attribute.is_a?(UnsupportedAttribute) && model.is_included?(self)
             $stderr.puts "WARN: Function #{@name} at #{Bro::location_to_s(@location)} has unsupported attribute '#{attribute.source}'"
@@ -550,7 +552,7 @@ module Bro
       end
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_parm_decl, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_iboutlet_attr
+        when :cursor_type_ref, :cursor_parm_decl, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_iboutlet_attr, :cursor_annotate_attr, :cursor_unexposed_expr
           # Ignored
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
@@ -618,6 +620,8 @@ module Bro
       @opaque = false
       cursor.visit_children do |cursor, parent|
         case cursor.kind
+        when :cursor_unexposed_expr
+        	# ignored
         when :cursor_obj_c_class_ref
           @opaque = @name == cursor.spelling
         when :cursor_obj_c_super_class_ref
@@ -666,6 +670,8 @@ module Bro
       @owner = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
+        when :cursor_unexposed_expr
+        	# ignored
         when :cursor_obj_c_protocol_ref
           @opaque = @name == cursor.spelling
           @protocols.push(cursor.spelling)
@@ -716,6 +722,8 @@ module Bro
       @owner = nil
       cursor.visit_children do |cursor, parent|
         case cursor.kind
+        when :cursor_unexposed_expr
+        	# ignored
         when :cursor_obj_c_class_ref
           @owner = cursor.spelling
         when :cursor_obj_c_protocol_ref
@@ -757,7 +765,7 @@ module Bro
       @type = cursor.type
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref
+        when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr
           # Ignored
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
@@ -1613,7 +1621,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 end
 
 mac_version = nil
-ios_version = '7.1'
+ios_version = '8.0'
 xcode_dir = `xcode-select -p`.chomp
 sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
 
