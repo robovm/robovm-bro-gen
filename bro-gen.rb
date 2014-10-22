@@ -1622,7 +1622,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 end
 
 mac_version = nil
-ios_version = '8.0'
+ios_version = '8.1'
 xcode_dir = `xcode-select -p`.chomp
 sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
 
