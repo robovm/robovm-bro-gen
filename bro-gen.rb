@@ -66,6 +66,8 @@ module Bro
   end
 
   class Entity
+    @@deprecated_version = 5
+  
     attr_accessor :id, :location, :name, :framework, :attributes
     def initialize(model, cursor)
       @location = cursor ? cursor.location : nil
@@ -97,6 +99,15 @@ module Bro
           ios_version && attrib.ios_version && attrib.ios_version.to_f <= ios_version.to_f || false
       else
         true
+      end
+    end
+    
+    def is_outdated?
+      if deprecated
+        d_version = deprecated[0..2].to_f
+  	    d_version <= @@deprecated_version
+      else
+        false
       end
     end
 
@@ -1470,7 +1481,10 @@ def push_availability(model, entity, lines = [])
 end
 
 def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
+  return [] if prop.is_outdated?
+
   conf = model.get_conf_for_key(prop.name, props_conf) || {}
+  
   if !conf['exclude']
     name = conf['name'] || prop.name
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
@@ -1533,6 +1547,8 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
 end
 
 def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter = false)
+  return [[], []] if method.is_outdated?
+
   full_name = (method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name
   conf = model.get_conf_for_key(full_name, methods_conf) || {}
   if seen[full_name]
@@ -1704,22 +1720,20 @@ ARGV[1..-1].each do |yaml_file|
   potential_constant_enums = []
   model.enums.each do |enum|
     c = model.get_enum_conf(enum.name)
-    if c && !c['exclude']
+    if c && !c['exclude'] && !enum.is_outdated?
       data = {}
       java_name = enum.java_name
       bits = enum.is_options? || c['bits']
       ignore = c['ignore']
-      values =  enum.values.find_all {|v| v.is_available?(mac_version, ios_version)}
       if bits
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map do |e|
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore) || !e.is_outdated?}.map do |e|
           push_availability(model, e).push("public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)").join("\n    ")
         end.join(";\n    ") + ";"
         if !c['skip_none'] && !enum.values.find {|e| e.java_name == 'None'}
           values = "public static final #{java_name} None = new #{java_name}(0L);\n    #{values}"
         end
       else
-#        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map { |e| "#{e.java_name}(#{e.value}L)" }.join(",\n    ") + ";"
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore)}.map do |e|
+        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore) || !e.is_outdated?}.map do |e|
           push_availability(model, e).push("#{e.java_name}(#{e.value}L)").join("\n    ")
         end.join(",\n    ") + ";"
       end
@@ -1760,7 +1774,7 @@ ARGV[1..-1].each do |yaml_file|
 
   model.structs.find_all {|e| e.name.size > 0 }.each do |struct|
     c = model.get_class_conf(struct.name)
-    if c && !c['exclude']
+    if c && !c['exclude'] && !struct.is_outdated?
       name = c['name'] || struct.name
       template_datas[name] = struct.is_opaque? ? opaque_to_java(model, {}, name, c) : struct_to_java(model, {}, name, struct, c)
     end
@@ -1779,7 +1793,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign global values to classes
   values = {}
-  model.global_values.find_all {|v| v.is_available?(mac_version, ios_version)}.each do |v|
+  model.global_values.find_all {|v| v.is_available?(mac_version, ios_version) && !v.is_outdated?}.each do |v|
     vconf = model.get_value_conf(v.name)
     if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
@@ -1792,11 +1806,12 @@ ARGV[1..-1].each do |yaml_file|
     data = template_datas[owner] || {}
     data['name'] = owner
     methods_s = vals.map do |(v, vconf)|
+      lines = []
       name = vconf['name'] || v.name
       #name = name[0, 1].downcase + name[1..-1]
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
-      lines = []
+      
       push_availability(model, v, lines)
       if vconf.has_key?('dereference') && !vconf['dereference']
         lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
@@ -1819,7 +1834,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign functions to classes
   functions = {}
-  model.functions.find_all {|f| f.is_available?(mac_version, ios_version)}.each do |f|
+  model.functions.find_all {|f| f.is_available?(mac_version, ios_version) && !f.is_outdated?}.each do |f|
     fconf = model.get_function_conf(f.name)
     if fconf && !fconf['exclude']
       owner = fconf['class'] || default_class
@@ -1835,43 +1850,43 @@ ARGV[1..-1].each do |yaml_file|
       name = fconf['name'] || f.name
       name = name[0, 1].downcase + name[1..-1]
       lines = []
-      push_availability(model, f, lines)
-      visibility = fconf['visibility'] || 'public'
-      parameters = f.parameters
+	  push_availability(model, f, lines)
+	  visibility = fconf['visibility'] || 'public'
+	  parameters = f.parameters
       static = "static "
-      paramconf = fconf['parameters'] || {}
-      firstparamconf = parameters.size >= 1 ? paramconf[parameters[0].name] : nil
-      firstparamtype = (firstparamconf || {})['type']
-      if !fconf['static'] && parameters.size >= 1 && (firstparamtype == owner || model.resolve_type(parameters[0].type).java_name == owner)
-        # Instance method
-        java_type = model.to_java_type(model.resolve_type(parameters[0].type))
-        if !firstparamtype && java_type.include?('@ByVal')
-          # If the instance is passed @ByVal we need to make a wrapper method and keep the @Bridge method static
-          java_ret = fconf['return_type'] || model.resolve_type(f.return_type).java_name
-          java_parameters = parameters[1..-1].map do |e|
-            pconf = paramconf[e.name] || {}
-            "#{pconf['type'] || model.resolve_type(e.type).java_name} #{pconf['name'] || e.name}"
-          end
-          args = parameters[1..-1].map do |e|
-            pconf = paramconf[e.name] || {}
-            pconf['name'] || e.name
-          end
-          args.unshift('this')
-          lines.push("#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }")
-          # Alter the visibility for the @Bridge method to private
-          visibility = 'private'
-        else
-          parameters = parameters[1..-1]
-          static = ""
-        end
-      end
-      java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
-      java_parameters = parameters.map do |e|
-        pconf = paramconf[e.name] || {}
-        "#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
-      end
-      lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
-      lines.push("#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});")
+  	  paramconf = fconf['parameters'] || {}
+	  firstparamconf = parameters.size >= 1 ? paramconf[parameters[0].name] : nil
+	  firstparamtype = (firstparamconf || {})['type']
+	  if !fconf['static'] && parameters.size >= 1 && (firstparamtype == owner || model.resolve_type(parameters[0].type).java_name == owner)
+	  	# Instance method
+		java_type = model.to_java_type(model.resolve_type(parameters[0].type))
+		if !firstparamtype && java_type.include?('@ByVal')
+		  # If the instance is passed @ByVal we need to make a wrapper method and keep the @Bridge method static
+		  java_ret = fconf['return_type'] || model.resolve_type(f.return_type).java_name
+		  java_parameters = parameters[1..-1].map do |e|
+		  	pconf = paramconf[e.name] || {}
+		    "#{pconf['type'] || model.resolve_type(e.type).java_name} #{pconf['name'] || e.name}"
+		  end
+		  args = parameters[1..-1].map do |e|
+		 	pconf = paramconf[e.name] || {}
+			pconf['name'] || e.name
+		  end
+		  args.unshift('this')
+		  lines.push("#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }")
+		  # Alter the visibility for the @Bridge method to private
+		  visibility = 'private'
+		else
+		  parameters = parameters[1..-1]
+		  static = ""
+		end
+	  end
+	  java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
+	  java_parameters = parameters.map do |e|
+	    pconf = paramconf[e.name] || {}
+		"#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
+	  end
+	  lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
+	  lines.push("#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});")
       lines
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
@@ -2038,7 +2053,7 @@ ARGV[1..-1].each do |yaml_file|
 
   model.objc_classes.find_all {|cls| !cls.is_opaque?} .each do |cls|
     c = model.get_class_conf(cls.name)
-    if c && !c['exclude']
+    if c && !c['exclude'] && !cls.is_outdated?
       name = c['name'] || cls.java_name
       data = template_datas[name] || {}
       data['name'] = name
@@ -2056,7 +2071,7 @@ ARGV[1..-1].each do |yaml_file|
 
   model.objc_protocols.each do |prot|
     c = model.get_protocol_conf(prot.name)
-    if c && !c['exclude']
+    if c && !c['exclude'] && !prot.is_outdated?
       name = c['name'] || prot.java_name
       data = template_datas[name] || {}
       data['name'] = name
