@@ -1726,14 +1726,14 @@ ARGV[1..-1].each do |yaml_file|
       bits = enum.is_options? || c['bits']
       ignore = c['ignore']
       if bits
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore) || !e.is_outdated?}.map do |e|
+        values = enum.values.find_all {|e| (!ignore || !e.name.match(ignore)) && !e.is_outdated?}.map do |e|
           push_availability(model, e).push("public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)").join("\n    ")
         end.join(";\n    ") + ";"
         if !c['skip_none'] && !enum.values.find {|e| e.java_name == 'None'}
           values = "public static final #{java_name} None = new #{java_name}(0L);\n    #{values}"
         end
       else
-        values = enum.values.find_all {|e| !ignore || !e.name.match(ignore) || !e.is_outdated?}.map do |e|
+        values = enum.values.find_all {|e| (!ignore || !e.name.match(ignore)) && !e.is_outdated?}.map do |e|
           push_availability(model, e).push("#{e.java_name}(#{e.value}L)").join("\n    ")
         end.join(",\n    ") + ";"
       end
