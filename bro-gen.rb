@@ -1495,9 +1495,10 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && 'public' ||
         owner.is_a?(Bro::ObjCCategory) && 'public' ||
-        adapter && 'public' ||
+        adapter && 'public' || 
+        owner.is_a?(Bro::ObjCProtocol) && model.get_protocol_conf(owner.name)['class'] && 'public' ||
         ''
-    native = owner.is_a?(Bro::ObjCProtocol) ? "" : (adapter ? '' : "native")
+    native = owner.is_a?(Bro::ObjCProtocol) && !model.get_protocol_conf(owner.name)['class'] ? "" : (adapter ? '' : "native")
     static = owner.is_a?(Bro::ObjCCategory) ? "static" : ""
     generics_s = [type].map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
@@ -1586,9 +1587,11 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && (is_init?(owner, method) ? 'protected' : 'public') ||
         owner.is_a?(Bro::ObjCCategory) && 'public' || 
-        adapter && 'public' ||
+        adapter && 'public' || 
+        owner.is_a?(Bro::ObjCProtocol) && model.get_protocol_conf(owner.name)['class'] && 'public' ||
         ''
-    native = owner.is_a?(Bro::ObjCProtocol) || (owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)) ? "" : (adapter ? '' : "native")
+    native = owner.is_a?(Bro::ObjCProtocol) && !model.get_protocol_conf(owner.name)['class'] || 
+    	(owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)) ? "" : (adapter ? '' : "native")
     static = method.is_a?(Bro::ObjCClassMethod) || owner.is_a?(Bro::ObjCCategory) ? "static" : ""
   #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
@@ -2076,9 +2079,17 @@ ARGV[1..-1].each do |yaml_file|
       data = template_datas[name] || {}
       data['name'] = name
       data['visibility'] = c['visibility'] || 'public'
-      data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
+      if ['class']
+        data['extends'] = c['extends'] || 'NSObject'
+        data['implements'] = protocol_list_s(model, 'implements', prot.protocols, c)
+        data['ptr'] = "public static class #{prot.java_name}Ptr extends Ptr<#{prot.java_name}, #{prot.java_name}Ptr> {}"
+        data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+        data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
+      else
+        data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
+        data['template'] = def_protocol_template
+      end
       data['imports'] = imports_s
-      data['template'] = def_protocol_template
       data['javadoc'] = "\n" + push_availability(model, prot).join("\n") + "\n"
       template_datas[name] = data
     end
@@ -2089,7 +2100,7 @@ ARGV[1..-1].each do |yaml_file|
     owner = h[:owner]
     if owner.is_a?(Bro::ObjCProtocol)
       c = model.get_protocol_conf(owner.name)
-      if !c['skip_adapter']
+      if !c['skip_adapter'] && !c['class']
         interface_name = c['name'] || owner.java_name
         owner_name = (interface_name) + 'Adapter'
         methods_lines = []
