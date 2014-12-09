@@ -2008,7 +2008,7 @@ ARGV[1..-1].each do |yaml_file|
     end
     def g(model, cls, conf)
       r = []
-      if cls.superclass
+      if !cls.is_a?(Bro::ObjCProtocol) && cls.superclass
         supercls = model.objc_classes.find {|e| e.name == cls.superclass}
         super_conf = model.get_class_conf(supercls.name)
         r = g(model, supercls, super_conf)
@@ -2027,6 +2027,19 @@ ARGV[1..-1].each do |yaml_file|
       if cls.superclass
         prots = prots - all_protocols(model, model.objc_classes.find {|e| e.name == cls.superclass} , model.get_class_conf(cls.superclass))
       end
+      prots.each do |(prot, protc)|
+        members[owner] = members[owner] || {owner: cls, owner_name: owner, members: [], conf: c}
+        members[owner][:members].push([prot.instance_methods + prot.class_methods + prot.properties, protc])
+      end
+    end
+  end
+  
+  # Add all methods defined by protocols to all implementing converted protocol classes
+  model.objc_protocols.find_all do |cls|
+    c = model.get_protocol_conf(cls.name)
+    if c && !c['exclude'] && c['class']
+      owner = c['name'] || cls.java_name
+      prots = all_protocols(model, cls, c)
       prots.each do |(prot, protc)|
         members[owner] = members[owner] || {owner: cls, owner_name: owner, members: [], conf: c}
         members[owner][:members].push([prot.instance_methods + prot.class_methods + prot.properties, protc])
@@ -2079,7 +2092,7 @@ ARGV[1..-1].each do |yaml_file|
       data = template_datas[name] || {}
       data['name'] = name
       data['visibility'] = c['visibility'] || 'public'
-      if ['class']
+      if c['class']
         data['extends'] = c['extends'] || 'NSObject'
         data['implements'] = protocol_list_s(model, 'implements', prot.protocols, c)
         data['ptr'] = "public static class #{prot.java_name}Ptr extends Ptr<#{prot.java_name}, #{prot.java_name}Ptr> {}"
