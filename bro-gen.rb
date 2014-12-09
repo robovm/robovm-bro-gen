@@ -1406,7 +1406,8 @@ def struct_to_java(model, data, name, struct, conf)
   struct.members.each do |e|
     member_name = (conf[e.name] || {})['name'] || e.name
     type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
-    members.push(["@StructMember(#{index}) public native #{type} get#{member_name.camelize}();", "@StructMember(#{index}) public native #{name} set#{member_name.camelize}(#{type} #{member_name});", "\n    @Deprecated", "@StructMember(#{index}) public native #{type} #{member_name}();", "@Deprecated", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});\n    "].join("\n    "))
+    getter = type == 'boolean' ? 'is' : 'get'
+    members.push(["@StructMember(#{index}) public native #{type} #{getter}#{member_name.camelize}();", "@StructMember(#{index}) public native #{name} set#{member_name.camelize}(#{type} #{member_name});", "\n    @Deprecated", "@StructMember(#{index}) public native #{type} #{member_name}();", "@Deprecated", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});\n    "].join("\n    "))
     index = index + inc
   end
   members = members.join("\n    ")
