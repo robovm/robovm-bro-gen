@@ -1406,7 +1406,7 @@ def struct_to_java(model, data, name, struct, conf)
   struct.members.each do |e|
     member_name = (conf[e.name] || {})['name'] || e.name
     type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
-    members.push(["@StructMember(#{index}) public native #{type} #{member_name}();", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});"].join("\n    "))
+    members.push(["@StructMember(#{index}) public native #{type} get#{member_name.camelize}();", "@StructMember(#{index}) public native #{name} set#{member_name.camelize}(#{type} #{member_name});", "\n    @Deprecated", "@StructMember(#{index}) public native #{type} #{member_name}();", "@Deprecated", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});\n    "].join("\n    "))
     index = index + inc
   end
   members = members.join("\n    ")
@@ -1419,7 +1419,7 @@ def struct_to_java(model, data, name, struct, conf)
     type = (conf[e.name] || {})['type']
     type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
     constructor_params.push "#{type} #{member_name}"
-    constructor_body.push "this.#{member_name}(#{member_name});"
+    constructor_body.push "this.set#{member_name.camelize}(#{member_name});"
   end.join("\n    ")
   constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
   constructor = constructor + constructor_body.join("\n        ")
