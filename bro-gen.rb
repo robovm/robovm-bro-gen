@@ -480,7 +480,7 @@ module Bro
       @variadic = cursor.variadic?
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr
+        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr, :cursor_ibaction_attr
           # Ignored
         when :cursor_parm_decl
           @parameters.push FunctionParameter.new cursor, "p#{param_count}"
@@ -563,7 +563,7 @@ module Bro
       end
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_parm_decl, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_iboutlet_attr, :cursor_annotate_attr, :cursor_unexposed_expr
+        when :cursor_type_ref, :cursor_parm_decl, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_obj_c_instance_method_decl, :cursor_iboutlet_attr, :cursor_annotate_attr, :cursor_unexposed_expr
           # Ignored
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
@@ -582,7 +582,7 @@ module Bro
     end
     def setter_name
       base = @name[0, 1].upcase + @name[1..-1]
-      @attrs['setter'] || "set#{@base}:"
+      @attrs['setter'] || "set#{base}:"
     end
     def is_readonly?
       @setter == nil
@@ -1513,31 +1513,31 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       body = " { throw new UnsupportedOperationException(); }"
     end
     lines = []
-    if !seen["-#{prop.getter.name}"]
+    if !seen["-#{prop.getter_name}"]
       push_availability(model, prop, lines)
       if adapter
-        lines.push("@NotImplemented(\"#{prop.getter.name}\")")
+        lines.push("@NotImplemented(\"#{prop.getter_name}\")")
       else
-        lines.push("@Property(selector = \"#{prop.getter.name}\")")
+        lines.push("@Property(selector = \"#{prop.getter_name}\")")
       end
       lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
-      seen["-#{prop.getter.name}"] = true
+      seen["-#{prop.getter_name}"] = true
     end
-    if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter.name}"]
+    if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter_name}"]
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
       push_availability(model, prop, lines)
       if adapter
-        lines.push("@NotImplemented(\"#{prop.setter.name}\")")
+        lines.push("@NotImplemented(\"#{prop.setter_name}\")")
       elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
         # assign is used on some properties of primitives, structs and enums which isn't needed
         if type[0] =~ /^@(ByVal|MachineSized|Pointer)/ || type[0] =~ /\b(boolean|byte|short|char|int|long|float|double)$/ || type[3] && type[3].is_a?(Bro::Enum)
-          lines.push("@Property(selector = \"#{prop.setter.name}\")")
+          lines.push("@Property(selector = \"#{prop.setter_name}\")")
         else
-          lines.push("@Property(selector = \"#{prop.setter.name}\", strongRef = true)")
+          lines.push("@Property(selector = \"#{prop.setter_name}\", strongRef = true)")
         end
       else
-        lines.push("@Property(selector = \"#{prop.setter.name}\")")
+        lines.push("@Property(selector = \"#{prop.setter_name}\")")
       end
       lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.setter.name}"] = true
