@@ -1468,15 +1468,15 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   end
 end
 
-def push_availability(model, entity, lines = [])
+def push_availability(model, entity, lines = [], indentation = "")
   since = entity.since
   deprecated = entity.deprecated
   if since || deprecated
-    lines.push('/**')
-    lines.push(" * @since Available in iOS #{since} and later.") if since
-    lines.push(" * @deprecated Deprecated in iOS #{deprecated}.") if deprecated
-    lines.push(' */')
-    lines.push('@Deprecated') if deprecated
+    lines.push("#{indentation}/**")
+    lines.push("#{indentation} * @since Available in iOS #{since} and later.") if since
+    lines.push("#{indentation} * @deprecated Deprecated in iOS #{deprecated}.") if deprecated
+    lines.push("#{indentation} */")
+    lines.push("#{indentation}@Deprecated") if deprecated
   end
   lines
 end
@@ -1809,26 +1809,49 @@ ARGV[1..-1].each do |yaml_file|
   values.each do |owner, vals|
     data = template_datas[owner] || {}
     data['name'] = owner
+	
+	last_static_class = nil
+    vals.sort_by { |v, vconf| vconf['static_class'] }
+    
     methods_s = vals.map do |(v, vconf)|
       lines = []
       name = vconf['name'] || v.name
-      #name = name[0, 1].downcase + name[1..-1]
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
       
-      push_availability(model, v, lines)
-      if vconf.has_key?('dereference') && !vconf['dereference']
-        lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
-      else
-        lines.push("@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+	  # static class grouping support
+      if last_static_class != vconf['static_class']
+        if !last_static_class.nil?
+          # End last static class.
+          lines.push("}\n")
+        end
+      
+        # Start new static class.
+        last_static_class = vconf['static_class']
+        
+        lines.push("@Library(\"#{library}\")", "public static class #{last_static_class} {", "    static { Bro.bind(#{last_static_class}.class); }\n")
       end
-      lines.push("#{visibility} static native #{java_type} #{name}();")
+      indentation = last_static_class.nil? ? "" : "    "
+      
+      
+      push_availability(model, v, lines, indentation)
+      if vconf.has_key?('dereference') && !vconf['dereference']
+        lines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
+      else
+        lines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+      end
+      lines.push("#{indentation}#{visibility} static native #{java_type} #{name}();")
       if !v.is_const? && !vconf['readonly']
-        push_availability(model, v, lines)
-        lines = lines + ["@GlobalValue(symbol=\"#{v.name}\", optional=true)", "public static native void #{name}(#{java_type} v);"]
+        push_availability(model, v, lines, indentation)
+        lines = lines + ["#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)", "public static native void #{name}(#{java_type} v);"]
       end
       lines
     end.flatten.join("\n    ")
+    
+    if !last_static_class.nil?
+      methods_s += "\n    }"
+    end
+
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
