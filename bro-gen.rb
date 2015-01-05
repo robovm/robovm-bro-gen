@@ -585,7 +585,7 @@ module Bro
       @attrs['setter'] || "set#{base}:"
     end
     def is_readonly?
-      @setter == nil
+      @setter == nil && @attrs['readonly']
     end
     def types
       [@type]
@@ -1491,7 +1491,19 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
     omit_prefix = conf['omit_prefix'] || false
     base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
-    getter = omit_prefix ? base : (type[0] == 'boolean' ? (name.match(/^is/) ? name : "is#{base}") : "get#{base}")
+    getter = name
+    if !omit_prefix
+      if type[0] == 'boolean'
+        case name.to_s
+          when /^is/, /^has/, /^can/, /^should/, /^allows/, /^shows/, /^ignores/, /^pauses/, /^uses/, /^autoenables/, /^suppresses/
+            getter = name
+          else
+            getter = "is#{base}"
+        end
+      else
+        getter = "get#{base}"
+      end
+    end
     setter = omit_prefix ? base : "set#{base}"
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && 'public' ||
@@ -1523,6 +1535,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.getter_name}"] = true
     end
+    
     if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter_name}"]
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
@@ -1540,7 +1553,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
         lines.push("@Property(selector = \"#{prop.setter_name}\")")
       end
       lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
-      seen["-#{prop.setter.name}"] = true
+      seen["-#{prop.setter_name}"] = true
     end
     lines
   else
