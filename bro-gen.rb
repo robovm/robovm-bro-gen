@@ -2037,6 +2037,7 @@ ARGV[1..-1].each do |yaml_file|
     data['marshalers'] = "\n    #{marshalers_s}\n    "
     data['methods'] = "\n    #{methods_s}\n        "
     data['constants'] = "\n    #{constants_s}\n    "
+    data['extends'] = "GlobalValueEnumeration<#{e.java_type}>"
     data['imports'] = imports_s
     data['values'] = values_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
@@ -2407,7 +2408,8 @@ ARGV[1..-1].each do |yaml_file|
     c = model.get_class_conf(owner) || model.get_protocol_conf(owner) || model.get_category_conf(owner) || model.get_enum_conf(owner) || {}
     data['imports'] = imports_s
     data['visibility'] = data['visibility'] || c['visibility'] || 'public'
-    data['extends'] = data['extends'] || c['extends'] || 'Object'
+    data['extends'] = data['extends'] || c['extends'] || 'CocoaUtility'
+    
     data['annotations'] = (data['annotations'] || []).concat(c['annotations'] || []).concat(conf['annotations'] || [])
     data['annotations'] = data['annotations'] && !data['annotations'].empty? ? data['annotations'].uniq.join(' ') : nil
     data['implements'] = data['implements'] || nil

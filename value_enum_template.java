@@ -24,7 +24,7 @@ package org.robovm.foo;
 /*</annotations>*/
 @Marshaler(/*<name>*/ClassName/*</name>*/.Marshaler.class)
 /*<visibility>*/ public /*</visibility>*/ class /*<name>*/ClassName/*</name>*/ 
-    extends GlobalValueEnumeration</*<type>*/Type/*</type>*/>
+    extends /*<extends>*/Object/*</extends>*/
     /*<implements>*//*</implements>*/ {
 
 	/*<marshalers>*/
