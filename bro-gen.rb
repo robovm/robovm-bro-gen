@@ -769,11 +769,27 @@ module Bro
     end
   end
 
+  class GlobalValueEnumeration < Entity
+    attr_accessor :name, :type, :java_type, :values
+    def initialize(model, name, first)
+      super(model, nil)
+      @name = name
+      @type = first.type
+      vconf = model.get_value_conf(first.name)
+      @java_type = vconf['type'] || model.resolve_type(@type)
+      @values = [first]
+    end
+  end
+
   class GlobalValue < Entity
-    attr_accessor :type
+    attr_accessor :type, :enum
     def initialize(model, cursor)
       super(model, cursor)
       @type = cursor.type
+      
+      conf = model.get_value_conf(name)
+      @enum = conf ? conf['enum'] : nil
+      
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr
@@ -947,7 +963,7 @@ module Bro
   end
 
   class Model
-    attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :objc_categories, :global_values, :constant_values, :structs, :enums, :cfenums, 
+    attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :objc_categories, :global_values, :global_value_enums, :constant_values, :structs, :enums, :cfenums, 
       :cfoptions, :conf_functions, :conf_values, :conf_constants, :conf_classes, :conf_protocols, :conf_categories, :conf_enums
     def initialize(conf)
       @conf = conf
@@ -962,6 +978,7 @@ module Bro
       @typedefs = []
       @functions = []
       @global_values = []
+      @global_value_enums = Hash.new
       @constant_values = []
       @structs = []
       @objc_classes = []
@@ -993,7 +1010,7 @@ module Bro
         t = resolve_type0(type, allow_arrays, owner, method)
         raise "Failed to resolve type '#{type.spelling}' with kind #{type.kind} defined at #{Bro::location_to_s(type.declaration.location)}" unless t
         if t.is_a?(Typedef) && t.is_callback?
-          # Callback. Map to VoidPtr for now.
+          # Callback.
           t = Bro::builtins_by_name("FunctionPtr")
         end
         if type.spelling != 'instancetype'
@@ -1358,6 +1375,17 @@ module Bro
       # Remove duplicate global values (occurs in CoreData)
       @global_values = @global_values.uniq {|v| v.name}
 
+	  # Create global value enumerations
+	  @global_values.find_all {|v| v.enum}.each do |v|
+	    if @global_value_enums[v.enum].nil?
+	      @global_value_enums[v.enum] = GlobalValueEnumeration.new self, v.enum, v
+	    else
+	      @global_value_enums[v.enum].values.push v
+	    end
+	  end
+	  # Filter out global values that belong to an enumeration
+      @global_values = @global_values.find_all {|v| !v.enum}
+
       # Filter out constants not defined in the framework or library we're generating code for
       @constant_values = @constant_values.find_all {|v| is_included?(v)}
     end
@@ -1405,9 +1433,11 @@ def struct_to_java(model, data, name, struct, conf)
   members = []
   struct.members.each do |e|
     member_name = (conf[e.name] || {})['name'] || e.name
+    upcase_member_name = member_name.dup
+    upcase_member_name[0] = upcase_member_name[0].capitalize
     type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
     getter = type == 'boolean' ? 'is' : 'get'
-    members.push(["@StructMember(#{index}) public native #{type} #{getter}#{member_name.camelize}();", "@StructMember(#{index}) public native #{name} set#{member_name.camelize}(#{type} #{member_name});", "\n    @Deprecated", "@StructMember(#{index}) public native #{type} #{member_name}();", "@Deprecated", "@StructMember(#{index}) public native #{name} #{member_name}(#{type} #{member_name});\n    "].join("\n    "))
+    members.push(["@StructMember(#{index}) public native #{type} #{getter}#{upcase_member_name}();", "@StructMember(#{index}) public native #{name} set#{upcase_member_name}(#{type} #{member_name});"].join("\n    "))
     index = index + inc
   end
   members = members.join("\n    ")
@@ -1417,10 +1447,13 @@ def struct_to_java(model, data, name, struct, conf)
   constructor_body = []
   struct.members.map do |e|
     member_name = (conf[e.name] || {})['name'] || e.name
+    upcase_member_name = member_name.dup
+    upcase_member_name[0] = upcase_member_name[0].capitalize
+    
     type = (conf[e.name] || {})['type']
     type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
     constructor_params.push "#{type} #{member_name}"
-    constructor_body.push "this.set#{member_name.camelize}(#{member_name});"
+    constructor_body.push "this.set#{upcase_member_name}(#{member_name});"
   end.join("\n    ")
   constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
   constructor = constructor + constructor_body.join("\n        ")
@@ -1488,14 +1521,23 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   
   if !conf['exclude']
     name = conf['name'] || prop.name
+    
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
     omit_prefix = conf['omit_prefix'] || false
     base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
     getter = name
-    if !omit_prefix
+    if !conf['getter'].nil?
+      getter = conf['getter']
+    elsif conf['omit_prefix'].nil?
       if type[0] == 'boolean'
         case name.to_s
-          when /^is/, /^has/, /^can/, /^should/, /^allows/, /^shows/, /^ignores/, /^pauses/, /^uses/, /^autoenables/, /^suppresses/
+          when /^is/, /^has/, /^can/, /^should/, /^allows/, /^shows/, /^ignores/, /^pauses/, /^uses/, 
+          /^autoenables/, /^suppresses/, /^applies/, /^automatically/, /^always/, /^requires/, /^expects/, 
+          /^marks/, /^performs/, /^supports/, /^provides/, /^preserves/, /^presents/, /^autoreverses/,
+          /^masks/, /^needs/, /^draws/, /^propagates/, /^includes/, /^returns/, /^notifies/, /^receives/, /^sends/, /^groups/,
+          /^generates/, /^does/, /^collapses/, /^evicts/, /^animates/, /^requests/, /^are/, /^normalizes/, /^disconnects/, /^wants/,
+          /^casts/, /^locks/, /^writes/, /^reads/, /^defines/, /^hides/, /^autoresizes/, /^clips/, /^clears/, /^enables/, /^contains/, /^adjusts/,
+          /^apportions/, /^displays/, /^dims/, /^delays/, /^bounces/, /^scrolls/, /^defers/, /^invalidates/, /^reverses/, /^fixes/
             getter = name
           else
             getter = "is#{base}"
@@ -1616,6 +1658,14 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
       end
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+    
+    ret_marshaler = conf['return_marshaler']
+    if ret_marshaler
+      ret_marshaler = "@org.robovm.rt.bro.annotation.Marshaler(#{ret_marshaler})"
+    else
+      ret_marshaler = ''
+    end
+    
     ret_anno = ''
     if generics_s.size > 0 && ret_type[0] =~ /^(@Pointer|@ByVal|@MachineSizedFloat|@MachineSizedSInt|@MachineSizedUInt)/
       # Generic types and an annotated return type. Move the annotation before the generic type info
@@ -1636,11 +1686,11 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     if owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)
       new_parameters_s = (['ObjCClass clazz'] + (param_types.map {|p| "#{p[0]} #{p[2]}"})).join(', ')
-      method_lines.push("protected static native #{[ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});")
+      method_lines.push("protected static native #{[ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});")
       args_s = (["ObjCClass.getByType(#{owner.owner}.class)"] + (param_types.map {|p| p[2]})).join(', ')
       body = " { #{ret_type[0] != 'void' ? 'return ' : ''}#{name}(#{args_s}); }"
     end
-    method_lines.push("#{[visibility,static,native,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+    method_lines.push("#{[visibility,static,native,ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
       args_s = param_types.map {|p| p[2]}.join(', ')
@@ -1665,6 +1715,7 @@ def_class_template = IO.read("#{script_dir}/class_template.java")
 def_enum_template = IO.read("#{script_dir}/enum_template.java")
 def_bits_template = IO.read("#{script_dir}/bits_template.java")
 def_protocol_template = IO.read("#{script_dir}/protocol_template.java")
+def_value_enum_template = IO.read("#{script_dir}/value_enum_template.java")
 global = YAML.load_file("#{script_dir}/global.yaml")
 
 ARGV[1..-1].each do |yaml_file|
@@ -1722,8 +1773,6 @@ ARGV[1..-1].each do |yaml_file|
     clang_args = clang_args + conf['clang_args']
   end
   translation_unit = index.parse_translation_unit("#{sysroot}#{headers[0]}", clang_args, [], {:detailed_preprocessing_record=>true})
-  #dump_ast translation_unit.cursor, ""
-  #exit
 
   model = Bro::Model.new conf
   model.process(translation_unit.cursor)
@@ -1871,6 +1920,129 @@ ARGV[1..-1].each do |yaml_file|
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
+  
+  def generate_global_value_marshalers(lines, class_name, java_type)
+    base_type = "NSObject"
+    if java_type == "CFString"
+      base_type = "CFType"
+    end
+  
+    lines.push("public static class Marshaler {")
+    lines.push("    @MarshalsPointer")
+    lines.push("    public static #{class_name} toObject(Class<#{class_name}> cls, long handle, long flags) {")
+    lines.push("        #{java_type} o = (#{java_type}) #{base_type}.Marshaler.toObject(#{java_type}.class, handle, flags);")
+    lines.push("        if (o == null) {")
+    lines.push("            return null;")
+    lines.push("        }")
+    lines.push("        return #{class_name}.valueOf(o);")
+    lines.push("    }")
+    lines.push("    @MarshalsPointer")
+    lines.push("    public static long toNative(#{class_name} o, long flags) {")
+    lines.push("        if (o == null) {")
+    lines.push("            return 0L;")
+    lines.push("        }")
+    lines.push("        return #{base_type}.Marshaler.toNative(o.value(), flags);")
+	lines.push("    }")
+    lines.push("}")
+    
+    lines.push("public static class AsListMarshaler {")
+    lines.push("    @SuppressWarnings(\"unchecked\")") if base_type == "NSObject"
+    lines.push("    @MarshalsPointer")
+    lines.push("    public static List<#{class_name}> toObject(Class<? extends #{base_type}> cls, long handle, long flags) {")
+    if base_type == "NSObject"
+      lines.push("        NSArray<#{java_type}> o = (NSArray<#{java_type}>) NSObject.Marshaler.toObject(cls, handle, flags);")
+    else 
+      lines.push("        CFArray o = (CFArray) CFType.Marshaler.toObject(cls, handle, flags);")
+    end
+    lines.push("        if (o == null) {")
+    lines.push("            return null;")
+    lines.push("        }")
+    lines.push("        List<#{class_name}> list = new ArrayList<>();")
+    lines.push("        for (long i = 0, n = o.size(); i < n; i++) {")
+    if base_type == "NSObject"
+      lines.push("            list.add(#{class_name}.valueOf(o.get(i)));")
+    else
+      lines.push("            list.add(#{class_name}.valueOf(o.get(i, #{java_type}.class)));")
+    end
+    lines.push("        }")
+    lines.push("        return list;")
+    lines.push("    }")
+    lines.push("    @MarshalsPointer")
+    lines.push("    public static long toNative(List<#{class_name}> l, long flags) {")
+    lines.push("        if (l == null) {")
+    lines.push("            return 0L;")
+    lines.push("        }")
+    if base_type == "NSObject"
+      lines.push("        NSArray<#{java_type}> array = new NSMutableArray<>();")
+    else
+      lines.push("        CFArray array = CFMutableArray.create();")
+    end
+    lines.push("        for (#{class_name} i : l) {")
+    lines.push("            array.add(i.value());")
+	lines.push("        }")
+    lines.push("        return #{base_type}.Marshaler.toNative(array, flags);")
+	lines.push("    }")
+    lines.push("}")
+    
+    lines
+  end
+  
+  # Generate template data for global value enumerations
+  model.global_value_enums.each do |name, e|
+    data = template_datas[name] || {}
+    data['name'] = name
+    data['type'] = e.java_type
+    
+	marshaler_lines = []
+	generate_global_value_marshalers(marshaler_lines, name, e.java_type)
+    
+    marshalers_s = marshaler_lines.flatten.join("\n    ")
+    
+    names = []
+    mlines = []
+    clines = []
+    indentation = "    "
+    
+    e.values.sort_by { |v| v.since }
+    
+    e.values.find_all {|v| v.is_available?(mac_version, ios_version) && !v.is_outdated?}.each do |v|
+      vconf = model.get_value_conf(v.name)
+      
+      vname = vconf['name'] || v.name
+      names.push(vname)
+      java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
+      visibility = vconf['visibility'] || 'public'
+            
+      push_availability(model, v, mlines, indentation)
+      if vconf.has_key?('dereference') && !vconf['dereference']
+        mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
+      else
+        mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+      end
+      mlines.push("#{indentation}#{visibility} static native #{java_type} #{vname}();")
+      if !v.is_const? && !vconf['readonly']
+        push_availability(model, v, mlines, indentation)
+        mlines = mlines + ["#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)", "#{indentation}public static native void #{vname}(#{java_type} v);"]
+      end
+      
+      push_availability(model, v, clines)
+      clines.push("public static final #{name} #{vname} = new #{name}(\"#{vname}\");")
+      
+    end
+    
+    methods_s = mlines.flatten.join("\n    ")
+    constants_s = clines.flatten.join("\n    ")
+    values_s = names.flatten.join(", ")
+    
+    data['marshalers'] = "\n    #{marshalers_s}\n    "
+    data['methods'] = "\n    #{methods_s}\n        "
+    data['constants'] = "\n    #{constants_s}\n    "
+    data['imports'] = imports_s
+    data['values'] = values_s
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+    data['template'] = def_value_enum_template
+    template_datas[name] = data
+  end
 
   # Assign functions to classes
   functions = {}
@@ -1920,13 +2092,21 @@ ARGV[1..-1].each do |yaml_file|
 		  static = ""
 		end
 	  end
+	  
+	  java_ret_marshaler = fconf['return_marshaler']
+      if java_ret_marshaler
+        java_ret_marshaler = "@org.robovm.rt.bro.annotation.Marshaler(#{java_ret_marshaler}.class) "
+      else
+        java_ret_marshaler = ""
+      end
+	  
 	  java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
 	  java_parameters = parameters.map do |e|
 	    pconf = paramconf[e.name] || {}
 		"#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
 	  end
 	  lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
-	  lines.push("#{visibility} #{static}native #{java_ret} #{name}(#{java_parameters.join(', ')});")
+	  lines.push("#{visibility} #{static}native #{java_ret_marshaler}#{java_ret} #{name}(#{java_parameters.join(', ')});")
       lines
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
@@ -2241,7 +2421,5 @@ ARGV[1..-1].each do |yaml_file|
     end
     merge_template(target_dir, package, owner, data['template'] || def_class_template, data)
   end
-
-  #puts model.constant_values.map { |e| "#{e.name} = #{e.value} (#{e.framework})" }
 
 end
