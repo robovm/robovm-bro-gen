@@ -769,6 +769,238 @@ module Bro
     end
   end
 
+  class GlobalValueDictionaryWrapper < Entity
+    attr_accessor :name, :values
+    def initialize(model, name, enum, first)
+      super(model, nil)
+      @name = name
+      @enum = enum
+      @type = first.type
+      vconf = model.get_value_conf(first.name)
+      @java_type = vconf['type'] || model.resolve_type(@type)
+      @mutable = vconf['mutable'] || true
+      @methods = vconf['methods']
+      @values = [first]
+    end
+    
+    def is_foundation?
+      !["CFString", "CFNumber"].include? @java_type 
+    end
+    
+    def is_mutable?
+      @mutable
+    end
+    
+    def generate_template_data(data)
+      data['name'] = name
+    
+      marshaler_lines = []
+      append_marshalers(marshaler_lines)
+      marshalers_s = marshaler_lines.flatten.join("\n    ")
+      data['marshalers'] = "\n    #{marshalers_s}\n    "
+    
+      constructor_lines = []
+      append_constructors(constructor_lines)
+      constructors_s = constructor_lines.flatten.join("\n    ")
+      data['constructors'] = "\n    #{constructors_s}\n    "
+    
+      method_lines = []
+      append_basic_methods(method_lines)
+      append_convenience_methods(method_lines) if !@methods.nil?
+	  methods_s = method_lines.flatten.join("\n    ")
+      data['methods'] = "\n    #{methods_s}\n    "
+    
+      if @enum.nil?
+        key_lines = []
+        append_key_class(key_lines)
+        keys_s = key_lines.flatten.join("\n    ")
+        data['keys'] = "\n    #{keys_s}\n    "
+      end
+    
+      data['extends'] = is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
+    
+      data
+    end
+    
+    def append_marshalers(lines)
+      dict_type = is_foundation? ? "NSDictionary" : "CFDictionary"
+      dict_generics = is_foundation? ? "<NSString, NSObject>" : ""
+      base_type = is_foundation? ? "NSObject" : "CFType"
+    
+      lines << "public static class Marshaler {"
+      lines << "    @MarshalsPointer"
+      lines << "    public static #{@name} toObject(Class<#{@name}> cls, long handle, long flags) {"
+      lines << "        #{dict_type}#{dict_generics} o = (#{dict_type}#{dict_generics}) #{base_type}.Marshaler.toObject(#{dict_type}.class, handle, flags);"
+      lines << "        if (o == null) {"
+      lines << "            return null;"
+      lines << "        }"
+      lines << "        return new #{name}(o);"
+      lines << "    }"
+      lines << "    @MarshalsPointer"
+      lines << "    public static long toNative(#{name} o, long flags) {"
+      lines << "        if (o == null) {"
+      lines << "            return 0L;"
+      lines << "        }"
+      lines << "        return #{base_type}.Marshaler.toNative(o.data, flags);"
+      lines << "    }"
+      lines << "}"
+    
+      array_type = is_foundation? ? "NSArray<#{dict_type}#{dict_generics}>" : "CFArray"
+    
+      lines << "public static class AsListMarshaler {"
+      lines << "    @MarshalsPointer"
+      lines << "    public static List<#{@name}> toObject(Class<? extends #{base_type}> cls, long handle, long flags) {"
+      lines << "        #{array_type} o = (#{array_type}) #{base_type}.Marshaler.toObject(cls, handle, flags);"
+      lines << "        if (o == null) {"
+      lines << "            return null;"
+      lines << "        }"
+      lines << "        List<#{@name}> list = new ArrayList<>();"
+      lines << "        for (int i = 0; i < o.size(); i++) {"
+      lines << "            list.add(new #{@name}(o.get(i)));" if is_foundation?
+      lines << "            list.add(new #{@name}(o.get(i, CFDictionary.class)));" if !is_foundation?
+      lines << "        }"
+      lines << "        return list;"
+      lines << "    }"
+      lines << "    @MarshalsPointer"
+      lines << "    public static long toNative(List<#{@name}> l, long flags) {"
+      lines << "        if (l == null) {"
+      lines << "            return 0L;"
+      lines << "        }"
+      lines << "        NSArray<NSDictionary<NSString, NSObject> array = new NSMutableArray<>();" if is_foundation?
+      lines << "        CFArray array = CFMutableArray.create();" if !is_foundation?
+      lines << "        for (#{@name} i : l) {"
+      lines << "            array.add(i.getDictionary());"
+      lines << "        }"
+      lines << "        return #{base_type}.Marshaler.toNative(array, flags);"
+      lines << "    }"
+      lines << "}"
+    end
+    
+    def append_constructors(lines)
+      dict_type = is_foundation? ? "NSDictionary<NSString, NSObject>" : "CFDictionary"
+    
+      lines << "#{@name}(#{dict_type} data) {"
+      lines << "    super(data);"
+      lines << "}"
+      lines << "public #{@name}() {}" if is_mutable?
+    end
+    
+    def append_basic_methods(lines)
+      key_type = @enum ? @enum.name : @java_type
+      key_value = @enum ? "key.value()" : "key"
+      base_type = is_foundation? ? "NSObject" : "CFType"
+    
+      lines << "public boolean has(#{key_type} key) {"
+      lines << "    return data.containsKey(#{key_value});"
+      lines << "}"
+      lines << "public NSObject get(#{key_type} key) {" if is_foundation?
+      lines << "public <T extends CFType> T get(#{key_type} key, Class<T> type) {" if !is_foundation?
+      lines << "    if (has(key)) {"
+      lines << "        return data.get(#{key_value});" if is_foundation?
+      lines << "        return data.get(#{key_value}, type);" if !is_foundation?
+      lines << "    }"
+      lines << "    return null;"
+      lines << "}"
+      lines << "public #{@name} set(#{key_type} key, #{base_type} value) {"
+      lines << "    data.put(#{key_value}, value);"
+      lines << "    return this;"
+      lines << "}"
+    end
+    
+    def append_convenience_methods(lines)
+      lines << "\n"
+      @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+          vconf = @model.get_value_conf(v.name)
+          vname = vconf['name'] || v.name
+          method = @methods.detect {|m| vname.include? m[0] }
+          if method
+            mconf = method[1]
+            name = mconf['name'] || method[0]
+            param_name = name[0].downcase + name[1..-1]
+            omit_prefix = mconf['omit_prefix'] || false
+            type = mconf['type'] || 'boolean'
+            
+            getter = @model.getter_for_name(param_name, type, omit_prefix)
+            
+            default_value = mconf['default'] || default_value_for_type(type)
+            key_accessor = @enum ? "#{@enum.name}.#{vname}" : "#{vname}()"
+            
+            @model.push_availability(v, lines)
+            lines << "public #{type} #{getter}() {"
+            lines << "    if (has(#{key_accessor})) {"
+            lines << convenience_getter_value(type, key_accessor)
+            lines << "    }"
+            lines << "    return #{default_value};"
+            lines << "}"
+
+            if is_mutable?
+              setter = @model.setter_for_name(name, omit_prefix)
+              
+			  @model.push_availability(v, lines)
+			  lines << "public #{@name} #{setter}(#{type} #{param_name}) {"
+			  lines << "    set(#{key_accessor}, #{convenience_setter_value(type, param_name)});"
+			  lines << "    return this;"
+			  lines << "}"
+			end
+          end
+      end
+    end
+    
+    def convenience_getter_value(type, key_accessor)
+      s = []
+      if is_foundation?
+        case type
+          when 'boolean'
+            s
+        end
+      else
+        case type
+          when 'boolean'
+            s << "CFBoolean val = get(#{key_accessor}, CFBoolean.class);"
+            s << "return val.booleanValue();"
+        end
+      end
+      "        " + s.flatten.join("\n            ")
+    end
+    
+    def convenience_setter_value(type, param_name)
+      s = ''
+      if is_foundation?
+        case type
+          when 'boolean'
+            s
+        end
+      else
+        case type
+          when 'boolean'
+            s = "CFBoolean.valueOf(#{param_name})"
+        end
+      end
+      s
+    end
+    
+    def default_value_for_type(type)
+      default = 'null'
+      case type
+      when 'boolean'
+        default = false
+      when 'byte', 'short', 'int', 'long', 'float', 'double'
+        default = 0
+      end
+      default
+    end
+    
+    def append_key_class(lines)
+      @values.sort_by { |v| v.since }
+      
+        @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+          $stderr.puts "#{v.name}" # TODO generate static Keys class
+        end
+    end
+    
+    private :append_marshalers, :append_constructors, :append_basic_methods, :append_convenience_methods, :append_key_class
+  end
+
   class GlobalValueEnumeration < Entity
     attr_accessor :name, :type, :java_type, :values
     def initialize(model, name, first)
@@ -782,13 +1014,14 @@ module Bro
   end
 
   class GlobalValue < Entity
-    attr_accessor :type, :enum
+    attr_accessor :type, :enum, :dictionary
     def initialize(model, cursor)
       super(model, cursor)
       @type = cursor.type
       
       conf = model.get_value_conf(name)
       @enum = conf ? conf['enum'] : nil
+      @dictionary = conf ? conf['dictionary'] : nil
       
       cursor.visit_children do |cursor, parent|
         case cursor.kind
@@ -963,7 +1196,7 @@ module Bro
   end
 
   class Model
-    attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :objc_categories, :global_values, :global_value_enums, :constant_values, :structs, :enums, :cfenums, 
+    attr_accessor :conf, :typedefs, :functions, :objc_classes, :objc_protocols, :objc_categories, :global_values, :global_value_enums, :global_value_dictionaries, :constant_values, :structs, :enums, :cfenums, 
       :cfoptions, :conf_functions, :conf_values, :conf_constants, :conf_classes, :conf_protocols, :conf_categories, :conf_enums
     def initialize(conf)
       @conf = conf
@@ -979,6 +1212,7 @@ module Bro
       @functions = []
       @global_values = []
       @global_value_enums = Hash.new
+      @global_value_dictionaries = Hash.new
       @constant_values = []
       @structs = []
       @objc_classes = []
@@ -1248,6 +1482,50 @@ module Bro
       end
     end
 
+    def getter_for_name(name, type, omit_prefix)
+      base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
+      getter = name
+      if !omit_prefix
+        if type == 'boolean'
+          case name.to_s
+            when /^is/, /^has/, /^can/, /^should/, /^adjusts/, /^allows/, /^always/, /^animates/, 
+            /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
+            /^autoreverses/, /^bounces/, /^casts/, /^clears/, /^clips/, /^collapses/, /^contains/, 
+            /^defers/, /^defines/, /^delays/, /^depends/, /^dims/, /^disconnects/, /^displays/, 
+            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^generates/, /^groups/, 
+            /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
+            /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
+            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^returns/, /^reverses/, 
+            /^scrolls/, /^sends/, /^shows/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
+              getter = name
+            else
+              getter = "is#{base}"
+          end
+        else
+          getter = "get#{base}"
+        end
+      end
+      getter
+    end
+    
+    def setter_for_name(name, omit_prefix)
+      base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
+      omit_prefix ? base : "set#{base}"
+    end
+    
+    def push_availability(entity, lines = [], indentation = "")
+      since = entity.since
+      deprecated = entity.deprecated
+      if since || deprecated
+        lines.push("#{indentation}/**")
+        lines.push("#{indentation} * @since Available in iOS #{since} and later.") if since
+        lines.push("#{indentation} * @deprecated Deprecated in iOS #{deprecated}.") if deprecated
+        lines.push("#{indentation} */")
+        lines.push("#{indentation}@Deprecated") if deprecated
+      end
+      lines
+    end
+
     def process(cursor)
       cursor.visit_children do |cursor, parent|
         case cursor.kind
@@ -1383,8 +1661,16 @@ module Bro
 	      @global_value_enums[v.enum].values.push v
 	    end
 	  end
-	  # Filter out global values that belong to an enumeration
-      @global_values = @global_values.find_all {|v| !v.enum}
+      # Create global value dictionary wrappers
+      @global_values.find_all {|v| v.dictionary}.each do |v|
+        if @global_value_dictionaries[v.dictionary].nil?
+          @global_value_dictionaries[v.dictionary] = GlobalValueDictionaryWrapper.new self, v.dictionary, @global_value_enums[v.enum], v
+        else
+          @global_value_dictionaries[v.dictionary].values.push v
+        end
+      end
+      # Filter out global values that belong to an enumeration or dictionary wrapper
+      @global_values = @global_values.find_all {|v| !v.enum || !v.dictionary}
 
       # Filter out constants not defined in the framework or library we're generating code for
       @constant_values = @constant_values.find_all {|v| is_included?(v)}
@@ -1464,7 +1750,7 @@ def struct_to_java(model, data, name, struct, conf)
   data['visibility'] = conf['visibility'] || 'public'
   data['extends'] = "Struct<#{name}>"
   data['ptr'] = "public static class #{name}Ptr extends Ptr<#{name}, #{name}Ptr> {}"
-  data['javadoc'] = "\n" + push_availability(model, struct).join("\n") + "\n"
+  data['javadoc'] = "\n" + model.push_availability(struct).join("\n") + "\n"
   data
 end
 
@@ -1501,19 +1787,6 @@ def get_generic_type(model, owner, method, type, index, conf_type, name = nil)
   end
 end
 
-def push_availability(model, entity, lines = [], indentation = "")
-  since = entity.since
-  deprecated = entity.deprecated
-  if since || deprecated
-    lines.push("#{indentation}/**")
-    lines.push("#{indentation} * @since Available in iOS #{since} and later.") if since
-    lines.push("#{indentation} * @deprecated Deprecated in iOS #{deprecated}.") if deprecated
-    lines.push("#{indentation} */")
-    lines.push("#{indentation}@Deprecated") if deprecated
-  end
-  lines
-end
-
 def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   return [] if prop.is_outdated?
 
@@ -1524,29 +1797,14 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
     omit_prefix = conf['omit_prefix'] || false
-    base = omit_prefix ? name[0..-1] : name[0, 1].upcase + name[1..-1]
-    getter = name
+    
+    getter = ""
     if !conf['getter'].nil?
       getter = conf['getter']
-    elsif conf['omit_prefix'].nil?
-      if type[0] == 'boolean'
-        case name.to_s
-          when /^is/, /^has/, /^can/, /^should/, /^allows/, /^shows/, /^ignores/, /^pauses/, /^uses/, 
-          /^autoenables/, /^suppresses/, /^applies/, /^automatically/, /^always/, /^requires/, /^expects/, 
-          /^marks/, /^performs/, /^supports/, /^provides/, /^preserves/, /^presents/, /^autoreverses/,
-          /^masks/, /^needs/, /^draws/, /^propagates/, /^includes/, /^returns/, /^notifies/, /^receives/, /^sends/, /^groups/,
-          /^generates/, /^does/, /^collapses/, /^evicts/, /^animates/, /^requests/, /^are/, /^normalizes/, /^disconnects/, /^wants/,
-          /^casts/, /^locks/, /^writes/, /^reads/, /^defines/, /^hides/, /^autoresizes/, /^clips/, /^clears/, /^enables/, /^contains/, /^adjusts/,
-          /^apportions/, /^displays/, /^dims/, /^delays/, /^bounces/, /^scrolls/, /^defers/, /^invalidates/, /^reverses/, /^fixes/
-            getter = name
-          else
-            getter = "is#{base}"
-        end
-      else
-        getter = "get#{base}"
-      end
+    elsif
+      getter = model.getter_for_name(name, type[0], omit_prefix)
     end
-    setter = omit_prefix ? base : "set#{base}"
+    setter = model.setter_for_name(name, omit_prefix)
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && 'public' ||
         owner.is_a?(Bro::ObjCCategory) && 'public' ||
@@ -1568,7 +1826,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     end
     lines = []
     if !seen["-#{prop.getter_name}"]
-      push_availability(model, prop, lines)
+      model.push_availability(prop, lines)
       if adapter
         lines.push("@NotImplemented(\"#{prop.getter_name}\")")
       else
@@ -1581,7 +1839,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     if !prop.is_readonly? && !conf['readonly'] && !seen["-#{prop.setter_name}"]
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
-      push_availability(model, prop, lines)
+      model.push_availability(prop, lines)
       if adapter
         lines.push("@NotImplemented(\"#{prop.setter_name}\")")
       elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
@@ -1678,7 +1936,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     method_lines = []
     constructor_lines = []
-    push_availability(model, method, method_lines)
+    model.push_availability(method, method_lines)
     if adapter
       method_lines.push("@NotImplemented(\"#{method.name}\")")
     else
@@ -1694,7 +1952,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
       args_s = param_types.map {|p| p[2]}.join(', ')
-      push_availability(model, method, constructor_lines)
+      model.push_availability(method, constructor_lines)
       constructor_lines.push("#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }")
     end
     seen[full_name] = true
@@ -1704,10 +1962,10 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
   end
 end
 
-mac_version = nil
-ios_version = '8.1'
+@@mac_version = nil
+@@ios_version = '8.1'
 xcode_dir = `xcode-select -p`.chomp
-sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{ios_version}.sdk"
+sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{@@ios_version}.sdk"
 
 script_dir = File.expand_path(File.dirname(__FILE__))
 target_dir = ARGV[0]
@@ -1716,6 +1974,7 @@ def_enum_template = IO.read("#{script_dir}/enum_template.java")
 def_bits_template = IO.read("#{script_dir}/bits_template.java")
 def_protocol_template = IO.read("#{script_dir}/protocol_template.java")
 def_value_enum_template = IO.read("#{script_dir}/value_enum_template.java")
+def_value_dictionary_template = IO.read("#{script_dir}/value_dictionary_template.java")
 global = YAML.load_file("#{script_dir}/global.yaml")
 
 ARGV[1..-1].each do |yaml_file|
@@ -1793,14 +2052,14 @@ ARGV[1..-1].each do |yaml_file|
       ignore = c['ignore']
       if bits
         values = enum.values.find_all {|e| (!ignore || !e.name.match(ignore)) && !e.is_outdated?}.map do |e|
-          push_availability(model, e).push("public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)").join("\n    ")
+          model.push_availability(e).push("public static final #{java_name} #{e.java_name} = new #{java_name}(#{e.value}L)").join("\n    ")
         end.join(";\n    ") + ";"
         if !c['skip_none'] && !enum.values.find {|e| e.java_name == 'None'}
           values = "public static final #{java_name} None = new #{java_name}(0L);\n    #{values}"
         end
       else
         values = enum.values.find_all {|e| (!ignore || !e.name.match(ignore)) && !e.is_outdated?}.map do |e|
-          push_availability(model, e).push("#{e.java_name}(#{e.value}L)").join("\n    ")
+          model.push_availability(e).push("#{e.java_name}(#{e.value}L)").join("\n    ")
         end.join(",\n    ") + ";"
       end
       data['values'] = "\n    #{values}\n    "
@@ -1827,7 +2086,7 @@ ARGV[1..-1].each do |yaml_file|
         end
       end
       data['imports'] = imports_s
-      data['javadoc'] = "\n" + push_availability(model, enum).join("\n") + "\n"
+      data['javadoc'] = "\n" + model.push_availability(enum).join("\n") + "\n"
       data['template'] = bits ? def_bits_template : def_enum_template
       template_datas[java_name] = data
 #      merge_template(target_dir, package, java_name, bits ? def_bits_template : def_enum_template, data)
@@ -1859,7 +2118,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign global values to classes
   values = {}
-  model.global_values.find_all {|v| v.is_available?(mac_version, ios_version) && !v.is_outdated?}.each do |v|
+  model.global_values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
     vconf = model.get_value_conf(v.name)
     if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
@@ -1896,7 +2155,7 @@ ARGV[1..-1].each do |yaml_file|
       indentation = last_static_class.nil? ? "" : "    "
       
       
-      push_availability(model, v, lines, indentation)
+      model.push_availability(v, lines, indentation)
       if vconf.has_key?('dereference') && !vconf['dereference']
         lines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
       else
@@ -1904,7 +2163,7 @@ ARGV[1..-1].each do |yaml_file|
       end
       lines.push("#{indentation}#{visibility} static native #{java_type} #{name}();")
       if !v.is_const? && !vconf['readonly']
-        push_availability(model, v, lines, indentation)
+        model.push_availability(v, lines, indentation)
         lines = lines + ["#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)", "public static native void #{name}(#{java_type} v);"]
       end
       lines
@@ -1921,7 +2180,7 @@ ARGV[1..-1].each do |yaml_file|
     template_datas[owner] = data
   end
   
-  def generate_global_value_marshalers(lines, class_name, java_type)
+  def generate_global_value_enum_marshalers(lines, class_name, java_type)
     base_type = "NSObject"
     if java_type == "CFString"
       base_type = "CFType"
@@ -1994,7 +2253,7 @@ ARGV[1..-1].each do |yaml_file|
     data['type'] = e.java_type
     
 	marshaler_lines = []
-	generate_global_value_marshalers(marshaler_lines, name, e.java_type)
+	generate_global_value_enum_marshalers(marshaler_lines, name, e.java_type)
     
     marshalers_s = marshaler_lines.flatten.join("\n    ")
     
@@ -2005,7 +2264,7 @@ ARGV[1..-1].each do |yaml_file|
     
     e.values.sort_by { |v| v.since }
     
-    e.values.find_all {|v| v.is_available?(mac_version, ios_version) && !v.is_outdated?}.each do |v|
+    e.values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
       vconf = model.get_value_conf(v.name)
       
       vname = vconf['name'] || v.name
@@ -2013,7 +2272,7 @@ ARGV[1..-1].each do |yaml_file|
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
             
-      push_availability(model, v, mlines, indentation)
+      model.push_availability(v, mlines, indentation)
       if vconf.has_key?('dereference') && !vconf['dereference']
         mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
       else
@@ -2021,11 +2280,11 @@ ARGV[1..-1].each do |yaml_file|
       end
       mlines.push("#{indentation}#{visibility} static native #{java_type} #{vname}();")
       if !v.is_const? && !vconf['readonly']
-        push_availability(model, v, mlines, indentation)
+        model.push_availability(v, mlines, indentation)
         mlines = mlines + ["#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)", "#{indentation}public static native void #{vname}(#{java_type} v);"]
       end
       
-      push_availability(model, v, clines)
+      model.push_availability(v, clines)
       clines.push("public static final #{name} #{vname} = new #{name}(\"#{vname}\");")
       
     end
@@ -2045,9 +2304,21 @@ ARGV[1..-1].each do |yaml_file|
     template_datas[name] = data
   end
 
+  # Generate template data for global value dictionary wrappers
+  model.global_value_dictionaries.each do |name, d|
+    data = template_datas[name] || {}
+    d.generate_template_data(data)
+    
+    data['imports'] = imports_s
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+    data['template'] = def_value_dictionary_template
+    
+    template_datas[name] = data
+  end
+
   # Assign functions to classes
   functions = {}
-  model.functions.find_all {|f| f.is_available?(mac_version, ios_version) && !f.is_outdated?}.each do |f|
+  model.functions.find_all {|f| f.is_available?(@@mac_version, @@ios_version) && !f.is_outdated?}.each do |f|
     fconf = model.get_function_conf(f.name)
     if fconf && !fconf['exclude']
       owner = fconf['class'] || default_class
@@ -2063,7 +2334,7 @@ ARGV[1..-1].each do |yaml_file|
       name = fconf['name'] || f.name
       name = name[0, 1].downcase + name[1..-1]
       lines = []
-	  push_availability(model, f, lines)
+	  model.push_availability(f, lines)
 	  visibility = fconf['visibility'] || 'public'
 	  parameters = f.parameters
       static = "static "
@@ -2298,7 +2569,7 @@ ARGV[1..-1].each do |yaml_file|
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
       data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")").push("@NativeClass")
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
-      data['javadoc'] = "\n" + push_availability(model, cls).join("\n") + "\n"
+      data['javadoc'] = "\n" + model.push_availability(cls).join("\n") + "\n"
       template_datas[name] = data
     end
   end
@@ -2321,7 +2592,7 @@ ARGV[1..-1].each do |yaml_file|
         data['template'] = def_protocol_template
       end
       data['imports'] = imports_s
-      data['javadoc'] = "\n" + push_availability(model, prot).join("\n") + "\n"
+      data['javadoc'] = "\n" + model.push_availability(prot).join("\n") + "\n"
       template_datas[name] = data
     end
   end
@@ -2369,12 +2640,12 @@ ARGV[1..-1].each do |yaml_file|
     constructors_lines = []
     properties_lines = []
     h[:members].each do |(members, c)|
-      members.find_all {|m| m.is_a?(Bro::ObjCMethod) && m.is_available?(mac_version, ios_version)}.each do |m|
+      members.find_all {|m| m.is_a?(Bro::ObjCMethod) && m.is_available?(@@mac_version, @@ios_version)}.each do |m|
         a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, seen)
         methods_lines.concat(a[0])
         constructors_lines.concat(a[1])
       end
-      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && m.is_available?(mac_version, ios_version)}.each do |p|
+      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && m.is_available?(@@mac_version, @@ios_version)}.each do |p|
         properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, seen))
       end
     end

@@ -30,31 +30,12 @@ package org.robovm.foo;
     /*<marshalers>*/
     /*</marshalers>*/
 
-    /*<constants>*/
-    /*</constants>*/
-    
-    private static /*<name>*/ClassName/*</name>*/[] values = new /*<name>*/ClassName/*</name>*/[] {/*<values>*//*</values>*/};
-    
-    /*<name>*/ClassName/*</name>*/ (String getterName) {
-        super(Values.class, getterName);
-    }
-    
-    public static /*<name>*/ClassName/*</name>*/ valueOf(/*<type>*/Type/*</type>*/ value) {
-        for (/*<name>*/ClassName/*</name>*/ v : values) {
-            if (v.value().equals(value)) {
-                return v;
-            }
-        }
-        throw new IllegalArgumentException("No constant with value " + value + " found in " 
-            + /*<name>*/ClassName/*</name>*/.class.getName());
-    }
-    
-    /*<annotations>*/
-    /*</annotations>*/
-    public static class Values {
-    	static { Bro.bind(Values.class); }
+    /*<constructors>*/
+    /*</constructors>*/
 
-        /*<methods>*/
-        /*</methods>*/
-    }
+    /*<methods>*/
+    /*</methods>*/
+    
+    /*<keys>*/
+    /*</keys>*/
 }
