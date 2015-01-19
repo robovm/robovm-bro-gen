@@ -780,6 +780,7 @@ module Bro
       @java_type = vconf['type'] || model.resolve_type(@type)
       @mutable = vconf['mutable'] || true
       @methods = vconf['methods']
+      @extends = vconf['extends'] || is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
       @values = [first]
     end
     
@@ -792,7 +793,9 @@ module Bro
     end
     
     def generate_template_data(data)
-      data['name'] = name
+      data['name'] = @name
+      data['extends'] = @extends
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     
       marshaler_lines = []
       append_marshalers(marshaler_lines)
@@ -816,8 +819,6 @@ module Bro
         keys_s = key_lines.flatten.join("\n    ")
         data['keys'] = "\n    #{keys_s}\n    "
       end
-    
-      data['extends'] = is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
     
       data
     end
@@ -912,7 +913,7 @@ module Bro
       @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
           vconf = @model.get_value_conf(v.name)
           vname = vconf['name'] || v.name
-          method = @methods.detect {|m| vname.include? m[0] }
+          method = @methods.detect {|m| vname == m[0] || v.name == m[0] }
           if method
             mconf = method[1]
             name = mconf['name'] || method[0]
@@ -923,7 +924,7 @@ module Bro
             getter = @model.getter_for_name(param_name, type, omit_prefix)
             
             default_value = mconf['default'] || default_value_for_type(type)
-            key_accessor = @enum ? "#{@enum.name}.#{vname}" : "#{vname}()"
+            key_accessor = @enum ? "#{@enum.name}.#{vname}" : "Keys.#{vname}()"
             
             @model.push_availability(v, lines)
             lines << "public #{type} #{getter}() {"
@@ -948,16 +949,61 @@ module Bro
     
     def convenience_getter_value(type, key_accessor)
       s = []
+      resolved_type = @model.resolve_type_by_name(type)
+      
       if is_foundation?
         case type
-          when 'boolean'
-            s
+          when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
+            s << "NSNumber val = (NSNumber) get(#{key_accessor});"
+            s << "return val.#{type}Value();"
+          when 'String'
+            s << "NSString val = (NSString) get(#{key_accessor});"
+            s << "return val.toString();"
+          else
+            s << "#{type} val = get(#{key_accessor}, #{type}.class);"
+            s << "return val;"
         end
       else
+        if resolved_type.is_a?(GlobalValueEnumeration)
+          s << "#{resolved_type.java_type} val = get(#{key_accessor}, #{resolved_type.java_type}.class);"
+          s << "return #{resolved_type.name}.valueOf(val);"
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+          s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
+          s << "return new #{resolved_type.name}(val);"
+        elsif resolved_type.is_a?(Enum)
+          s << "CFNumber val = get(#{key_accessor}, CFNumber.class);"
+          econf = @model.get_enum_conf(resolved_type.name)
+          if resolved_type.is_options? || econf['bits']
+            s << "return new #{resolved_type.name}(val.longValue());"
+          else
+            s << "return #{resolved_type.name}.valueOf(val.longValue());"
+          end
+        else
         case type
           when 'boolean'
             s << "CFBoolean val = get(#{key_accessor}, CFBoolean.class);"
             s << "return val.booleanValue();"
+          when 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
+            s << "CFNumber val = get(#{key_accessor}, CFNumber.class);"
+            s << "return val.#{type}Value();"
+          when 'String'
+            s << "CFString val = get(#{key_accessor}, CFString.class);"
+            s << "return val.toString();"
+          when 'CMTime'
+            s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
+            s << "NSDictionary dict = val.as(NSDictionary.class);"
+            s << "return CMTime.create(dict);"
+          when 'Map<String, NSObject>'
+            s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
+            s << "NSDictionary dict = val.as(NSDictionary.class)"
+            s << "return dict.asStringMap();"
+          when 'Map<String, String>'
+            s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
+            s << "return val.asStringStringMap();"
+          else
+            s << "#{type} val = get(#{key_accessor}, #{type}.class);"
+            s << "return val;"
+        end
         end
       end
       "        " + s.flatten.join("\n            ")
@@ -965,15 +1011,36 @@ module Bro
     
     def convenience_setter_value(type, param_name)
       s = ''
+      resolved_type = @model.resolve_type_by_name(type)
       if is_foundation?
         case type
           when 'boolean'
             s
         end
       else
+        if resolved_type.is_a?(GlobalValueEnumeration)
+          s = "#{param_name}.value()"
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+          s = "#{param_name}.getDictionary()"
+        elsif resolved_type.is_a?(Enum)
+          s = "CFNumber.valueOf(#{param_name}.value())"
+        else
         case type
           when 'boolean'
             s = "CFBoolean.valueOf(#{param_name})"
+          when 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
+            s = "CFNumber.valueOf(#{param_name})"
+          when 'String'
+            s = "new CFString(#{param_name})"
+          when 'CMTime'
+            s = "#{param_name}.asDictionary(null).as(CFDictionary.class)"
+          when 'Map<String, NSObject>'
+            s = "CFDictionary.fromStringMap(#{param_name})"
+          when 'Map<String, String>'
+            s = "CFDictionary.fromStringStringMap(#{param_name})"
+          else
+            s = param_name
+        end
         end
       end
       s
@@ -984,7 +1051,7 @@ module Bro
       case type
       when 'boolean'
         default = false
-      when 'byte', 'short', 'int', 'long', 'float', 'double'
+      when 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
         default = 0
       end
       default
@@ -993,9 +1060,28 @@ module Bro
     def append_key_class(lines)
       @values.sort_by { |v| v.since }
       
-        @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
-          $stderr.puts "#{v.name}" # TODO generate static Keys class
+      lines << "@Library(\"#{@@library}\")"
+      lines << "public static class Keys {"
+      lines << "    static { Bro.bind(Keys.class); }"
+    	
+      @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+        vconf = @model.get_value_conf(v.name)
+      
+        indentation = "    "
+        vname = vconf['name'] || v.name
+        java_type = vconf['type'] || @model.to_java_type(@model.resolve_type(v.type, true))
+        visibility = vconf['visibility'] || 'public'
+            
+        @model.push_availability(v, lines, indentation)
+        if vconf.has_key?('dereference') && !vconf['dereference']
+          lines << "#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)"
+        else
+          lines << "#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)"
         end
+        lines << "#{indentation}#{visibility} static native #{java_type} #{vname}();"
+      end
+      
+      lines << "}"
     end
     
     private :append_marshalers, :append_constructors, :append_basic_methods, :append_convenience_methods, :append_key_class
@@ -1236,6 +1322,8 @@ module Bro
       e = e || @objc_classes.find {|e| e.name == name}
       e = e || @objc_protocols.find {|e| e.name == name}
       e = e || @typedefs.find {|e| e.name == name}
+      e = e || @global_value_enums[name]
+      e = e || @global_value_dictionaries[name]
       e || (orig_name != name ? Builtin.new(name) : nil)
     end
     def resolve_type(type, allow_arrays = false, owner = nil, method = nil)
@@ -1492,10 +1580,10 @@ module Bro
             /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
             /^autoreverses/, /^bounces/, /^casts/, /^clears/, /^clips/, /^collapses/, /^contains/, 
             /^defers/, /^defines/, /^delays/, /^depends/, /^dims/, /^disconnects/, /^displays/, 
-            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^generates/, /^groups/, 
+            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^generates/, /^groups/, 
             /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
             /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
-            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^returns/, /^reverses/, 
+            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^resets/, /^returns/, /^reverses/, 
             /^scrolls/, /^sends/, /^shows/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
@@ -1670,7 +1758,7 @@ module Bro
         end
       end
       # Filter out global values that belong to an enumeration or dictionary wrapper
-      @global_values = @global_values.find_all {|v| !v.enum || !v.dictionary}
+      @global_values = @global_values.find_all {|v| !v.enum && !v.dictionary}
 
       # Filter out constants not defined in the framework or library we're generating code for
       @constant_values = @constant_values.find_all {|v| is_included?(v)}
@@ -1917,12 +2005,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
     
-    ret_marshaler = conf['return_marshaler']
-    if ret_marshaler
-      ret_marshaler = "@org.robovm.rt.bro.annotation.Marshaler(#{ret_marshaler})"
-    else
-      ret_marshaler = ''
-    end
+    ret_marshaler = conf['return_marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['return_marshaler']})" : ''
     
     ret_anno = ''
     if generics_s.size > 0 && ret_type[0] =~ /^(@Pointer|@ByVal|@MachineSizedFloat|@MachineSizedSInt|@MachineSizedUInt)/
@@ -2037,7 +2120,7 @@ ARGV[1..-1].each do |yaml_file|
   model.process(translation_unit.cursor)
 
   package = conf['package'] || ''
-  library = conf['library'] || ''
+  @@library = conf['library'] || ''
   default_class = conf['default_class'] || conf['framework'] || 'Functions'
 
   template_datas = {}
@@ -2150,7 +2233,7 @@ ARGV[1..-1].each do |yaml_file|
         # Start new static class.
         last_static_class = vconf['static_class']
         
-        lines.push("@Library(\"#{library}\")", "public static class #{last_static_class} {", "    static { Bro.bind(#{last_static_class}.class); }\n")
+        lines.push("@Library(\"#{@@library}\")", "public static class #{last_static_class} {", "    static { Bro.bind(#{last_static_class}.class); }\n")
       end
       indentation = last_static_class.nil? ? "" : "    "
       
@@ -2175,7 +2258,7 @@ ARGV[1..-1].each do |yaml_file|
 
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -2279,10 +2362,6 @@ ARGV[1..-1].each do |yaml_file|
         mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)")
       end
       mlines.push("#{indentation}#{visibility} static native #{java_type} #{vname}();")
-      if !v.is_const? && !vconf['readonly']
-        model.push_availability(v, mlines, indentation)
-        mlines = mlines + ["#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)", "#{indentation}public static native void #{vname}(#{java_type} v);"]
-      end
       
       model.push_availability(v, clines)
       clines.push("public static final #{name} #{vname} = new #{name}(\"#{vname}\");")
@@ -2299,7 +2378,7 @@ ARGV[1..-1].each do |yaml_file|
     data['extends'] = "GlobalValueEnumeration<#{e.java_type}>"
     data['imports'] = imports_s
     data['values'] = values_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     data['template'] = def_value_enum_template
     template_datas[name] = data
   end
@@ -2310,7 +2389,6 @@ ARGV[1..-1].each do |yaml_file|
     d.generate_template_data(data)
     
     data['imports'] = imports_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
     data['template'] = def_value_dictionary_template
     
     template_datas[name] = data
@@ -2349,7 +2427,8 @@ ARGV[1..-1].each do |yaml_file|
 		  java_ret = fconf['return_type'] || model.resolve_type(f.return_type).java_name
 		  java_parameters = parameters[1..-1].map do |e|
 		  	pconf = paramconf[e.name] || {}
-		    "#{pconf['type'] || model.resolve_type(e.type).java_name} #{pconf['name'] || e.name}"
+		  	marshaler = pconf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{pconf['marshaler']}.class) " : ''
+		    "#{marshaler}#{pconf['type'] || model.resolve_type(e.type).java_name} #{pconf['name'] || e.name}"
 		  end
 		  args = parameters[1..-1].map do |e|
 		 	pconf = paramconf[e.name] || {}
@@ -2375,7 +2454,8 @@ ARGV[1..-1].each do |yaml_file|
 	  java_ret = fconf['return_type'] || model.to_java_type(model.resolve_type(f.return_type))
 	  java_parameters = parameters.map do |e|
 	    pconf = paramconf[e.name] || {}
-		"#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
+	    marshaler = pconf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{pconf['marshaler']}.class) " : ''
+		"#{marshaler}#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
 	  end
 	  lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
 	  lines.push("#{visibility} #{static}native #{java_ret_marshaler}#{java_ret} #{name}(#{java_parameters.join(', ')});")
@@ -2383,7 +2463,7 @@ ARGV[1..-1].each do |yaml_file|
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -2567,7 +2647,7 @@ ARGV[1..-1].each do |yaml_file|
       data['imports'] = imports_s
       data['implements'] = protocol_list_s(model, 'implements', cls.protocols, c)
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
-      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")").push("@NativeClass")
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")").push("@NativeClass")
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
       data['javadoc'] = "\n" + model.push_availability(cls).join("\n") + "\n"
       template_datas[name] = data
@@ -2585,7 +2665,7 @@ ARGV[1..-1].each do |yaml_file|
         data['extends'] = c['extends'] || 'NSObject'
         data['implements'] = protocol_list_s(model, 'implements', prot.protocols, c)
         data['ptr'] = "public static class #{prot.java_name}Ptr extends Ptr<#{prot.java_name}, #{prot.java_name}Ptr> {}"
-        data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+        data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
         data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
       else
         data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
@@ -2661,7 +2741,7 @@ ARGV[1..-1].each do |yaml_file|
       end
     elsif owner.is_a?(Bro::ObjCCategory)
       constructors_lines.unshift("private #{owner_name}() {}")
-      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{library}\")")
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
       data['extends'] = 'NSExtensions'
