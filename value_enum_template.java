@@ -27,13 +27,15 @@ package org.robovm.foo;
     extends /*<extends>*/Object/*</extends>*/
     /*<implements>*//*</implements>*/ {
 
+    static { Bro.bind(/*<name>*/ClassName/*</name>*/.class); }
+
     /*<marshalers>*/
     /*</marshalers>*/
 
     /*<constants>*/
     /*</constants>*/
     
-    private static /*<name>*/ClassName/*</name>*/[] values = new /*<name>*/ClassName/*</name>*/[] {/*<values>*//*</values>*/};
+    private static /*<name>*/ClassName/*</name>*/[] values = new /*<name>*/ClassName/*</name>*/[] {/*<value_list>*//*</value_list>*/};
     
     /*<name>*/ClassName/*</name>*/ (String getterName) {
         super(Values.class, getterName);
@@ -49,12 +51,15 @@ package org.robovm.foo;
             + /*<name>*/ClassName/*</name>*/.class.getName());
     }
     
+    /*<methods>*/
+    /*</methods>*/
+    
     /*<annotations>*/
     /*</annotations>*/
     public static class Values {
     	static { Bro.bind(Values.class); }
 
-        /*<methods>*/
-        /*</methods>*/
+        /*<values>*/
+        /*</values>*/
     }
 }

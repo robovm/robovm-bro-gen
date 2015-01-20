@@ -781,6 +781,7 @@ module Bro
       @mutable = vconf['mutable'] || true
       @methods = vconf['methods']
       @extends = vconf['extends'] || is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
+      @constructor_visibility = vconf['constructor_visibility']
       @values = [first]
     end
     
@@ -880,7 +881,9 @@ module Bro
     def append_constructors(lines)
       dict_type = is_foundation? ? "NSDictionary<NSString, NSObject>" : "CFDictionary"
     
-      lines << "#{@name}(#{dict_type} data) {"
+      constructor_visibility = "#{@constructor_visibility} " || ''
+    
+      lines << "#{constructor_visibility}#{@name}(#{dict_type} data) {"
       lines << "    super(data);"
       lines << "}"
       lines << "public #{@name}() {}" if is_mutable?
@@ -889,13 +892,13 @@ module Bro
     def append_basic_methods(lines)
       key_type = @enum ? @enum.name : @java_type
       key_value = @enum ? "key.value()" : "key"
-      base_type = is_foundation? ? "NSObject" : "CFType"
+      base_type = is_foundation? ? "NSObject" : "NativeObject"
     
       lines << "public boolean has(#{key_type} key) {"
       lines << "    return data.containsKey(#{key_value});"
       lines << "}"
       lines << "public NSObject get(#{key_type} key) {" if is_foundation?
-      lines << "public <T extends CFType> T get(#{key_type} key, Class<T> type) {" if !is_foundation?
+      lines << "public <T extends NativeObject> T get(#{key_type} key, Class<T> type) {" if !is_foundation?
       lines << "    if (has(key)) {"
       lines << "        return data.get(#{key_value});" if is_foundation?
       lines << "        return data.get(#{key_value}, type);" if !is_foundation?
@@ -951,6 +954,8 @@ module Bro
       s = []
       resolved_type = @model.resolve_type_by_name(type)
       
+      type_no_generics = type.partition("<").first
+      
       if is_foundation?
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
@@ -960,7 +965,7 @@ module Bro
             s << "NSString val = (NSString) get(#{key_accessor});"
             s << "return val.toString();"
           else
-            s << "#{type} val = get(#{key_accessor}, #{type}.class);"
+            s << "#{type} val = get(#{key_accessor}, #{type_no_generics}.class);"
             s << "return val;"
         end
       else
@@ -995,13 +1000,13 @@ module Bro
             s << "return CMTime.create(dict);"
           when 'Map<String, NSObject>'
             s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
-            s << "NSDictionary dict = val.as(NSDictionary.class)"
+            s << "NSDictionary dict = val.as(NSDictionary.class);"
             s << "return dict.asStringMap();"
           when 'Map<String, String>'
             s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
             s << "return val.asStringStringMap();"
           else
-            s << "#{type} val = get(#{key_accessor}, #{type}.class);"
+            s << "#{type} val = get(#{key_accessor}, #{type_no_generics}.class);"
             s << "return val;"
         end
         end
@@ -2341,7 +2346,7 @@ ARGV[1..-1].each do |yaml_file|
     marshalers_s = marshaler_lines.flatten.join("\n    ")
     
     names = []
-    mlines = []
+    vlines = []
     clines = []
     indentation = "    "
     
@@ -2351,33 +2356,35 @@ ARGV[1..-1].each do |yaml_file|
       vconf = model.get_value_conf(v.name)
       
       vname = vconf['name'] || v.name
+      vname = "_#{vname}" if vname.match(/^[0-9]/)
+      
       names.push(vname)
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
       visibility = vconf['visibility'] || 'public'
             
-      model.push_availability(v, mlines, indentation)
+      model.push_availability(v, vlines, indentation)
       if vconf.has_key?('dereference') && !vconf['dereference']
-        mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
+        vlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true, dereference=false)")
       else
-        mlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)")
+        vlines.push("#{indentation}@GlobalValue(symbol=\"#{v.name}\", optional=true)")
       end
-      mlines.push("#{indentation}#{visibility} static native #{java_type} #{vname}();")
+      vlines.push("#{indentation}#{visibility} static native #{java_type} #{vname}();")
       
       model.push_availability(v, clines)
       clines.push("public static final #{name} #{vname} = new #{name}(\"#{vname}\");")
       
     end
     
-    methods_s = mlines.flatten.join("\n    ")
+    values_s = vlines.flatten.join("\n    ")
     constants_s = clines.flatten.join("\n    ")
-    values_s = names.flatten.join(", ")
+    value_list_s = names.flatten.join(", ")
     
     data['marshalers'] = "\n    #{marshalers_s}\n    "
-    data['methods'] = "\n    #{methods_s}\n        "
+    data['values'] = "\n    #{values_s}\n        "
     data['constants'] = "\n    #{constants_s}\n    "
     data['extends'] = "GlobalValueEnumeration<#{e.java_type}>"
     data['imports'] = imports_s
-    data['values'] = values_s
+    data['value_list'] = value_list_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     data['template'] = def_value_enum_template
     template_datas[name] = data
