@@ -868,7 +868,7 @@ module Bro
       lines << "        if (l == null) {"
       lines << "            return 0L;"
       lines << "        }"
-      lines << "        NSArray<NSDictionary<NSString, NSObject> array = new NSMutableArray<>();" if is_foundation?
+      lines << "        NSArray<NSDictionary<NSString, NSObject>> array = new NSMutableArray<>();" if is_foundation?
       lines << "        CFArray array = CFMutableArray.create();" if !is_foundation?
       lines << "        for (#{@name} i : l) {"
       lines << "            array.add(i.getDictionary());"
@@ -1019,8 +1019,12 @@ module Bro
       resolved_type = @model.resolve_type_by_name(type)
       if is_foundation?
         case type
-          when 'boolean'
-            s
+          when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
+            s = "NSNumber.valueOf(#{param_name})"
+          when 'String'
+            s = "new NSString(#{param_name})"
+          else
+            s = param_name
         end
       else
         if resolved_type.is_a?(GlobalValueEnumeration)
@@ -1093,13 +1097,14 @@ module Bro
   end
 
   class GlobalValueEnumeration < Entity
-    attr_accessor :name, :type, :java_type, :values
+    attr_accessor :name, :type, :java_type, :values, :extends
     def initialize(model, name, first)
       super(model, nil)
       @name = name
       @type = first.type
       vconf = model.get_value_conf(first.name)
       @java_type = vconf['type'] || model.resolve_type(@type)
+      @extends = vconf['extends']
       @values = [first]
     end
   end
@@ -1588,7 +1593,7 @@ module Bro
             /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^generates/, /^groups/, 
             /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
             /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
-            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^resets/, /^returns/, /^reverses/, 
+            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
             /^scrolls/, /^sends/, /^shows/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
@@ -1974,7 +1979,8 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     param_types = method.parameters.inject([]) do |l, p|
       index = l.size + 1
       pconf = params_conf[p.name] || params_conf[l.size] || {}
-      l.push(get_generic_type(model, owner, method, p.type, index, pconf['type'], pconf['name'] || p.name))
+      pmarshaler = pconf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{pconf['marshaler']}.class) " : ''
+      l.push(get_generic_type(model, owner, method, p.type, index, pconf['type'], pconf['name'] || p.name).push(pmarshaler))
       l
     end
     name = conf['name']
@@ -2000,7 +2006,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     native = owner.is_a?(Bro::ObjCProtocol) && !model.get_protocol_conf(owner.name)['class'] || 
     	(owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)) ? "" : (adapter ? '' : "native")
     static = method.is_a?(Bro::ObjCClassMethod) || owner.is_a?(Bro::ObjCCategory) ? "static" : ""
-  #  lines = ["@Method", "#{visibility} #{static}#{native}#{java_type} #{name}();"]
+
     generics_s = ([ret_type] + param_types).map {|e| e[1]}.find_all {|e| e}.join(', ')
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     if owner.is_a?(Bro::ObjCCategory)
@@ -2008,7 +2014,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
         param_types.unshift([owner.owner, nil, 'thiz'])
       end
     end
-    parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+    parameters_s = param_types.map {|p| "#{p[4]}#{p[0]} #{p[2]}"}.join(', ')
     
     ret_marshaler = conf['return_marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['return_marshaler']})" : ''
     
@@ -2024,12 +2030,30 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     method_lines = []
     constructor_lines = []
+    
+    if conf['throws']
+      model.push_availability(method, method_lines)
+    
+      new_parameters_s = param_types[0..-2].map {|p| "#{p[0]} #{p[2]}"}.join(', ')
+      params_s = param_types[0..-2].map {|p| "#{p[2]}"}.join(', ')
+      method_lines << "public #{[static,ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
+      method_lines << "   NSError.NSErrorPtr ptr = new NSError.NSErrorPtr();"
+      ret = ret_type[0] == 'void' ? '' : "#{ret_type[0]} result = "
+      method_lines << "   #{ret}#{name}(#{params_s}, ptr);"
+      method_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
+      method_lines << "   return result;" if ret_type[0] != 'void'
+      method_lines << "}"
+      
+      visibility = 'private'
+    end
+    
     model.push_availability(method, method_lines)
     if adapter
       method_lines.push("@NotImplemented(\"#{method.name}\")")
     else
       method_lines.push("@Method(selector = \"#{method.name}\")")
     end
+    
     if owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)
       new_parameters_s = (['ObjCClass clazz'] + (param_types.map {|p| "#{p[0]} #{p[2]}"})).join(', ')
       method_lines.push("protected static native #{[ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});")
@@ -2305,7 +2329,7 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("            return null;")
     lines.push("        }")
     lines.push("        List<#{class_name}> list = new ArrayList<>();")
-    lines.push("        for (long i = 0, n = o.size(); i < n; i++) {")
+    lines.push("        for (int i = 0, n = o.size(); i < n; i++) {")
     if base_type == "NSObject"
       lines.push("            list.add(#{class_name}.valueOf(o.get(i)));")
     else
@@ -2382,7 +2406,7 @@ ARGV[1..-1].each do |yaml_file|
     data['marshalers'] = "\n    #{marshalers_s}\n    "
     data['values'] = "\n    #{values_s}\n        "
     data['constants'] = "\n    #{constants_s}\n    "
-    data['extends'] = "GlobalValueEnumeration<#{e.java_type}>"
+    data['extends'] = e.extends || "GlobalValueEnumeration<#{e.java_type}>"
     data['imports'] = imports_s
     data['value_list'] = value_list_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
