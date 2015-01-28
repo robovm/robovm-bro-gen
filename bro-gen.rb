@@ -778,7 +778,7 @@ module Bro
       @type = first.type
       vconf = model.get_value_conf(first.name)
       @java_type = vconf['type'] || model.resolve_type(@type)
-      @mutable = vconf['mutable'] || true
+      @mutable = vconf['mutable'].nil? ? true : vconf['mutable']
       @methods = vconf['methods']
       @extends = vconf['extends'] || is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
       @constructor_visibility = vconf['constructor_visibility']
@@ -881,7 +881,7 @@ module Bro
     def append_constructors(lines)
       dict_type = is_foundation? ? "NSDictionary<NSString, NSObject>" : "CFDictionary"
     
-      constructor_visibility = "#{@constructor_visibility} " || ''
+      constructor_visibility = @constructor_visibility.nil? ? '' : "#{@constructor_visibility} "
     
       lines << "#{constructor_visibility}#{@name}(#{dict_type} data) {"
       lines << "    super(data);"
@@ -905,10 +905,12 @@ module Bro
       lines << "    }"
       lines << "    return null;"
       lines << "}"
-      lines << "public #{@name} set(#{key_type} key, #{base_type} value) {"
-      lines << "    data.put(#{key_value}, value);"
-      lines << "    return this;"
-      lines << "}"
+      if is_mutable?
+        lines << "public #{@name} set(#{key_type} key, #{base_type} value) {"
+        lines << "    data.put(#{key_value}, value);"
+        lines << "    return this;"
+        lines << "}"
+      end
     end
     
     def append_convenience_methods(lines)
@@ -957,6 +959,21 @@ module Bro
       type_no_generics = type.partition("<").first
       
       if is_foundation?
+        if resolved_type.is_a?(GlobalValueEnumeration)
+          s << "#{resolved_type.java_type} val = (#{resolved_type.java_type}) get(#{key_accessor});"
+          s << "return #{resolved_type.name}.valueOf(val);"
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+          s << "NSDictionary<NSString, NSObject> val = (NSDictionary<NSString, NSObject>) get(#{key_accessor});"
+          s << "return new #{resolved_type.name}(val);"
+        elsif resolved_type.is_a?(Enum)
+          s << "NSNumber val = (NSNumber) get(#{key_accessor});"
+          econf = @model.get_enum_conf(resolved_type.name)
+          if resolved_type.is_options? || econf['bits']
+            s << "return new #{resolved_type.name}(val.longValue());"
+          else
+            s << "return #{resolved_type.name}.valueOf(val.longValue());"
+          end
+        else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
             s << "NSNumber val = (NSNumber) get(#{key_accessor});"
@@ -967,6 +984,7 @@ module Bro
           else
             s << "#{type} val = get(#{key_accessor}, #{type_no_generics}.class);"
             s << "return val;"
+        end
         end
       else
         if resolved_type.is_a?(GlobalValueEnumeration)
@@ -1018,6 +1036,13 @@ module Bro
       s = ''
       resolved_type = @model.resolve_type_by_name(type)
       if is_foundation?
+        if resolved_type.is_a?(GlobalValueEnumeration)
+          s = "#{param_name}.value()"
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+          s = "#{param_name}.getDictionary()"
+        elsif resolved_type.is_a?(Enum)
+          s = "NSNumber.valueOf(#{param_name}.value())"
+        else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
             s = "NSNumber.valueOf(#{param_name})"
@@ -1025,6 +1050,7 @@ module Bro
             s = "new NSString(#{param_name})"
           else
             s = param_name
+        end
         end
       else
         if resolved_type.is_a?(GlobalValueEnumeration)
@@ -1067,7 +1093,7 @@ module Bro
     end
     
     def append_key_class(lines)
-      @values.sort_by { |v| v.since }
+      @values.sort_by { |v| v.since || '' }
       
       lines << "@Library(\"#{@@library}\")"
       lines << "public static class Keys {"
@@ -2293,6 +2319,10 @@ ARGV[1..-1].each do |yaml_file|
   end
   
   def generate_global_value_enum_marshalers(lines, class_name, java_type)
+    if java_type == 'Integer'
+      return # Ignore for now
+    end
+  
     base_type = "NSObject"
     if java_type == "CFString"
       base_type = "CFType"
@@ -2329,7 +2359,7 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("            return null;")
     lines.push("        }")
     lines.push("        List<#{class_name}> list = new ArrayList<>();")
-    lines.push("        for (int i = 0, n = o.size(); i < n; i++) {")
+    lines.push("        for (int i = 0; i < o.size(); i++) {")
     if base_type == "NSObject"
       lines.push("            list.add(#{class_name}.valueOf(o.get(i)));")
     else
@@ -2374,7 +2404,7 @@ ARGV[1..-1].each do |yaml_file|
     clines = []
     indentation = "    "
     
-    e.values.sort_by { |v| v.since }
+    e.values.sort_by { |v| v.since || '' }
     
     e.values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
       vconf = model.get_value_conf(v.name)
@@ -2384,6 +2414,7 @@ ARGV[1..-1].each do |yaml_file|
       
       names.push(vname)
       java_type = vconf['type'] || model.to_java_type(model.resolve_type(v.type, true))
+      java_type = 'int' if java_type == 'Integer'
       visibility = vconf['visibility'] || 'public'
             
       model.push_availability(v, vlines, indentation)
@@ -2410,6 +2441,7 @@ ARGV[1..-1].each do |yaml_file|
     data['imports'] = imports_s
     data['value_list'] = value_list_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+    
     data['template'] = def_value_enum_template
     template_datas[name] = data
   end
@@ -2443,7 +2475,6 @@ ARGV[1..-1].each do |yaml_file|
       name = fconf['name'] || f.name
       name = name[0, 1].downcase + name[1..-1]
       lines = []
-	  model.push_availability(f, lines)
 	  visibility = fconf['visibility'] || 'public'
 	  parameters = f.parameters
       static = "static "
@@ -2466,6 +2497,7 @@ ARGV[1..-1].each do |yaml_file|
 			pconf['name'] || e.name
 		  end
 		  args.unshift('this')
+		  model.push_availability(f, lines)
 		  lines.push("#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }")
 		  # Alter the visibility for the @Bridge method to private
 		  visibility = 'private'
@@ -2488,6 +2520,35 @@ ARGV[1..-1].each do |yaml_file|
 	    marshaler = pconf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{pconf['marshaler']}.class) " : ''
 		"#{marshaler}#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
 	  end
+	  
+	  if fconf['throws']
+        model.push_availability(f, lines)
+    
+        error_type = 'NSError'
+    	case fconf['throws']
+          when 'CFStreamErrorException'
+            error_type = 'CFStreamError'
+        end
+    
+        new_parameters_s = java_parameters[0..-2].join(', ')
+        params = parameters[0..-2].map do |e|
+	      pconf = paramconf[e.name] || {}
+		  "#{pconf['name'] || e.name}"
+	    end
+	    params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
+        lines << "#{visibility} #{static}#{java_ret_marshaler}#{java_ret} #{name}(#{new_parameters_s}) throws #{fconf['throws']} {"
+        lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
+        ret = java_ret == 'void' ? '' : "#{java_ret} result = "
+        lines << "   #{ret}#{name}(#{params_s});"
+        lines << "   if (ptr.get() != null) { throw new #{fconf['throws']}(ptr.get()); }"
+        lines << "   return result;" if java_ret != 'void'
+        lines << "}"
+      
+        java_parameters[-1] = "#{error_type}.#{error_type}Ptr error"
+        visibility = 'private'
+      end
+	  
+	  model.push_availability(f, lines)
 	  lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
 	  lines.push("#{visibility} #{static}native #{java_ret_marshaler}#{java_ret} #{name}(#{java_parameters.join(', ')});")
       lines
