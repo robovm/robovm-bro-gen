@@ -2528,6 +2528,8 @@ ARGV[1..-1].each do |yaml_file|
     	case fconf['throws']
           when 'CFStreamErrorException'
             error_type = 'CFStreamError'
+          when 'CFErrorException'
+            error_type = 'CFError'
         end
     
         new_parameters_s = java_parameters[0..-2].join(', ')
@@ -2538,7 +2540,8 @@ ARGV[1..-1].each do |yaml_file|
 	    params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
         lines << "#{visibility} #{static}#{java_ret_marshaler}#{java_ret} #{name}(#{new_parameters_s}) throws #{fconf['throws']} {"
         lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
-        ret = java_ret == 'void' ? '' : "#{java_ret} result = "
+        ret = java_ret.gsub(/@\w+ /, '') # Trim annotations
+        ret = ret == 'void' ? '' : "#{ret} result = "
         lines << "   #{ret}#{name}(#{params_s});"
         lines << "   if (ptr.get() != null) { throw new #{fconf['throws']}(ptr.get()); }"
         lines << "   return result;" if java_ret != 'void'
