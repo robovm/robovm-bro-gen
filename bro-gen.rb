@@ -425,6 +425,7 @@ module Bro
       super(model, cursor)
       @name = @name.gsub(/\s*\bconst\b\s*/, '')
       @name = @name.sub(/^(struct|union)\s*/, '')
+      
       @members = []
       @children = []
       @parent = parent
@@ -942,9 +943,16 @@ module Bro
             if is_mutable?
               setter = @model.setter_for_name(name, omit_prefix)
               
+              convenience_setter = convenience_setter_value(type, param_name)
+              if convenience_setter.respond_to?('each')
+                convenience_setter << "    set(#{key_accessor}, val);"
+                convenience_setter = convenience_setter.flatten.join("\n    ")
+              else
+                convenience_setter = "    set(#{key_accessor}, #{convenience_setter});"
+              end
 			  @model.push_availability(v, lines)
 			  lines << "public #{@name} #{setter}(#{type} #{param_name}) {"
-			  lines << "    set(#{key_accessor}, #{convenience_setter_value(type, param_name)});"
+			  lines << convenience_setter
 			  lines << "    return this;"
 			  lines << "}"
 			end
@@ -1001,6 +1009,9 @@ module Bro
           else
             s << "return #{resolved_type.name}.valueOf(val.longValue());"
           end
+        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
+          s << "NSData val = get(#{key_accessor}, NSData.class);"
+          s << "return val.getStructData(#{type}.class);"
         else
         case type
           when 'boolean'
@@ -1012,10 +1023,23 @@ module Bro
           when 'String'
             s << "CFString val = get(#{key_accessor}, CFString.class);"
             s << "return val.toString();"
-          when 'CMTime'
-            s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
-            s << "NSDictionary dict = val.as(NSDictionary.class);"
-            s << "return CMTime.create(dict);"
+          when 'List<String>'
+            s << "CFArray val = get(#{key_accessor}, CFArray.class);"
+            s << "return val.asStringList();"
+          when /^List<(.*)>$/
+            s << "CFArray val = get(#{key_accessor}, CFArray.class);"
+          
+            generic_type = @model.resolve_type_by_name("#{$1}")
+			if generic_type.is_a?(GlobalValueDictionaryWrapper)
+              s << "List<#{$1}> list = new ArrayList<>();"
+              s << "CFDictionary[] array = val.toArray(CFDictionary.class);"
+              s << "for (CFDictionary d : array) {"
+              s << "   list.add(new #{$1}(d));"
+              s << "}"
+              s << "return list;"
+            else
+              s << "return val.toList(#{$1}.class);"
+            end
           when 'Map<String, NSObject>'
             s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
             s << "NSDictionary dict = val.as(NSDictionary.class);"
@@ -1023,6 +1047,10 @@ module Bro
           when 'Map<String, String>'
             s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
             s << "return val.asStringStringMap();"
+          when 'CMTime'
+            s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
+            s << "NSDictionary dict = val.as(NSDictionary.class);"
+            s << "return CMTime.create(dict);"
           else
             s << "#{type} val = get(#{key_accessor}, #{type_no_generics}.class);"
             s << "return val;"
@@ -1033,7 +1061,7 @@ module Bro
     end
     
     def convenience_setter_value(type, param_name)
-      s = ''
+      s = nil
       resolved_type = @model.resolve_type_by_name(type)
       if is_foundation?
         if resolved_type.is_a?(GlobalValueEnumeration)
@@ -1059,6 +1087,8 @@ module Bro
           s = "#{param_name}.getDictionary()"
         elsif resolved_type.is_a?(Enum)
           s = "CFNumber.valueOf(#{param_name}.value())"
+        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
+          s = "new NSData(#{param_name})"
         else
         case type
           when 'boolean'
@@ -1067,12 +1097,25 @@ module Bro
             s = "CFNumber.valueOf(#{param_name})"
           when 'String'
             s = "new CFString(#{param_name})"
-          when 'CMTime'
-            s = "#{param_name}.asDictionary(null).as(CFDictionary.class)"
+          when 'List<String>'
+            s = "CFArray.fromStrings(#{param_name})"
+          when /List<(.*)>/
+            generic_type = @model.resolve_type_by_name("#{$1}")
+			if generic_type.is_a?(GlobalValueDictionaryWrapper)
+			  s = []
+			  s << "    CFArray val = CFMutableArray.create();"
+			  s << "    for (#{generic_type.name} e : #{param_name}) {"
+			  s << "        val.add(e.getDictionary());"
+			  s << "    }"
+			else
+              s = "CFArray.create(#{param_name})"
+            end
           when 'Map<String, NSObject>'
             s = "CFDictionary.fromStringMap(#{param_name})"
           when 'Map<String, String>'
             s = "CFDictionary.fromStringStringMap(#{param_name})"
+          when 'CMTime'
+            s = "#{param_name}.asDictionary(null).as(CFDictionary.class)"
           else
             s = param_name
         end
@@ -1619,7 +1662,7 @@ module Bro
             /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^generates/, /^groups/, 
             /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
             /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
-            /^provides/, /^reads/, /^receives/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
+            /^provides/, /^reads/, /^receives/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
             /^scrolls/, /^sends/, /^shows/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
@@ -2528,8 +2571,6 @@ ARGV[1..-1].each do |yaml_file|
     	case fconf['throws']
           when 'CFStreamErrorException'
             error_type = 'CFStreamError'
-          when 'CFErrorException'
-            error_type = 'CFError'
         end
     
         new_parameters_s = java_parameters[0..-2].join(', ')
