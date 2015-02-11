@@ -2103,16 +2103,27 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     if conf['throws']
       model.push_availability(method, method_lines)
     
-      new_parameters_s = param_types[0..-2].map {|p| "#{p[0]} #{p[2]}"}.join(', ')
-      params_s = param_types[0..-2].map {|p| "#{p[2]}"}.join(', ')
-      method_lines << "public #{[static,ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
-      method_lines << "   NSError.NSErrorPtr ptr = new NSError.NSErrorPtr();"
-      ret = ret_type[0] == 'void' ? '' : "#{ret_type[0]} result = "
-      method_lines << "   #{ret}#{name}(#{params_s}, ptr);"
+      error_type = 'NSError'
+      case conf['throws']
+        when 'CFStreamErrorException'
+          error_type = 'CFStreamError'
+      end
+    
+      new_parameters_s = param_types[0..-2].join(', ')
+      params = param_types[0..-2].map do |e|
+	    pconf = paramconf[e.name] || {}
+		"#{pconf['name'] || e.name}"
+	  end
+	  params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
+      method_lines << "#{[visibility,static,ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
+      method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
+      ret = ret_type[0].gsub(/@\w+ /, '') # Trim annotations
+      ret = ret == 'void' ? '' : "#{ret} result = "
+      method_lines << "   #{ret}#{name}(#{params_s});"
       method_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
       method_lines << "   return result;" if ret_type[0] != 'void'
       method_lines << "}"
-      
+    
       visibility = 'private'
     end
     
