@@ -781,7 +781,7 @@ module Bro
       @java_type = vconf['type'] || model.resolve_type(@type)
       @mutable = vconf['mutable'].nil? ? true : vconf['mutable']
       @methods = vconf['methods']
-      @extends = vconf['extends'] || is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper"
+      @extends = vconf['dictionary_extends'] || vconf['extends'] || (is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper")
       @constructor_visibility = vconf['constructor_visibility']
       @values = [first]
     end
@@ -797,6 +797,8 @@ module Bro
     def generate_template_data(data)
       data['name'] = @name
       data['extends'] = @extends
+      
+      
       data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
     
       marshaler_lines = []
@@ -1173,7 +1175,7 @@ module Bro
       @type = first.type
       vconf = model.get_value_conf(first.name)
       @java_type = vconf['type'] || model.resolve_type(@type)
-      @extends = vconf['extends']
+      @extends = vconf['enum_extends'] || vconf['extends']
       @values = [first]
     end
   end
@@ -1968,10 +1970,15 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     getter = ""
     if !conf['getter'].nil?
       getter = conf['getter']
-    elsif
+    else
       getter = model.getter_for_name(name, type[0], omit_prefix)
     end
-    setter = model.setter_for_name(name, omit_prefix)
+    setter = ""
+    if !conf['setter'].nil?
+      setter = conf['setter']
+    else
+      setter = model.setter_for_name(name, omit_prefix)
+    end
     visibility = conf['visibility'] || 
         owner.is_a?(Bro::ObjCClass) && 'public' ||
         owner.is_a?(Bro::ObjCCategory) && 'public' ||
