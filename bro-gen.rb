@@ -787,7 +787,7 @@ module Bro
     end
     
     def is_foundation?
-      !["CFString", "CFNumber"].include? @java_type 
+      !["CFType", "CFString", "CFNumber"].include? @java_type 
     end
     
     def is_mutable?
@@ -1174,7 +1174,7 @@ module Bro
       @name = name
       @type = first.type
       vconf = model.get_value_conf(first.name)
-      @java_type = vconf['type'] || model.resolve_type(@type)
+      @java_type = vconf['type'] || model.to_java_type(model.resolve_type(@type, true))
       @extends = vconf['enum_extends'] || vconf['extends']
       @values = [first]
     end
@@ -1240,6 +1240,15 @@ module Bro
       @name = cursor.spelling
       @value = cursor.enum_value
       @type = cursor.type
+      
+      if @type.spelling == "NSUInteger" && @value == -1
+        # We assume NSUIntegerMax
+        @value = "Bro.IS_32BIT ? 0xffffffffL : 0xffffffffffffffff"
+      elsif @type.spelling == "NSInteger" && @value == 0x7fffffffffffffff
+        # We assume NSIntegerMax
+        @value = "Bro.IS_32BIT ? 0x7fffffffL : 0x7fffffffffffffff"
+      end
+      
       @enum = enum
       @java_name = nil
       cursor.visit_children do |cursor, parent|
@@ -2222,7 +2231,7 @@ ARGV[1..-1].each do |yaml_file|
   imports_s = "\n" + imports.map {|im| "import #{im};"}.join("\n") + "\n"
 
   index = FFI::Clang::Index.new
-  clang_args = ['-arch', 'armv7', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
+  clang_args = ['-arch', 'arm64', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
   headers[1 .. -1].each do |e|
     clang_args.push('-include')
     clang_args.push("#{sysroot}#{e}")
@@ -2385,7 +2394,7 @@ ARGV[1..-1].each do |yaml_file|
     end
   
     base_type = "NSObject"
-    if java_type == "CFString"
+    if java_type == "CFType" || java_type == "CFString" || java_type == "CFNumber"
       base_type = "CFType"
     end
   
