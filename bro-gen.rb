@@ -1230,6 +1230,15 @@ module Bro
           @type = 'double'
         end
       end
+      
+    #  if @type == "long" && @value == "-1L"
+    #    # We assume NSUIntegerMax
+    #    @value = "Bro.IS_32BIT ? 0xffffffffL : 0xffffffffffffffffL"
+      
+      if @type == "long" && @value == "9223372036854775807L"
+        # We assume NSIntegerMax
+        @value = "Bro.IS_32BIT ? 0x7fffffffL : 0x7fffffffffffffffL"
+      end
     end
   end
 
