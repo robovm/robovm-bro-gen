@@ -2110,7 +2110,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     parameters_s = param_types.map {|p| "#{p[4]}#{p[0]} #{p[2]}"}.join(', ')
     
-    ret_marshaler = conf['return_marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['return_marshaler']})" : ''
+    ret_marshaler = conf['return_marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['return_marshaler']}.class)" : ''
     
     ret_anno = ''
     if generics_s.size > 0 && ret_type[0] =~ /^(@Pointer|@ByVal|@MachineSizedFloat|@MachineSizedSInt|@MachineSizedUInt)/
@@ -2134,13 +2134,14 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
           error_type = 'CFStreamError'
       end
     
-      new_parameters_s = param_types[0..-2].join(', ')
+      new_parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}[0..-2].join(', ')
+      paramconf = conf['parameters'] || {}
       params = param_types[0..-2].map do |e|
-	    pconf = paramconf[e.name] || {}
-		"#{pconf['name'] || e.name}"
+	    pconf = paramconf[e[2]] || {}
+		"#{pconf['name'] || e[2]}"
 	  end
 	  params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
-      method_lines << "#{[visibility,static,ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
+      method_lines << "#{[visibility,static,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
       method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
       ret = ret_type[0].gsub(/@\w+ /, '') # Trim annotations
       ret = ret == 'void' ? '' : "#{ret} result = "
