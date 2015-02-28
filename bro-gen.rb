@@ -798,8 +798,7 @@ module Bro
       data['name'] = @name
       data['extends'] = @extends
       
-      
-      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
     
       marshaler_lines = []
       append_marshalers(marshaler_lines)
@@ -918,9 +917,10 @@ module Bro
     
     def append_convenience_methods(lines)
       lines << "\n"
-      @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+      @values.find_all {|v| v.is_available?($mac_version, $ios_version) && !v.is_outdated?}.each do |v|
           vconf = @model.get_value_conf(v.name)
           vname = vconf['name'] || v.name
+          
           method = @methods.detect {|m| vname == m[0] || v.name == m[0] }
           if method
             mconf = method[1]
@@ -1140,11 +1140,11 @@ module Bro
     def append_key_class(lines)
       @values.sort_by { |v| v.since || '' }
       
-      lines << "@Library(\"#{@@library}\")"
+      lines << "@Library(\"#{$library}\")"
       lines << "public static class Keys {"
       lines << "    static { Bro.bind(Keys.class); }"
     	
-      @values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+      @values.find_all {|v| v.is_available?($mac_version, $ios_version) && !v.is_outdated?}.each do |v|
         vconf = @model.get_value_conf(v.name)
       
         indentation = "    "
@@ -2180,10 +2180,10 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
   end
 end
 
-@@mac_version = nil
-@@ios_version = '8.1'
+$mac_version = nil
+$ios_version = '8.1'
 xcode_dir = `xcode-select -p`.chomp
-sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{@@ios_version}.sdk"
+sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{$ios_version}.sdk"
 
 script_dir = File.expand_path(File.dirname(__FILE__))
 target_dir = ARGV[0]
@@ -2255,7 +2255,7 @@ ARGV[1..-1].each do |yaml_file|
   model.process(translation_unit.cursor)
 
   package = conf['package'] || ''
-  @@library = conf['library'] || ''
+  $library = conf['library'] || ''
   default_class = conf['default_class'] || conf['framework'] || 'Functions'
 
   template_datas = {}
@@ -2336,7 +2336,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign global values to classes
   values = {}
-  model.global_values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+  model.global_values.find_all {|v| v.is_available?($mac_version, $ios_version) && !v.is_outdated?}.each do |v|
     vconf = model.get_value_conf(v.name)
     if vconf && !vconf['exclude']
       owner = vconf['class'] || default_class
@@ -2368,7 +2368,7 @@ ARGV[1..-1].each do |yaml_file|
         # Start new static class.
         last_static_class = vconf['static_class']
         
-        lines.push("@Library(\"#{@@library}\")", "public static class #{last_static_class} {", "    static { Bro.bind(#{last_static_class}.class); }\n")
+        lines.push("@Library(\"#{$library}\")", "public static class #{last_static_class} {", "    static { Bro.bind(#{last_static_class}.class); }\n")
       end
       indentation = last_static_class.nil? ? "" : "    "
       
@@ -2393,7 +2393,7 @@ ARGV[1..-1].each do |yaml_file|
 
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -2486,7 +2486,7 @@ ARGV[1..-1].each do |yaml_file|
     
     e.values.sort_by { |v| v.since || '' }
     
-    e.values.find_all {|v| v.is_available?(@@mac_version, @@ios_version) && !v.is_outdated?}.each do |v|
+    e.values.find_all {|v| v.is_available?($mac_version, $ios_version) && !v.is_outdated?}.each do |v|
       vconf = model.get_value_conf(v.name)
       
       vname = vconf['name'] || v.name
@@ -2520,7 +2520,7 @@ ARGV[1..-1].each do |yaml_file|
     data['extends'] = e.extends || "GlobalValueEnumeration<#{e.java_type}>"
     data['imports'] = imports_s
     data['value_list'] = value_list_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
     
     data['template'] = def_value_enum_template
     template_datas[name] = data
@@ -2539,7 +2539,7 @@ ARGV[1..-1].each do |yaml_file|
 
   # Assign functions to classes
   functions = {}
-  model.functions.find_all {|f| f.is_available?(@@mac_version, @@ios_version) && !f.is_outdated?}.each do |f|
+  model.functions.find_all {|f| f.is_available?($mac_version, $ios_version) && !f.is_outdated?}.each do |f|
     fconf = model.get_function_conf(f.name)
     if fconf && !fconf['exclude']
       owner = fconf['class'] || default_class
@@ -2636,7 +2636,7 @@ ARGV[1..-1].each do |yaml_file|
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
     data['imports'] = imports_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+    data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
     data['bind'] = "static { Bro.bind(#{owner}.class); }"
     template_datas[owner] = data
   end
@@ -2820,7 +2820,7 @@ ARGV[1..-1].each do |yaml_file|
       data['imports'] = imports_s
       data['implements'] = protocol_list_s(model, 'implements', cls.protocols, c)
       data['ptr'] = "public static class #{cls.java_name}Ptr extends Ptr<#{cls.java_name}, #{cls.java_name}Ptr> {}"
-      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")").push("@NativeClass")
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")").push("@NativeClass")
       data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
       data['javadoc'] = "\n" + model.push_availability(cls).join("\n") + "\n"
       template_datas[name] = data
@@ -2838,7 +2838,7 @@ ARGV[1..-1].each do |yaml_file|
         data['extends'] = c['extends'] || 'NSObject'
         data['implements'] = protocol_list_s(model, 'implements', prot.protocols, c)
         data['ptr'] = "public static class #{prot.java_name}Ptr extends Ptr<#{prot.java_name}, #{prot.java_name}Ptr> {}"
-        data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+        data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
         data['bind'] = "static { ObjCRuntime.bind(#{name}.class); }"
       else
         data['implements'] = protocol_list_s(model, 'extends', prot.protocols, c) || 'extends NSObjectProtocol'
@@ -2893,12 +2893,12 @@ ARGV[1..-1].each do |yaml_file|
     constructors_lines = []
     properties_lines = []
     h[:members].each do |(members, c)|
-      members.find_all {|m| m.is_a?(Bro::ObjCMethod) && m.is_available?(@@mac_version, @@ios_version)}.each do |m|
+      members.find_all {|m| m.is_a?(Bro::ObjCMethod) && m.is_available?($mac_version, $ios_version)}.each do |m|
         a = method_to_java(model, owner_name, owner, m, c['methods'] || {}, seen)
         methods_lines.concat(a[0])
         constructors_lines.concat(a[1])
       end
-      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && m.is_available?(@@mac_version, @@ios_version)}.each do |p|
+      members.find_all {|m| m.is_a?(Bro::ObjCProperty) && m.is_available?($mac_version, $ios_version)}.each do |p|
         properties_lines.concat(property_to_java(model, owner, p, c['properties'] || {}, seen))
       end
     end
@@ -2914,7 +2914,7 @@ ARGV[1..-1].each do |yaml_file|
       end
     elsif owner.is_a?(Bro::ObjCCategory)
       constructors_lines.unshift("private #{owner_name}() {}")
-      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{@@library}\")")
+      data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
       data['extends'] = 'NSExtensions'
