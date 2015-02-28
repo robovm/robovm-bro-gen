@@ -992,7 +992,7 @@ module Bro
             s << "NSString val = (NSString) get(#{key_accessor});"
             s << "return val.toString();"
           else
-            s << "#{type} val = get(#{key_accessor}, #{type_no_generics}.class);"
+            s << "#{type} val = (#{type_no_generics}) get(#{key_accessor});"
             s << "return val;"
         end
         end
@@ -2616,7 +2616,7 @@ ARGV[1..-1].each do |yaml_file|
 		  "#{pconf['name'] || e.name}"
 	    end
 	    params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
-        lines << "#{visibility} #{static}#{java_ret_marshaler}#{java_ret} #{name}(#{new_parameters_s}) throws #{fconf['throws']} {"
+        lines << "#{visibility} #{static}#{java_ret} #{name}(#{new_parameters_s}) throws #{fconf['throws']} {"
         lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
         ret = java_ret.gsub(/@\w+ /, '') # Trim annotations
         ret = ret == 'void' ? '' : "#{ret} result = "
