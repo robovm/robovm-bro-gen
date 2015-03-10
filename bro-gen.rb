@@ -2016,6 +2016,9 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     if adapter
       body = " { throw new UnsupportedOperationException(); }"
     end
+    
+    marshaler = conf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['marshaler']}.class)" : ''
+    
     lines = []
     if !seen["-#{prop.getter_name}"]
       model.push_availability(prop, lines)
@@ -2024,7 +2027,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       else
         lines.push("@Property(selector = \"#{prop.getter_name}\")")
       end
-      lines.push("#{[visibility,static,native,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+      lines.push("#{[visibility,static,native,marshaler,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
       seen["-#{prop.getter_name}"] = true
     end
     
@@ -2044,7 +2047,9 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       else
         lines.push("@Property(selector = \"#{prop.setter_name}\")")
       end
-      lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+      marshaler = "#{marshaler }" if marshaler != ''
+      
+      lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{marshaler}#{parameters_s})#{body}")
       seen["-#{prop.setter_name}"] = true
     end
     lines
@@ -2057,6 +2062,9 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
   return [[], []] if method.is_outdated?
 
   full_name = (method.is_a?(Bro::ObjCClassMethod) ? '+' : '-') + method.name
+  
+  return [[], []] if full_name == "-init" # ignore designated initializers
+  
   conf = model.get_conf_for_key(full_name, methods_conf) || {}
   if seen[full_name]
     [[], []]
@@ -2181,7 +2189,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 end
 
 $mac_version = nil
-$ios_version = '8.1'
+$ios_version = '8.2'
 xcode_dir = `xcode-select -p`.chomp
 sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{$ios_version}.sdk"
 
@@ -2399,7 +2407,7 @@ ARGV[1..-1].each do |yaml_file|
   end
   
   def generate_global_value_enum_marshalers(lines, class_name, java_type)
-    if java_type == 'Integer'
+    if java_type == 'Integer' || java_type == "@MachineSizedFloat double"
       return # Ignore for now
     end
   
@@ -2514,10 +2522,12 @@ ARGV[1..-1].each do |yaml_file|
     constants_s = clines.flatten.join("\n    ")
     value_list_s = names.flatten.join(", ")
     
+    java_type_no_anno = e.java_type.split(" ").last.capitalize
+    
     data['marshalers'] = "\n    #{marshalers_s}\n    "
     data['values'] = "\n    #{values_s}\n        "
     data['constants'] = "\n    #{constants_s}\n    "
-    data['extends'] = e.extends || "GlobalValueEnumeration<#{e.java_type}>"
+    data['extends'] = e.extends || "GlobalValueEnumeration<#{java_type_no_anno}>"
     data['imports'] = imports_s
     data['value_list'] = value_list_s
     data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
