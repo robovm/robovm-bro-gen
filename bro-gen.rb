@@ -1982,6 +1982,8 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
   if !conf['exclude']
     name = conf['name'] || prop.name
     
+    return [] if adapter && conf['skip_adapter']
+    
     type = get_generic_type(model, owner, prop, prop.type, 0, conf['type'])
     omit_prefix = conf['omit_prefix'] || false
     
@@ -2066,6 +2068,9 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
   return [[], []] if full_name == "-init" # ignore designated initializers
   
   conf = model.get_conf_for_key(full_name, methods_conf) || {}
+  
+  return [[], []] if adapter && conf['skip_adapter']
+  
   if seen[full_name]
     [[], []]
   elsif method.is_variadic? || !method.parameters.empty? && method.parameters[-1].type.spelling == 'va_list'
@@ -2522,7 +2527,7 @@ ARGV[1..-1].each do |yaml_file|
     constants_s = clines.flatten.join("\n    ")
     value_list_s = names.flatten.join(", ")
     
-    java_type_no_anno = e.java_type.split(" ").last.capitalize
+    java_type_no_anno = e.java_type.split(" ").last
     
     data['marshalers'] = "\n    #{marshalers_s}\n    "
     data['values'] = "\n    #{values_s}\n        "
