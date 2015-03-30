@@ -2016,7 +2016,15 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
     body = ';'
     if adapter
-      body = " { throw new UnsupportedOperationException(); }"
+      t = type[0].split(' ')
+      case t.last
+      when 'boolean'
+        body = " { return false; }"
+      when 'byte', 'int', 'char', 'short', 'long', 'float', 'double'
+        body = " { return 0; }"
+      else
+        body = " { return null; }"
+      end
     end
     
     marshaler = conf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['marshaler']}.class)" : ''
@@ -2039,6 +2047,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       model.push_availability(prop, lines)
       if adapter
         lines.push("@NotImplemented(\"#{prop.setter_name}\")")
+        body = " {}"
       elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
         # assign is used on some properties of primitives, structs and enums which isn't needed
         if type[0] =~ /^@(ByVal|MachineSized|Pointer)/ || type[0] =~ /\b(boolean|byte|short|char|int|long|float|double)$/ || type[3] && type[3].is_a?(Bro::Enum)
@@ -2133,7 +2142,17 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     body = ';'
     if adapter
-      body = " { throw new UnsupportedOperationException(); }"
+      t = ret_type[0].split(' ')
+      case t.last
+      when 'boolean'
+        body = " { return false; }"
+      when 'byte', 'int', 'char', 'short', 'long', 'float', 'double'
+        body = " { return 0; }"
+      when 'void'
+        body = " {}"
+      else
+        body = " { return null; }"
+      end
     end
     method_lines = []
     constructor_lines = []
