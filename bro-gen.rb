@@ -1279,6 +1279,21 @@ module Bro
         @java_name
       else
         n = @enum.enum_conf[@name] || @name
+        
+        match = @enum.enum_conf.find {|pattern, value| $~ = @model.match_fully(pattern, @name)}
+        if match && !$~.captures.empty?
+          def get_binding(g)
+            binding
+          end
+          b = get_binding($~.captures)
+          captures = $~.captures
+          v = match[1]
+          if v.is_a?(String) && v.match(/#\{/)
+            v = eval("\"#{v}\"", b)
+          end
+          n = v
+        end
+    
         if n.start_with?(@enum.prefix)
           n = @name[@enum.prefix.size..-1]
         end
@@ -1904,35 +1919,49 @@ def struct_to_java(model, data, name, struct, conf)
   inc = struct.union ? 0 : 1
   index = 0
   members = []
+  
   struct.members.each do |e|
-    member_name = (conf[e.name] || {})['name'] || e.name
+    mconf = conf[index] || conf[e.name] || {}
+    next if mconf['exclude']
+    
+    member_name = mconf['name'] || e.name
     upcase_member_name = member_name.dup
     upcase_member_name[0] = upcase_member_name[0].capitalize
-    type = (conf[e.name] || {})['type'] || model.to_java_type(model.resolve_type(e.type, true))
+    
+    visibility = mconf['visibility'] || 'public'
+    type = mconf['type'] || model.to_java_type(model.resolve_type(e.type, true))
     getter = type == 'boolean' ? 'is' : 'get'
-    members.push(["@StructMember(#{index}) public native #{type} #{getter}#{upcase_member_name}();", "@StructMember(#{index}) public native #{name} set#{upcase_member_name}(#{type} #{member_name});"].join("\n    "))
+    members.push(["@StructMember(#{index}) #{visibility} native #{type} #{getter}#{upcase_member_name}();", "@StructMember(#{index}) #{visibility} native #{name} set#{upcase_member_name}(#{type} #{member_name});"].join("\n    "))
     index = index + inc
   end
   members = members.join("\n    ")
   data['members'] = "\n    #{members}\n    "
 
-  constructor_params = []
-  constructor_body = []
-  struct.members.map do |e|
-    member_name = (conf[e.name] || {})['name'] || e.name
-    upcase_member_name = member_name.dup
-    upcase_member_name[0] = upcase_member_name[0].capitalize
+  if !conf['skip_def_constructor']
+    constructor_params = []
+    constructor_body = []
+    struct.members.map do |e|
+      mconf = conf[index] || conf[e.name] || {}
+      next if mconf['exclude']
+      
+      member_name = mconf['name'] || e.name
+      upcase_member_name = member_name.dup
+      upcase_member_name[0] = upcase_member_name[0].capitalize
     
-    type = (conf[e.name] || {})['type']
-    type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
-    constructor_params.push "#{type} #{member_name}"
-    constructor_body.push "this.set#{upcase_member_name}(#{member_name});"
-  end.join("\n    ")
-  constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
-  constructor = constructor + constructor_body.join("\n        ")
-  constructor = "#{constructor}\n    }"
-  data['constructors'] = "\n    public #{name}() {}\n    #{constructor}\n    "
-
+      visibility = mconf['visibility'] || 'public'
+      if visibility != 'private'
+        type = mconf['type']
+        type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
+        constructor_params.push "#{type} #{member_name}"
+        constructor_body.push "this.set#{upcase_member_name}(#{member_name});"
+      end
+    end.join("\n    ")
+    constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
+    constructor = constructor + constructor_body.join("\n        ")
+    constructor = "#{constructor}\n    }"
+    data['constructors'] = "\n    public #{name}() {}\n    #{constructor}\n    "
+  end
+  
   data['name'] = name
   data['visibility'] = conf['visibility'] || 'public'
   data['extends'] = "Struct<#{name}>"
