@@ -1922,16 +1922,19 @@ def struct_to_java(model, data, name, struct, conf)
   
   struct.members.each do |e|
     mconf = conf[index] || conf[e.name] || {}
-    next if mconf['exclude']
+    if !mconf['exclude']
+      member_name = mconf['name'] || e.name
+      upcase_member_name = member_name.dup
+      upcase_member_name[0] = upcase_member_name[0].capitalize
+      
+      visibility = mconf['visibility'] || 'public'
+      type = mconf['type'] || model.to_java_type(model.resolve_type(e.type, true))
+      getter = type == 'boolean' ? 'is' : 'get'
     
-    member_name = mconf['name'] || e.name
-    upcase_member_name = member_name.dup
-    upcase_member_name[0] = upcase_member_name[0].capitalize
-    
-    visibility = mconf['visibility'] || 'public'
-    type = mconf['type'] || model.to_java_type(model.resolve_type(e.type, true))
-    getter = type == 'boolean' ? 'is' : 'get'
-    members.push(["@StructMember(#{index}) #{visibility} native #{type} #{getter}#{upcase_member_name}();", "@StructMember(#{index}) #{visibility} native #{name} set#{upcase_member_name}(#{type} #{member_name});"].join("\n    "))
+      members << "@StructMember(#{index}) #{visibility} native #{type} #{getter}#{upcase_member_name}();"
+      members << "@StructMember(#{index}) #{visibility} native #{name} set#{upcase_member_name}(#{type} #{member_name});"
+	  members.join("\n    ")
+	end
     index = index + inc
   end
   members = members.join("\n    ")
@@ -1949,16 +1952,18 @@ def struct_to_java(model, data, name, struct, conf)
       upcase_member_name[0] = upcase_member_name[0].capitalize
     
       visibility = mconf['visibility'] || 'public'
-      if visibility != 'private'
+      if visibility == 'public'
         type = mconf['type']
         type = type ? type.sub(/^(@ByVal|@Array.*)\s+/, '') : model.resolve_type(e.type, true).java_name
         constructor_params.push "#{type} #{member_name}"
         constructor_body.push "this.set#{upcase_member_name}(#{member_name});"
       end
     end.join("\n    ")
-    constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
-    constructor = constructor + constructor_body.join("\n        ")
-    constructor = "#{constructor}\n    }"
+    if constructor_params.length > 0
+      constructor = "public #{name}(" + constructor_params.join(', ') + ") {\n        "
+      constructor = constructor + constructor_body.join("\n        ")
+      constructor = "#{constructor}\n    }"
+    end
     data['constructors'] = "\n    public #{name}() {}\n    #{constructor}\n    "
   end
   
