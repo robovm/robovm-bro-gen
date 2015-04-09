@@ -430,6 +430,7 @@ module Bro
       @children = []
       @parent = parent
       @union = union
+      
       cursor.visit_children do |cursor, parent|
         case cursor.kind
         when :cursor_unexposed_expr
@@ -1921,6 +1922,10 @@ def struct_to_java(model, data, name, struct, conf)
   members = []
   
   struct.members.each do |e|
+    if e.type.spelling.include? 'union'
+      index = index + inc
+      next  
+    end
     mconf = conf[index] || conf[e.name] || {}
     if !mconf['exclude']
       member_name = mconf['name'] || e.name
@@ -1946,6 +1951,7 @@ def struct_to_java(model, data, name, struct, conf)
     struct.members.map do |e|
       mconf = conf[index] || conf[e.name] || {}
       next if mconf['exclude']
+      next if e.type.spelling.include? 'union'
       
       member_name = mconf['name'] || e.name
       upcase_member_name = member_name.dup
