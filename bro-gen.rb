@@ -482,7 +482,7 @@ module Bro
       @variadic = cursor.variadic?
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr, :cursor_ibaction_attr
+        when :cursor_type_ref, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr, :cursor_ibaction_attr, 410, 409
           # Ignored
         when :cursor_parm_decl
           @parameters.push FunctionParameter.new cursor, "p#{param_count}"
@@ -782,6 +782,7 @@ module Bro
       @java_type = vconf['type'] || model.resolve_type(@type)
       @mutable = vconf['mutable'].nil? ? true : vconf['mutable']
       @methods = vconf['methods']
+      @generate_marshalers = vconf['marshalers'] || true
       @extends = vconf['dictionary_extends'] || vconf['extends'] || (is_foundation? ? "NSDictionaryWrapper" : "CFDictionaryWrapper")
       @constructor_visibility = vconf['constructor_visibility']
       @values = [first]
@@ -801,10 +802,12 @@ module Bro
       
       data['annotations'] = (data['annotations'] || []).push("@Library(\"#{$library}\")")
     
-      marshaler_lines = []
-      append_marshalers(marshaler_lines)
-      marshalers_s = marshaler_lines.flatten.join("\n    ")
-      data['marshalers'] = "\n    #{marshalers_s}\n    "
+      if @generate_marshalers
+        marshaler_lines = []
+        append_marshalers(marshaler_lines)
+        marshalers_s = marshaler_lines.flatten.join("\n    ")
+        data['marshalers'] = "\n    #{marshalers_s}\n    "
+      end
     
       constructor_lines = []
       append_constructors(constructor_lines)
@@ -1699,7 +1702,7 @@ module Bro
             /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
             /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
             /^provides/, /^reads/, /^receives/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
-            /^scrolls/, /^sends/, /^shows/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
+            /^scrolls/, /^sends/, /^shows/, /^simulates/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
               getter = "is#{base}"
@@ -2253,7 +2256,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 end
 
 $mac_version = nil
-$ios_version = '8.2'
+$ios_version = '8.3'
 xcode_dir = `xcode-select -p`.chomp
 sysroot = "#{xcode_dir}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS#{$ios_version}.sdk"
 
