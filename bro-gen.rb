@@ -2201,8 +2201,6 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     constructor_lines = []
     
     if conf['throws']
-      model.push_availability(method, method_lines)
-    
       error_type = 'NSError'
       case conf['throws']
         when 'CFStreamErrorException'
@@ -2216,14 +2214,19 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 		"#{pconf['name'] || e[2]}"
 	  end
 	  params_s = params.length == 0 ? "ptr" : "#{params.join(', ')}, ptr"
-      method_lines << "#{[visibility,static,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
-      method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
-      ret = ret_type[0].gsub(/@\w+ /, '') # Trim annotations
-      ret = ret == 'void' ? '' : "#{ret} result = "
-      method_lines << "   #{ret}#{name}(#{params_s});"
-      method_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
-      method_lines << "   return result;" if ret_type[0] != 'void'
-      method_lines << "}"
+	  
+	  if !(owner.is_a?(Bro::ObjCClass) && is_init?(owner, method))
+	      model.push_availability(method, method_lines)
+	  
+          method_lines << "#{[visibility,static,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
+          method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
+          ret = ret_type[0].gsub(/@\w+ /, '') # Trim annotations
+          ret = ret == 'void' ? '' : "#{ret} result = "
+          method_lines << "   #{ret}#{name}(#{params_s});"
+          method_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
+          method_lines << "   return result;" if ret_type[0] != 'void'
+          method_lines << "}"
+      end
     
       visibility = 'private'
     end
@@ -2245,8 +2248,20 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     if owner.is_a?(Bro::ObjCClass) && is_init?(owner, method) && conf['constructor'] != false
       constructor_visibility = conf['constructor_visibility'] || 'public'
       args_s = param_types.map {|p| p[2]}.join(', ')
+      
       model.push_availability(method, constructor_lines)
-      constructor_lines.push("#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }")
+      
+      if conf['throws']
+        constructor_lines << "#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{new_parameters_s}) throws #{conf['throws']} {"
+        constructor_lines << "   super((SkipInit) null);"
+        constructor_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
+        constructor_lines << "   long handle = #{name}(#{params_s});"
+        constructor_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
+        constructor_lines << "   initObject(handle);"
+        constructor_lines << "}"
+      else
+        constructor_lines << "#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{parameters_s}) { super((SkipInit) null); initObject(#{name}(#{args_s})); }"
+      end
     end
     seen[full_name] = true
     [method_lines, constructor_lines]
