@@ -935,7 +935,7 @@ module Bro
             
             getter = @model.getter_for_name(param_name, type, omit_prefix)
             
-            default_value = mconf['default'] || default_value_for_type(type)
+            default_value = mconf['default'] || @model.default_value_for_type(type)
             key_accessor = @enum ? "#{@enum.name}.#{vname}" : "Keys.#{vname}()"
             
             @model.push_availability(v, lines)
@@ -1128,17 +1128,6 @@ module Bro
         end
       end
       s
-    end
-    
-    def default_value_for_type(type)
-      default = 'null'
-      case type
-      when 'boolean'
-        default = false
-      when 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
-        default = 0
-      end
-      default
     end
     
     def append_key_class(lines)
@@ -1719,6 +1708,17 @@ module Bro
       omit_prefix ? base : "set#{base}"
     end
     
+    def default_value_for_type(type)
+      default = 'null'
+      case type
+      when 'boolean'
+        default = false
+      when 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
+        default = 0
+      end
+      default
+    end
+    
     def push_availability(entity, lines = [], indentation = "")
       since = entity.since
       deprecated = entity.deprecated
@@ -2060,14 +2060,8 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     body = ';'
     if adapter
       t = type[0].split(' ')
-      case t.last
-      when 'boolean'
-        body = " { return false; }"
-      when 'byte', 'int', 'char', 'short', 'long', 'float', 'double'
-        body = " { return 0; }"
-      else
-        body = " { return null; }"
-      end
+      default_value = conf['default'] || model.default_value_for_type(t.last)
+      body = " { return #{default_value}; }"
     end
     
     marshaler = conf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['marshaler']}.class)" : ''
@@ -2186,15 +2180,11 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     body = ';'
     if adapter
       t = ret_type[0].split(' ')
-      case t.last
-      when 'boolean'
-        body = " { return false; }"
-      when 'byte', 'int', 'char', 'short', 'long', 'float', 'double'
-        body = " { return 0; }"
-      when 'void'
+      if t.last == 'void'
         body = " {}"
       else
-        body = " { return null; }"
+        default_value = conf['default'] || model.default_value_for_type(t.last)
+        body = " { return #{default_value}; }"
       end
     end
     method_lines = []
