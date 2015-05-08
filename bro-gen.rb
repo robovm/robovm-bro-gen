@@ -2054,7 +2054,9 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     param_types = []
     if owner.is_a?(Bro::ObjCCategory)
-      param_types.unshift([owner.owner, nil, 'thiz'])
+      cconf = model.get_category_conf(owner.owner)
+      thiz_type = cconf['owner_type'] || owner.owner
+      param_types.unshift([thiz_type, nil, 'thiz'])
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
     body = ';'
@@ -2164,7 +2166,9 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     if owner.is_a?(Bro::ObjCCategory)
       if method.is_a?(Bro::ObjCInstanceMethod)
-        param_types.unshift([owner.owner, nil, 'thiz'])
+        cconf = model.get_category_conf(owner.owner)
+        thiz_type = cconf['owner_type'] || owner.owner
+        param_types.unshift([thiz_type, nil, 'thiz'])
       end
     end
     parameters_s = param_types.map {|p| "#{p[4]}#{p[0]} #{p[2]}"}.join(', ')
