@@ -2290,6 +2290,11 @@ ARGV[1..-1].each do |yaml_file|
 
   conf = global.merge conf
   conf['typedefs'] = (global['typedefs'] || {}).merge(conf['typedefs'] || {}).merge(conf['private_typedefs'] || {})
+  if conf['header_root']
+    header_root = File.expand_path(File.dirname(yaml_file)) + conf['header_root']
+  else
+    header_root = sysroot
+  end
 
   imports = []
   imports << "java.io.*"
@@ -2328,12 +2333,12 @@ ARGV[1..-1].each do |yaml_file|
   clang_args = ['-arch', 'arm64', '-mthumb', '-miphoneos-version-min', '7.0', '-fblocks', '-isysroot', sysroot]
   headers[1 .. -1].each do |e|
     clang_args.push('-include')
-    clang_args.push("#{sysroot}#{e}")
+    clang_args.push("#{header_root}#{e}")
   end
   if conf['clang_args']
     clang_args = clang_args + conf['clang_args']
   end
-  translation_unit = index.parse_translation_unit("#{sysroot}#{headers[0]}", clang_args, [], {:detailed_preprocessing_record=>true})
+  translation_unit = index.parse_translation_unit("#{header_root}#{headers[0]}", clang_args, [], {:detailed_preprocessing_record=>true})
 
   model = Bro::Model.new conf
   model.process(translation_unit.cursor)
