@@ -353,7 +353,7 @@ module Bro
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
        source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
        source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
-       source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER'
+       source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER' || source == 'NS_EXTENSION_UNAVAILABLE_IOS("")'
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
       return UnavailableAttribute.new source
@@ -633,7 +633,7 @@ module Bro
       @opaque = false
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_unexposed_expr
+        when :cursor_unexposed_expr, :cursor_struct
         	# ignored
         when :cursor_obj_c_class_ref
           @opaque = @name == cursor.spelling
@@ -1185,7 +1185,7 @@ module Bro
       
       cursor.visit_children do |cursor, parent|
         case cursor.kind
-        when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr
+        when :cursor_type_ref, :cursor_integer_literal, :cursor_asm_label_attr, :cursor_obj_c_class_ref, :cursor_obj_c_protocol_ref, :cursor_unexposed_expr, :cursor_struct
           # Ignored
         when :cursor_unexposed_attr
           attribute = Bro::parse_attribute(cursor)
@@ -1686,7 +1686,7 @@ module Bro
             when /^is/, /^has/, /^can/, /^should/, /^adjusts/, /^allows/, /^always/, /^animates/, 
             /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
             /^autoreverses/, /^bounces/, /^casts/, /^clears/, /^clips/, /^collapses/, /^contains/, 
-            /^defers/, /^defines/, /^delays/, /^depends/, /^dims/, /^disconnects/, /^displays/, 
+            /^defers/, /^defines/, /^delays/, /^depends/, /^did/, /^dims/, /^disconnects/, /^displays/, 
             /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^generates/, /^groups/, 
             /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
             /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
