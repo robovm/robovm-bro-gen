@@ -351,7 +351,7 @@ module Bro
        source == 'CF_IMPLICIT_BRIDGING_ENABLED' || source.start_with?('DISPATCH_') || source.match(/^(CF|NS)_RETURNS_RETAINED/) ||
        source.match(/^(CF|NS)_INLINE$/) || source.match(/^(CF|NS)_FORMAT_FUNCTION.*/) || source.match(/^(CF|NS)_FORMAT_ARGUMENT.*/) || 
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
-       source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') ||
+       source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') || source == 'NSObject'
        source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
        source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER' || source == 'NS_EXTENSION_UNAVAILABLE_IOS("")'
       return IgnoredAttribute.new source
@@ -987,6 +987,9 @@ module Bro
           else
             s << "return #{resolved_type.name}.valueOf(val.longValue());"
           end
+        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
+          s << "NSData val = get(#{key_accessor}, NSData.class);"
+          s << "return val.getStructData(#{type}.class);"
         else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
@@ -995,6 +998,29 @@ module Bro
           when 'String'
             s << "NSString val = (NSString) get(#{key_accessor});"
             s << "return val.toString();"
+          when 'List<String>'
+            s << "NSArray<NSString> val = (NSArray<NSString>) get(#{key_accessor});"
+            s << "return val.asStringList();"
+          when /^List<(.*)>$/
+            s << "NSArray<?> val = get(#{key_accessor});"
+          
+            generic_type = @model.resolve_type_by_name("#{$1}")
+			if generic_type.is_a?(GlobalValueDictionaryWrapper)
+              s << "List<#{$1}> list = new ArrayList<>();"
+              s << "NSDictionary<?, ?>[] array = val.toArray(NSDictionary.class);"
+              s << "for (NSDictionary<?, ?> d : array) {"
+              s << "   list.add(new #{$1}(d));"
+              s << "}"
+              s << "return list;"
+            else
+              s << "return val.toList(#{$1}.class);"
+            end
+          when 'Map<String, NSObject>'
+            s << "NSDictionary<?, ?> dict = get(#{key_accessor});"
+            s << "return dict.asStringMap();"
+          when 'Map<String, String>'
+            s << "NSDictionary val = get(#{key_accessor});"
+            s << "return val.asStringStringMap();"
           else
             s << "#{type} val = (#{type_no_generics}) get(#{key_accessor});"
             s << "return val;"
@@ -1076,12 +1102,31 @@ module Bro
           s = "#{param_name}.getDictionary()"
         elsif resolved_type.is_a?(Enum)
           s = "NSNumber.valueOf(#{param_name}.value())"
+        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
+          s = "new NSData(#{param_name})"
         else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
             s = "NSNumber.valueOf(#{param_name})"
           when 'String'
             s = "new NSString(#{param_name})"
+          when 'List<String>'
+            s = "NSArray.fromStrings(#{param_name})"
+          when /List<(.*)>/
+            generic_type = @model.resolve_type_by_name("#{$1}")
+			if generic_type.is_a?(GlobalValueDictionaryWrapper)
+			  s = []
+			  s << "    NSArray<?> val = new NSMutableArray<?>();"
+			  s << "    for (#{generic_type.name} e : #{param_name}) {"
+			  s << "        val.add(e.getDictionary());"
+			  s << "    }"
+			else
+              s = "new NSArray<?>(#{param_name})"
+            end
+          when 'Map<String, NSObject>'
+            s = "NSDictionary.fromStringMap(#{param_name})"
+          when 'Map<String, String>'
+            s = "NSDictionary.fromStringStringMap(#{param_name})"
           else
             s = param_name
         end
@@ -1133,7 +1178,7 @@ module Bro
     def append_key_class(lines)
       @values.sort_by { |v| v.since || '' }
       
-      lines << "@Library(#{$library})"
+      lines << "@Library(#{$library}) @StronglyLinked"
       lines << "public static class Keys {"
       lines << "    static { Bro.bind(Keys.class); }"
     	
@@ -2055,7 +2100,7 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     param_types = []
     if owner.is_a?(Bro::ObjCCategory)
       cconf = model.get_category_conf(owner.owner)
-      thiz_type = cconf['owner_type'] || owner.owner
+      thiz_type = cconf && cconf['owner_type'] || owner.owner
       param_types.unshift([thiz_type, nil, 'thiz'])
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
@@ -2068,15 +2113,19 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     
     marshaler = conf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{conf['marshaler']}.class)" : ''
     
+    annotations = conf['annotations'] && !conf['annotations'].empty? ? conf['annotations'].uniq.join(' ') : nil
+    
     lines = []
     if !seen["-#{prop.getter_name}"]
       model.push_availability(prop, lines)
+      lines << "#{annotations}" if annotations
+      
       if adapter
-        lines.push("@NotImplemented(\"#{prop.getter_name}\")")
+        lines << "@NotImplemented(\"#{prop.getter_name}\")"
       else
-        lines.push("@Property(selector = \"#{prop.getter_name}\")")
+        lines << "@Property(selector = \"#{prop.getter_name}\")"
       end
-      lines.push("#{[visibility,static,native,marshaler,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}")
+      lines << "#{[visibility,static,native,marshaler,generics_s,type[0],getter].find_all {|e| e.size>0}.join(' ')}(#{parameters_s})#{body}"
       seen["-#{prop.getter_name}"] = true
     end
     
@@ -2084,22 +2133,23 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
       param_types.push([type[0], nil, 'v'])
       parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
       model.push_availability(prop, lines)
+      lines << "#{annotations}" if annotations
       if adapter
-        lines.push("@NotImplemented(\"#{prop.setter_name}\")")
+        lines << "@NotImplemented(\"#{prop.setter_name}\")"
         body = " {}"
       elsif (prop.attrs['assign'] || prop.attrs['weak'] || conf['strong']) && !conf['weak']
         # assign is used on some properties of primitives, structs and enums which isn't needed
         if type[0] =~ /^@(ByVal|MachineSized|Pointer)/ || type[0] =~ /\b(boolean|byte|short|char|int|long|float|double)$/ || type[3] && type[3].is_a?(Bro::Enum)
-          lines.push("@Property(selector = \"#{prop.setter_name}\")")
+          lines << "@Property(selector = \"#{prop.setter_name}\")"
         else
-          lines.push("@Property(selector = \"#{prop.setter_name}\", strongRef = true)")
+          lines << "@Property(selector = \"#{prop.setter_name}\", strongRef = true)"
         end
       else
-        lines.push("@Property(selector = \"#{prop.setter_name}\")")
+        lines << "@Property(selector = \"#{prop.setter_name}\")"
       end
       marshaler = "#{marshaler }" if marshaler != ''
       
-      lines.push("#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{marshaler}#{parameters_s})#{body}")
+      lines << "#{[visibility,static,native,generics_s,'void',setter].find_all {|e| e.size>0}.join(' ')}(#{marshaler}#{parameters_s})#{body}"
       seen["-#{prop.setter_name}"] = true
     end
     lines
@@ -2167,7 +2217,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     if owner.is_a?(Bro::ObjCCategory)
       if method.is_a?(Bro::ObjCInstanceMethod)
         cconf = model.get_category_conf(owner.owner)
-        thiz_type = cconf['owner_type'] || owner.owner
+        thiz_type = cconf && cconf['owner_type'] || owner.owner
         param_types.unshift([thiz_type, nil, 'thiz'])
       end
     end
@@ -2194,6 +2244,8 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     method_lines = []
     constructor_lines = []
     
+    annotations = conf['annotations'] && !conf['annotations'].empty? ? conf['annotations'].uniq.join(' ') : nil
+    
     if conf['throws']
       error_type = 'NSError'
       case conf['throws']
@@ -2212,6 +2264,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 	  if !(owner.is_a?(Bro::ObjCClass) && is_init?(owner, method))
 	      model.push_availability(method, method_lines)
 	  
+	      method_lines << "#{annotations}" if annotations
           method_lines << "#{[visibility,static,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
           method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
           ret = ret_type[0].gsub(/@[a-zA-Z0-9_().]+ /, '') # Trim annotations
@@ -2226,15 +2279,16 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
     end
     
     model.push_availability(method, method_lines)
+    method_lines << "#{annotations}" if annotations
     if adapter
-      method_lines.push("@NotImplemented(\"#{method.name}\")")
+      method_lines << "@NotImplemented(\"#{method.name}\")"
     else
-      method_lines.push("@Method(selector = \"#{method.name}\")")
+      method_lines << "@Method(selector = \"#{method.name}\")"
     end
     
     if owner.is_a?(Bro::ObjCCategory) && method.is_a?(Bro::ObjCClassMethod)
       new_parameters_s = (['ObjCClass clazz'] + (param_types.map {|p| "#{p[0]} #{p[2]}"})).join(', ')
-      method_lines.push("protected static native #{[ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});")
+      method_lines << "protected static native #{[ret_marshaler,ret_anno,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s});"
       args_s = (["ObjCClass.getByType(#{owner.owner}.class)"] + (param_types.map {|p| p[2]})).join(', ')
       body = " { #{ret_type[0] != 'void' ? 'return ' : ''}#{name}(#{args_s}); }"
     end
@@ -2304,6 +2358,7 @@ ARGV[1..-1].each do |yaml_file|
   imports << "org.robovm.objc.annotation.*"
   imports << "org.robovm.objc.block.*"
   imports << "org.robovm.rt.*"
+  imports << "org.robovm.rt.annotation.*"
   imports << "org.robovm.rt.bro.*"
   imports << "org.robovm.rt.bro.annotation.*"
   imports << "org.robovm.rt.bro.ptr.*"
@@ -2609,13 +2664,18 @@ ARGV[1..-1].each do |yaml_file|
     
     java_type_no_anno = e.java_type.split(" ").last
     
+    case java_type_no_anno
+      when 'byte', 'short', 'int', 'long', 'float', 'double'
+        java_type_no_anno = java_type_no_anno[0, 1].upcase + java_type_no_anno[1..-1]
+    end 
+    
     data['marshalers'] = "\n    #{marshalers_s}\n    "
     data['values'] = "\n    #{values_s}\n        "
     data['constants'] = "\n    #{constants_s}\n    "
     data['extends'] = e.extends || "GlobalValueEnumeration<#{java_type_no_anno}>"
     data['imports'] = imports_s
     data['value_list'] = value_list_s
-    data['annotations'] = (data['annotations'] || []).push("@Library(#{$library})")
+    data['annotations'] = (data['annotations'] || []).push("@Library(#{$library})").push("@StronglyLinked")
     
     data['template'] = def_value_enum_template
     template_datas[name] = data
@@ -2696,8 +2756,11 @@ ARGV[1..-1].each do |yaml_file|
 		"#{marshaler}#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
 	  end
 	  
+	  annotations = fconf['annotations'] && !fconf['annotations'].empty? ? fconf['annotations'].uniq.join(' ') : nil
+	  
 	  if fconf['throws']
         model.push_availability(f, lines)
+        lines << "#{annotations}" if annotations
     
         error_type = 'NSError'
     	case fconf['throws']
@@ -2725,8 +2788,9 @@ ARGV[1..-1].each do |yaml_file|
       end
 	  
 	  model.push_availability(f, lines)
-	  lines.push("@Bridge(symbol=\"#{f.name}\", optional=true)")
-	  lines.push("#{visibility} #{static}native #{java_ret_marshaler}#{java_ret} #{name}(#{java_parameters.join(', ')});")
+	  lines << "#{annotations}" if annotations
+	  lines << "@Bridge(symbol=\"#{f.name}\", optional=true)"
+	  lines << "#{visibility} #{static}native #{java_ret_marshaler}#{java_ret} #{name}(#{java_parameters.join(', ')});"
       lines
     end.flatten.join("\n    ")
     data['methods'] = (data['methods'] || '') + "\n    #{methods_s}\n    "
@@ -3009,7 +3073,7 @@ ARGV[1..-1].each do |yaml_file|
       end
     elsif owner.is_a?(Bro::ObjCCategory)
       constructors_lines.unshift("private #{owner_name}() {}")
-      data['annotations'] = (data['annotations'] || []).push("@Library(#{$library})")
+      data['annotations'] = (data['annotations'] || []).push("@Library(#{$library})") 
       data['bind'] = "static { ObjCRuntime.bind(#{owner_name}.class); }"
       data['visibility'] = c['visibility'] || 'public final'
       data['extends'] = 'NSExtensions'
