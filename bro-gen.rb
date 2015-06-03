@@ -2716,6 +2716,9 @@ ARGV[1..-1].each do |yaml_file|
   	  paramconf = fconf['parameters'] || {}
 	  firstparamconf = parameters.size >= 1 ? paramconf[parameters[0].name] : nil
 	  firstparamtype = (firstparamconf || {})['type']
+	  
+	  annotations = fconf['annotations'] && !fconf['annotations'].empty? ? fconf['annotations'].uniq.join(' ') : nil
+	  
 	  if !fconf['static'] && parameters.size >= 1 && (firstparamtype == owner || model.resolve_type(parameters[0].type).java_name == owner)
 	  	# Instance method
 		java_type = model.to_java_type(model.resolve_type(parameters[0].type))
@@ -2733,7 +2736,8 @@ ARGV[1..-1].each do |yaml_file|
 		  end
 		  args.unshift('this')
 		  model.push_availability(f, lines)
-		  lines.push("#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }")
+		  lines << "#{annotations}" if annotations
+		  lines << "#{visibility} #{java_ret} #{name}(#{java_parameters.join(', ')}) { #{java_ret != 'void' ? 'return ' : ''}#{name}(#{args.join(', ')}); }"
 		  # Alter the visibility for the @Bridge method to private
 		  visibility = 'private'
 		else
@@ -2755,8 +2759,6 @@ ARGV[1..-1].each do |yaml_file|
 	    marshaler = pconf['marshaler'] ? "@org.robovm.rt.bro.annotation.Marshaler(#{pconf['marshaler']}.class) " : ''
 		"#{marshaler}#{pconf['type'] || model.to_java_type(model.resolve_type(e.type))} #{pconf['name'] || e.name}"
 	  end
-	  
-	  annotations = fconf['annotations'] && !fconf['annotations'].empty? ? fconf['annotations'].uniq.join(' ') : nil
 	  
 	  if fconf['throws']
         model.push_availability(f, lines)
