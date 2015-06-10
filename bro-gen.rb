@@ -1178,7 +1178,7 @@ module Bro
     def append_key_class(lines)
       @values.sort_by { |v| v.since || '' }
       
-      lines << "@Library(#{$library}) @StronglyLinked"
+      lines << "@Library(#{$library})"
       lines << "public static class Keys {"
       lines << "    static { Bro.bind(Keys.class); }"
     	
