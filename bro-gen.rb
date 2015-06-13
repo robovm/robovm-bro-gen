@@ -351,9 +351,10 @@ module Bro
        source == 'CF_IMPLICIT_BRIDGING_ENABLED' || source.start_with?('DISPATCH_') || source.match(/^(CF|NS)_RETURNS_RETAINED/) ||
        source.match(/^(CF|NS)_INLINE$/) || source.match(/^(CF|NS)_FORMAT_FUNCTION.*/) || source.match(/^(CF|NS)_FORMAT_ARGUMENT.*/) || 
        source == 'NS_RETURNS_INNER_POINTER' || source == 'NS_AUTOMATED_REFCOUNT_WEAK_UNAVAILABLE' || source == 'NS_REQUIRES_NIL_TERMINATION' ||
-       source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') || source == 'NSObject'
+       source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') || source == 'NSObject' ||
        source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
-       source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER' || source == 'NS_EXTENSION_UNAVAILABLE_IOS("")'
+       source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER' || source.start_with?('NS_EXTENSION_UNAVAILABLE_IOS') ||
+       source == 'NS_REQUIRES_PROPERTY_DEFINITIONS'
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
       return UnavailableAttribute.new source
@@ -938,18 +939,26 @@ module Bro
             default_value = mconf['default'] || @model.default_value_for_type(type)
             key_accessor = @enum ? "#{@enum.name}.#{vname}" : "Keys.#{vname}()"
             
+            annotations = mconf['annotations'] && !mconf['annotations'].empty? ? mconf['annotations'].uniq.join(' ') : nil
+            
             @model.push_availability(v, lines)
+            lines << "#{annotations}" if annotations
             lines << "public #{type} #{getter}() {"
             lines << "    if (has(#{key_accessor})) {"
-            lines << convenience_getter_value(type, key_accessor)
+            lines << convenience_getter_value(type, mconf['hint'], key_accessor)
             lines << "    }"
             lines << "    return #{default_value};"
             lines << "}"
+            
+            mutable = is_mutable?
+            unless mconf['mutable'].nil?
+              mutable = mconf['mutable']
+            end
 
-            if is_mutable?
+            if mutable
               setter = @model.setter_for_name(name, omit_prefix)
               
-              convenience_setter = convenience_setter_value(type, param_name)
+              convenience_setter = convenience_setter_value(type, mconf['hint'], param_name)
               if convenience_setter.respond_to?('each')
                 convenience_setter << "    set(#{key_accessor}, val);"
                 convenience_setter = convenience_setter.flatten.join("\n    ")
@@ -957,6 +966,7 @@ module Bro
                 convenience_setter = "    set(#{key_accessor}, #{convenience_setter});"
               end
 			  @model.push_availability(v, lines)
+			  lines << "#{annotations}" if annotations
 			  lines << "public #{@name} #{setter}(#{type} #{param_name}) {"
 			  lines << convenience_setter
 			  lines << "    return this;"
@@ -966,16 +976,30 @@ module Bro
       end
     end
     
-    def convenience_getter_value(type, key_accessor)
+    def convenience_getter_value(type, type_hint, key_accessor)
       s = []
       resolved_type = @model.resolve_type_by_name(type)
       
       type_no_generics = type.partition("<").first
       
+      if type_hint
+          hint_parts = type_hint.partition("<")
+          type_generic_hint = hint_parts[2].partition(">").first
+          type_hint = hint_parts.first
+      end
+      
       if is_foundation?
-        if resolved_type.is_a?(GlobalValueEnumeration)
-          s << "#{resolved_type.java_type} val = (#{resolved_type.java_type}) get(#{key_accessor});"
-          s << "return #{resolved_type.name}.valueOf(val);"
+        if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
+          name = resolved_type ? resolved_type.name : type
+          type = resolved_type ? resolved_type.java_type : type_generic_hint
+          case type
+          when 'int', 'long', 'float', 'double'
+            s << "NSNumber val = (NSNumber) get(#{key_accessor});"
+            s << "return #{name}.valueOf(val.#{type}Value());"
+          else
+            s << "#{type} val = (#{type}) get(#{key_accessor});"
+            s << "return #{name}.valueOf(val);"
+          end
         elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
           s << "NSDictionary<NSString, NSObject> val = (NSDictionary<NSString, NSObject>) get(#{key_accessor});"
           s << "return new #{resolved_type.name}(val);"
@@ -987,9 +1011,14 @@ module Bro
           else
             s << "return #{resolved_type.name}.valueOf(val.longValue());"
           end
-        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
-          s << "NSData val = get(#{key_accessor}, NSData.class);"
-          s << "return val.getStructData(#{type}.class);"
+        elsif resolved_type.is_a?(Struct)
+          if resolved_type.is_opaque?
+            s << "#{resolved_type.name} val = get(#{key_accessor}).as(#{resolved_type.name}.class);"
+            s << "return val;"
+          else
+            s << "NSData val = (NSData) get(#{key_accessor});"
+            s << "return val.getStructData(#{type}.class);"
+          end
         else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
@@ -1016,18 +1045,18 @@ module Bro
               s << "return val.toList(#{$1}.class);"
             end
           when 'Map<String, NSObject>'
-            s << "NSDictionary<?, ?> dict = get(#{key_accessor});"
-            s << "return dict.asStringMap();"
+            s << "NSDictionary val = (NSDictionary) get(#{key_accessor});"
+            s << "return val.asStringMap();"
           when 'Map<String, String>'
-            s << "NSDictionary val = get(#{key_accessor});"
+            s << "NSDictionary val = (NSDictionary) get(#{key_accessor});"
             s << "return val.asStringStringMap();"
           else
-            s << "#{type} val = (#{type_no_generics}) get(#{key_accessor});"
+            s << "#{type} val = (#{type}) get(#{key_accessor});"
             s << "return val;"
         end
         end
       else
-        if resolved_type.is_a?(GlobalValueEnumeration)
+        if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
           s << "#{resolved_type.java_type} val = get(#{key_accessor}, #{resolved_type.java_type}.class);"
           s << "return #{resolved_type.name}.valueOf(val);"
         elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
@@ -1092,18 +1121,35 @@ module Bro
       "        " + s.flatten.join("\n            ")
     end
     
-    def convenience_setter_value(type, param_name)
+    def convenience_setter_value(type, type_hint, param_name)
       s = nil
       resolved_type = @model.resolve_type_by_name(type)
+      
+      if type_hint
+          hint_parts = type_hint.partition("<")
+          type_generic_hint = hint_parts[2].partition(">").first
+          type_hint = hint_parts.first
+      end
+      
       if is_foundation?
-        if resolved_type.is_a?(GlobalValueEnumeration)
-          s = "#{param_name}.value()"
+        if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
+          type = resolved_type ? resolved_type.java_type : type
+          case type
+          when 'int', 'long', 'float', 'double'
+            s = "NSNumber.valueOf(#{param_name}.value())"
+          else
+            s = "#{param_name}.value()"
+          end
         elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
           s = "#{param_name}.getDictionary()"
         elsif resolved_type.is_a?(Enum)
           s = "NSNumber.valueOf(#{param_name}.value())"
-        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
-          s = "new NSData(#{param_name})"
+        elsif resolved_type.is_a?(Struct)
+          if resolved_type.is_opaque?
+            s = "#{param_name}.as(NSObject.class)"
+          else
+            s = "new NSData(#{param_name})"
+          end
         else
         case type
           when 'boolean', 'byte', 'short', 'char', 'int', 'long', 'float', 'double'
@@ -1132,7 +1178,7 @@ module Bro
         end
         end
       else
-        if resolved_type.is_a?(GlobalValueEnumeration)
+        if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
           s = "#{param_name}.value()"
         elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
           s = "#{param_name}.getDictionary()"
@@ -1464,18 +1510,18 @@ module Bro
     def inspect
       object_id
     end
-    def resolve_type_by_name(name)
+    def resolve_type_by_name(name)    
       name = name.sub(/^(@ByVal|@Array.*)\s+/, '')
       orig_name = name
       name = @conf_typedefs[name] || name
       e = Bro::builtins_by_name(name)
+      e = e || @global_value_enums[name]
+      e = e || @global_value_dictionaries[name]
       e = e || @enums.find {|e| e.name == name}
       e = e || @structs.find {|e| e.name == name}
       e = e || @objc_classes.find {|e| e.name == name}
       e = e || @objc_protocols.find {|e| e.name == name}
       e = e || @typedefs.find {|e| e.name == name}
-      e = e || @global_value_enums[name]
-      e = e || @global_value_dictionaries[name]
       e || (orig_name != name ? Builtin.new(name) : nil)
     end
     def resolve_type(type, allow_arrays = false, owner = nil, method = nil)
@@ -1730,13 +1776,13 @@ module Bro
           case name.to_s
             when /^is/, /^has/, /^can/, /^should/, /^adjusts/, /^allows/, /^always/, /^animates/, 
             /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
-            /^autoreverses/, /^bounces/, /^casts/, /^clears/, /^clips/, /^collapses/, /^contains/, 
+            /^autoreverses/, /^bounces/, /^casts/, /^checks/, /^clears/, /^clips/, /^collapses/, /^contains/, /^creates/,
             /^defers/, /^defines/, /^delays/, /^depends/, /^did/, /^dims/, /^disconnects/, /^displays/, 
-            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^generates/, /^groups/, 
-            /^hides/, /^ignores/, /^includes/, /^invalidates/, /^locks/, /^marks/, /^masks/, /^needs/,
-            /^normalizes/, /^notifies/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
-            /^provides/, /^reads/, /^receives/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
-            /^scrolls/, /^sends/, /^shows/, /^simulates/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
+            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^flattens/, /^generates/, /^groups/, 
+            /^hides/, /^ignores/, /^includes/, /^infers/, /^invalidates/, /^keeps/, /^locks/, /^marks/, /^masks/, /^migrates/, /^needs/,
+            /^normalizes/, /^notifies/, /^overrides/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
+            /^provides/, /^reads/, /^receives/, /^recognizes/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
+            /^scrolls/, /^searches/, /^sends/, /^shows/, /^simulates/, /^sorts/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
               getter = "is#{base}"
@@ -1792,6 +1838,7 @@ module Bro
         when :cursor_enum_decl
           e = Enum.new self, cursor
           if !e.values.empty?
+            
             @enums.push(e)
           end
           next :continue
@@ -2547,8 +2594,12 @@ ARGV[1..-1].each do |yaml_file|
   end
   
   def generate_global_value_enum_marshalers(lines, class_name, java_type)
-    if java_type == 'Integer' || java_type == "@MachineSizedFloat double"
-      return # Ignore for now
+    toObjectValueAppendix = ''
+    toNativeValueText = 'o.value()'
+    if java_type.include?('int') || java_type.include?('double')
+      toObjectValueAppendix = ".#{java_type}Value()"
+      toNativeValueText = "NSNumber.valueOf(o.value())"
+      java_type = 'NSNumber'
     end
   
     base_type = "NSObject"
@@ -2563,14 +2614,14 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("        if (o == null) {")
     lines.push("            return null;")
     lines.push("        }")
-    lines.push("        return #{class_name}.valueOf(o);")
+    lines.push("        return #{class_name}.valueOf(o#{toObjectValueAppendix});")
     lines.push("    }")
     lines.push("    @MarshalsPointer")
     lines.push("    public static long toNative(#{class_name} o, long flags) {")
     lines.push("        if (o == null) {")
     lines.push("            return 0L;")
     lines.push("        }")
-    lines.push("        return #{base_type}.Marshaler.toNative(o.value(), flags);")
+    lines.push("        return #{base_type}.Marshaler.toNative(#{toNativeValueText}, flags);")
 	lines.push("    }")
     lines.push("}")
     
@@ -2589,9 +2640,9 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("        List<#{class_name}> list = new ArrayList<>();")
     lines.push("        for (int i = 0; i < o.size(); i++) {")
     if base_type == "NSObject"
-      lines.push("            list.add(#{class_name}.valueOf(o.get(i)));")
+      lines.push("            list.add(#{class_name}.valueOf(o.get(i)#{toObjectValueAppendix}));")
     else
-      lines.push("            list.add(#{class_name}.valueOf(o.get(i, #{java_type}.class)));")
+      lines.push("            list.add(#{class_name}.valueOf(o.get(i, #{java_type}.class)#{toObjectValueAppendix}));")
     end
     lines.push("        }")
     lines.push("        return list;")
@@ -2606,8 +2657,8 @@ ARGV[1..-1].each do |yaml_file|
     else
       lines.push("        CFArray array = CFMutableArray.create();")
     end
-    lines.push("        for (#{class_name} i : l) {")
-    lines.push("            array.add(i.value());")
+    lines.push("        for (#{class_name} o : l) {")
+    lines.push("            array.add(#{toNativeValueText});")
 	lines.push("        }")
     lines.push("        return #{base_type}.Marshaler.toNative(array, flags);")
 	lines.push("    }")
@@ -2665,8 +2716,10 @@ ARGV[1..-1].each do |yaml_file|
     java_type_no_anno = e.java_type.split(" ").last
     
     case java_type_no_anno
-      when 'byte', 'short', 'int', 'long', 'float', 'double'
+      when 'byte', 'short', 'long', 'float', 'double'
         java_type_no_anno = java_type_no_anno[0, 1].upcase + java_type_no_anno[1..-1]
+      when 'int'
+        java_type_no_anno = 'Integer'
     end 
     
     data['marshalers'] = "\n    #{marshalers_s}\n    "
