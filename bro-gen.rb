@@ -988,21 +988,23 @@ module Bro
           type_hint = hint_parts.first
       end
       
+      name = resolved_type ? resolved_type.name : type
+      java_type = type
+      
       if is_foundation?
         if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
-          name = resolved_type ? resolved_type.name : type
-          type = resolved_type ? resolved_type.java_type : type_generic_hint
-          case type
+          java_type = resolved_type ? resolved_type.java_type : type_generic_hint
+          case java_type
           when 'int', 'long', 'float', 'double'
             s << "NSNumber val = (NSNumber) get(#{key_accessor});"
-            s << "return #{name}.valueOf(val.#{type}Value());"
+            s << "return #{name}.valueOf(val.#{java_type}Value());"
           else
-            s << "#{type} val = (#{type}) get(#{key_accessor});"
+            s << "#{java_type} val = (#{java_type}) get(#{key_accessor});"
             s << "return #{name}.valueOf(val);"
           end
-        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper) || type_hint == 'GlobalValueDictionaryWrapper'
           s << "NSDictionary<NSString, NSObject> val = (NSDictionary<NSString, NSObject>) get(#{key_accessor});"
-          s << "return new #{resolved_type.name}(val);"
+          s << "return new #{name}(val);"
         elsif resolved_type.is_a?(Enum)
           s << "NSNumber val = (NSNumber) get(#{key_accessor});"
           econf = @model.get_enum_conf(resolved_type.name)
@@ -1011,13 +1013,18 @@ module Bro
           else
             s << "return #{resolved_type.name}.valueOf(val.longValue());"
           end
-        elsif resolved_type.is_a?(Struct)
-          if resolved_type.is_opaque?
-            s << "#{resolved_type.name} val = get(#{key_accessor}).as(#{resolved_type.name}.class);"
-            s << "return val;"
-          else
+        elsif resolved_type.is_a?(Struct) || type_hint == 'Struct'
+          if type == 'CGRect' || type == 'CGSize' || type == 'CGAffineTransform' || type == 'NSRange' || type == 'UIEdgeInsets'
+            valueShort = type[2..-1]
+            valueShort[0] = valueShort[0].downcase
+            s << "NSValue val = (NSValue) get(#{key_accessor});"
+            s << "return val.#{valueShort}Value();"
+          elsif type_hint == 'Struct' || !resolved_type.is_opaque?
             s << "NSData val = (NSData) get(#{key_accessor});"
             s << "return val.getStructData(#{type}.class);"
+          else
+            s << "#{resolved_type.name} val = get(#{key_accessor}).as(#{resolved_type.name}.class);"
+            s << "return val;"
           end
         else
         case type
@@ -1036,8 +1043,8 @@ module Bro
             generic_type = @model.resolve_type_by_name("#{$1}")
 			if generic_type.is_a?(GlobalValueDictionaryWrapper)
               s << "List<#{$1}> list = new ArrayList<>();"
-              s << "NSDictionary<?, ?>[] array = val.toArray(NSDictionary.class);"
-              s << "for (NSDictionary<?, ?> d : array) {"
+              s << "NSDictionary<NSString, NSObject>[] array = val.toArray(NSDictionary.class);"
+              s << "for (NSDictionary<NSString, NSObject> d : array) {"
               s << "   list.add(new #{$1}(d));"
               s << "}"
               s << "return list;"
@@ -1057,11 +1064,12 @@ module Bro
         end
       else
         if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
-          s << "#{resolved_type.java_type} val = get(#{key_accessor}, #{resolved_type.java_type}.class);"
-          s << "return #{resolved_type.name}.valueOf(val);"
-        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+          java_type = resolved_type ? resolved_type.java_type : type_generic_hint
+          s << "#{java_type} val = get(#{key_accessor}, #{java_type}.class);"
+          s << "return #{name}.valueOf(val);"
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper) || type_hint == 'GlobalValueDictionaryWrapper'
           s << "CFDictionary val = get(#{key_accessor}, CFDictionary.class);"
-          s << "return new #{resolved_type.name}(val);"
+          s << "return new #{name}(val);"
         elsif resolved_type.is_a?(Enum)
           s << "CFNumber val = get(#{key_accessor}, CFNumber.class);"
           econf = @model.get_enum_conf(resolved_type.name)
@@ -1070,7 +1078,7 @@ module Bro
           else
             s << "return #{resolved_type.name}.valueOf(val.longValue());"
           end
-        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque?
+        elsif resolved_type.is_a?(Struct) && !resolved_type.is_opaque? || type_hint == 'Struct'
           s << "NSData val = get(#{key_accessor}, NSData.class);"
           s << "return val.getStructData(#{type}.class);"
         else
@@ -1133,22 +1141,24 @@ module Bro
       
       if is_foundation?
         if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
-          type = resolved_type ? resolved_type.java_type : type
-          case type
+          java_type = resolved_type ? resolved_type.java_type : type
+          case java_type
           when 'int', 'long', 'float', 'double'
             s = "NSNumber.valueOf(#{param_name}.value())"
           else
             s = "#{param_name}.value()"
           end
-        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper) || type_hint == 'GlobalValueDictionaryWrapper'
           s = "#{param_name}.getDictionary()"
         elsif resolved_type.is_a?(Enum)
           s = "NSNumber.valueOf(#{param_name}.value())"
-        elsif resolved_type.is_a?(Struct)
-          if resolved_type.is_opaque?
-            s = "#{param_name}.as(NSObject.class)"
-          else
+        elsif resolved_type.is_a?(Struct) || type_hint == 'Struct'
+          if type == 'CGRect' || type == 'CGSize' || type == 'CGAffineTransform' || type == 'NSRange' || type == 'UIEdgeInsets'
+            s = "NSValue.valueOf(#{param_name})"
+          elsif type_hint == 'Struct' || !resolved_type.is_opaque?
             s = "new NSData(#{param_name})"
+          else
+            s = "#{param_name}.as(NSObject.class)"
           end
         else
         case type
@@ -1180,7 +1190,7 @@ module Bro
       else
         if resolved_type.is_a?(GlobalValueEnumeration) || type_hint == 'GlobalValueEnumeration'
           s = "#{param_name}.value()"
-        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper)
+        elsif resolved_type.is_a?(GlobalValueDictionaryWrapper) || type_hint == 'GlobalValueDictionaryWrapper'
           s = "#{param_name}.getDictionary()"
         elsif resolved_type.is_a?(Enum)
           s = "CFNumber.valueOf(#{param_name}.value())"
@@ -1780,7 +1790,7 @@ module Bro
             /^defers/, /^defines/, /^delays/, /^depends/, /^did/, /^dims/, /^disconnects/, /^displays/, 
             /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^flattens/, /^generates/, /^groups/, 
             /^hides/, /^ignores/, /^includes/, /^infers/, /^invalidates/, /^keeps/, /^locks/, /^marks/, /^masks/, /^migrates/, /^needs/,
-            /^normalizes/, /^notifies/, /^overrides/, /^pauses/, /^performs/, /^presents/, /^preserves/, /^propagates/,
+            /^normalizes/, /^notifies/, /^overrides/, /^pauses/, /^performs/, /^prefers/, /^presents/, /^preserves/, /^propagates/,
             /^provides/, /^reads/, /^receives/, /^recognizes/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
             /^scrolls/, /^searches/, /^sends/, /^shows/, /^simulates/, /^sorts/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
               getter = name
@@ -2594,6 +2604,7 @@ ARGV[1..-1].each do |yaml_file|
   end
   
   def generate_global_value_enum_marshalers(lines, class_name, java_type)
+    java_type = java_type.split(" ").last
     toObjectValueAppendix = ''
     toNativeValueText = 'o.value()'
     if java_type.include?('int') || java_type.include?('double')
@@ -2602,9 +2613,13 @@ ARGV[1..-1].each do |yaml_file|
       java_type = 'NSNumber'
     end
   
-    base_type = "NSObject"
-    if java_type == "CFType" || java_type == "CFString" || java_type == "CFNumber"
-      base_type = "CFType"
+    case java_type
+      when 'CFType', 'CFString', 'CFNumber'
+        base_type = 'CFType'
+      when 'CGRect', 'CGSize'
+        base_type = 'Struct'
+      else
+        base_type = 'NSObject'
     end
   
     lines.push("public static class Marshaler {")
@@ -2624,6 +2639,10 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("        return #{base_type}.Marshaler.toNative(#{toNativeValueText}, flags);")
 	lines.push("    }")
     lines.push("}")
+    
+    if base_type == 'Struct'
+      return lines
+    end
     
     lines.push("public static class AsListMarshaler {")
     lines.push("    @SuppressWarnings(\"unchecked\")") if base_type == "NSObject"
