@@ -75,7 +75,7 @@ module Bro
       @name = cursor ? cursor.spelling : nil
       @model = model
       @framework = @location ?
-          "#{@location.file}".split(File::SEPARATOR).reverse.find_all {|e| e.match(/^.*\.framework$/)}.map {|e| e.sub(/(.*)\.framework/, '\1')}.first :
+          "#{@location.file}".split(File::SEPARATOR).reverse.find_all {|e| e.match(/^.*\.(framework|lib)$/)}.map {|e| e.sub(/(.*)\.(framework|lib)/, '\1')}.first :
           nil
       @attributes = []
     end
@@ -354,7 +354,7 @@ module Bro
        source == 'NS_ROOT_CLASS' || source == '__header_always_inline' || source.end_with?('_EXTERN') || source.end_with?('_EXTERN_CLASS') || source == 'NSObject' ||
        source.end_with?('_CLASS_EXPORT') || source.end_with?('_EXPORT') || source == 'NS_REPLACES_RECEIVER' || source == '__objc_exception__' || source == 'OBJC_EXPORT' ||
        source == 'OBJC_ROOT_CLASS' || source == '__ai' || source.end_with?('_EXTERN_WEAK') || source == 'NS_DESIGNATED_INITIALIZER' || source.start_with?('NS_EXTENSION_UNAVAILABLE_IOS') ||
-       source == 'NS_REQUIRES_PROPERTY_DEFINITIONS'
+       source == 'NS_REQUIRES_PROPERTY_DEFINITIONS' || source.start_with?('DEPRECATED_MSG_ATTRIBUTE')
       return IgnoredAttribute.new source
     elsif source == 'NS_UNAVAILABLE' || source == 'UNAVAILABLE_ATTRIBUTE'
       return UnavailableAttribute.new source
@@ -1766,7 +1766,7 @@ module Bro
     def is_included?(entity)
       framework = conf['framework']
       path_match = conf['path_match']
-#      puts "entity.location.file = #{entity.location.file} #{path_match} #{entity.location.file.match(path_match)}"
+
       if path_match && entity.location.file.match(path_match)
         true
       else
@@ -1784,7 +1784,7 @@ module Bro
       if !omit_prefix
         if type == 'boolean'
           case name.to_s
-            when /^is/, /^has/, /^can/, /^should/, /^adjusts/, /^allows/, /^always/, /^animates/, 
+            when /^is/, /^has/, /^can/, /^should/, /^adjusts/, /^allows/, /^always/, /^animates/, /^appends/,
             /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
             /^autoreverses/, /^bounces/, /^casts/, /^checks/, /^clears/, /^clips/, /^collapses/, /^contains/, /^creates/,
             /^defers/, /^defines/, /^delays/, /^depends/, /^did/, /^dims/, /^disconnects/, /^displays/, 
@@ -1792,7 +1792,7 @@ module Bro
             /^hides/, /^ignores/, /^includes/, /^infers/, /^invalidates/, /^keeps/, /^locks/, /^marks/, /^masks/, /^migrates/, /^needs/,
             /^normalizes/, /^notifies/, /^overrides/, /^pauses/, /^performs/, /^prefers/, /^presents/, /^preserves/, /^propagates/,
             /^provides/, /^reads/, /^receives/, /^recognizes/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
-            /^scrolls/, /^searches/, /^sends/, /^shows/, /^simulates/, /^sorts/, /^supports/, /^suppresses/, /^uses/, /^wants/, /^writes/   
+            /^scrolls/, /^searches/, /^sends/, /^shows/, /^simulates/, /^sorts/, /^supports/, /^suppresses/, /^tracks/, /^uses/, /^wants/, /^writes/   
               getter = name
             else
               getter = "is#{base}"
@@ -2438,6 +2438,12 @@ ARGV[1..-1].each do |yaml_file|
     end
   end
 
+  if conf['library'] && conf['library'] != "Library.INTERNAL"
+    $library = "\"#{conf['library']}\""
+  else
+    $library = 'Library.INTERNAL'
+  end
+
   imports.uniq!
   imports_s = "\n" + imports.map {|im| "import #{im};"}.join("\n") + "\n"
 
@@ -2456,11 +2462,6 @@ ARGV[1..-1].each do |yaml_file|
   model.process(translation_unit.cursor)
 
   package = conf['package'] || ''
-  if conf['library'] && conf['library'] != "Library.INTERNAL"
-    $library = "\"#{conf['library']}\""
-  else
-    $library = 'Library.INTERNAL'
-  end
   default_class = conf['default_class'] || conf['framework'] || 'Functions'
 
   template_datas = {}
