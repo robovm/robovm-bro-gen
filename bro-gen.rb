@@ -930,7 +930,7 @@ module Bro
           if method
             mconf = method[1]
             name = mconf['name'] || method[0]
-            param_name = name[0].downcase + name[1..-1]
+            param_name = mconf['param_name'] || name[0].downcase + name[1..-1]
             omit_prefix = mconf['omit_prefix'] || false
             type = mconf['type'] || 'boolean'
             
@@ -1788,8 +1788,8 @@ module Bro
             /^applies/, /^apportions/, /^are/, /^autoenables/, /^automatically/, /^autoresizes/, 
             /^autoreverses/, /^bounces/, /^casts/, /^checks/, /^clears/, /^clips/, /^collapses/, /^contains/, /^creates/,
             /^defers/, /^defines/, /^delays/, /^depends/, /^did/, /^dims/, /^disconnects/, /^displays/, 
-            /^does/, /^draws/, /^enables/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^flattens/, /^generates/, /^groups/, 
-            /^hides/, /^ignores/, /^includes/, /^infers/, /^invalidates/, /^keeps/, /^locks/, /^marks/, /^masks/, /^migrates/, /^needs/,
+            /^does/, /^draws/, /^embeds/, /^enables/, /^enumerates/, /^evicts/, /^expects/, /^fixes/, /^fills/, /^flattens/, /^generates/, /^groups/, 
+            /^hides/, /^ignores/, /^includes/, /^infers/, /^invalidates/, /^keeps/, /^locks/, /^marks/, /^masks/, /^merges/, /^migrates/, /^needs/,
             /^normalizes/, /^notifies/, /^overrides/, /^pauses/, /^performs/, /^prefers/, /^presents/, /^preserves/, /^propagates/,
             /^provides/, /^reads/, /^receives/, /^recognizes/, /^removes/, /^requests/, /^requires/, /^resets/, /^resumes/, /^returns/, /^reverses/, 
             /^scrolls/, /^searches/, /^sends/, /^shows/, /^simulates/, /^sorts/, /^supports/, /^suppresses/, /^tracks/, /^uses/, /^wants/, /^writes/   
@@ -2355,6 +2355,7 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
       args_s = param_types.map {|p| p[2]}.join(', ')
       
       model.push_availability(method, constructor_lines)
+      constructor_lines << "#{annotations}" if annotations
       
       if conf['throws']
         constructor_lines << "#{constructor_visibility}#{generics_s.size>0 ? ' ' + generics_s : ''} #{owner_name}(#{new_parameters_s}) throws #{conf['throws']} {"
