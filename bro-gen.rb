@@ -2324,11 +2324,11 @@ def method_to_java(model, owner_name, owner, method, methods_conf, seen, adapter
 	      method_lines << "#{annotations}" if annotations
           method_lines << "#{[visibility,static,generics_s,ret_type[0],name].find_all {|e| e.size>0}.join(' ')}(#{new_parameters_s}) throws #{conf['throws']} {"
           method_lines << "   #{error_type}.#{error_type}Ptr ptr = new #{error_type}.#{error_type}Ptr();"
-          ret = ret_type[0].gsub(/@[a-zA-Z0-9_().]+ /, '') # Trim annotations
+          ret = ret_type[0].gsub(/@[a-zA-Z0-9_().]+ /, '').gsub(/\<.*\> /, '') # Trim annotations
           ret = ret == 'void' ? '' : "#{ret} result = "
           method_lines << "   #{ret}#{name}(#{params_s});"
           method_lines << "   if (ptr.get() != null) { throw new #{conf['throws']}(ptr.get()); }"
-          method_lines << "   return result;" if ret_type[0] != 'void'
+          method_lines << "   return result;" unless ret == ''
           method_lines << "}"
       end
     
