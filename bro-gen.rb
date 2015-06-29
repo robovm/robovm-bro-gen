@@ -2156,8 +2156,8 @@ def property_to_java(model, owner, prop, props_conf, seen, adapter = false)
     generics_s = generics_s.size > 0 ? "<#{generics_s}>" : ''
     param_types = []
     if owner.is_a?(Bro::ObjCCategory)
-      cconf = model.get_category_conf(owner.owner)
-      thiz_type = cconf && cconf['owner_type'] || owner.owner
+      cconf = model.get_category_conf(owner.owner == nil ? owner.name : owner.owner)
+      thiz_type = cconf && cconf['owner_type'] || owner.owner || owner.name
       param_types.unshift([thiz_type, nil, 'thiz'])
     end
     parameters_s = param_types.map {|p| "#{p[0]} #{p[2]}"}.join(', ')
