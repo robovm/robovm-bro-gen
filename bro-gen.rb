@@ -1038,12 +1038,12 @@ module Bro
             s << "NSArray<NSString> val = (NSArray<NSString>) get(#{key_accessor});"
             s << "return val.asStringList();"
           when /^List<(.*)>$/
-            s << "NSArray<?> val = get(#{key_accessor});"
+            s << "NSArray<?> val = (NSArray<?>) get(#{key_accessor});"
           
             generic_type = @model.resolve_type_by_name("#{$1}")
 			if generic_type.is_a?(GlobalValueDictionaryWrapper)
               s << "List<#{$1}> list = new ArrayList<>();"
-              s << "NSDictionary<NSString, NSObject>[] array = val.toArray(NSDictionary.class);"
+              s << "NSDictionary<NSString, NSObject>[] array = (NSDictionary<NSString, NSObject>[]) val.toArray(new NSDictionary[val.size()]);"
               s << "for (NSDictionary<NSString, NSObject> d : array) {"
               s << "   list.add(new #{$1}(d));"
               s << "}"
@@ -1172,12 +1172,12 @@ module Bro
             generic_type = @model.resolve_type_by_name("#{$1}")
 			if generic_type.is_a?(GlobalValueDictionaryWrapper)
 			  s = []
-			  s << "    NSArray<?> val = new NSMutableArray<?>();"
+			  s << "    NSArray<NSDictionary<NSString, NSObject>> val = new NSMutableArray<>();"
 			  s << "    for (#{generic_type.name} e : #{param_name}) {"
 			  s << "        val.add(e.getDictionary());"
 			  s << "    }"
 			else
-              s = "new NSArray<?>(#{param_name})"
+              s = "new NSArray<>(#{param_name})"
             end
           when 'Map<String, NSObject>'
             s = "NSDictionary.fromStringMap(#{param_name})"
