@@ -855,11 +855,12 @@ module Bro
       lines << "}"
     
       array_type = is_foundation? ? "NSArray<#{dict_type}#{dict_generics}>" : "CFArray"
+      array_class = is_foundation? ? "NSArray.class" : "CFArray.class"
     
       lines << "public static class AsListMarshaler {"
       lines << "    @MarshalsPointer"
       lines << "    public static List<#{@name}> toObject(Class<? extends #{base_type}> cls, long handle, long flags) {"
-      lines << "        #{array_type} o = (#{array_type}) #{base_type}.Marshaler.toObject(cls, handle, flags);"
+      lines << "        #{array_type} o = (#{array_type}) #{base_type}.Marshaler.toObject(#{array_class}, handle, flags);"
       lines << "        if (o == null) {"
       lines << "            return null;"
       lines << "        }"
@@ -2651,9 +2652,9 @@ ARGV[1..-1].each do |yaml_file|
     lines.push("    @MarshalsPointer")
     lines.push("    public static List<#{class_name}> toObject(Class<? extends #{base_type}> cls, long handle, long flags) {")
     if base_type == "NSObject"
-      lines.push("        NSArray<#{java_type}> o = (NSArray<#{java_type}>) NSObject.Marshaler.toObject(cls, handle, flags);")
+      lines.push("        NSArray<#{java_type}> o = (NSArray<#{java_type}>) NSObject.Marshaler.toObject(NSArray.class, handle, flags);")
     else 
-      lines.push("        CFArray o = (CFArray) CFType.Marshaler.toObject(cls, handle, flags);")
+      lines.push("        CFArray o = (CFArray) CFType.Marshaler.toObject(CFArray.class, handle, flags);")
     end
     lines.push("        if (o == null) {")
     lines.push("            return null;")
