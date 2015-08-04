@@ -833,13 +833,12 @@ module Bro
     
     def append_marshalers(lines)
       dict_type = is_foundation? ? "NSDictionary" : "CFDictionary"
-      dict_generics = is_foundation? ? "<NSString, NSObject>" : ""
       base_type = is_foundation? ? "NSObject" : "CFType"
     
       lines << "public static class Marshaler {"
       lines << "    @MarshalsPointer"
       lines << "    public static #{@name} toObject(Class<#{@name}> cls, long handle, long flags) {"
-      lines << "        #{dict_type}#{dict_generics} o = (#{dict_type}#{dict_generics}) #{base_type}.Marshaler.toObject(#{dict_type}.class, handle, flags);"
+      lines << "        #{dict_type} o = (#{dict_type}) #{base_type}.Marshaler.toObject(#{dict_type}.class, handle, flags);"
       lines << "        if (o == null) {"
       lines << "            return null;"
       lines << "        }"
@@ -854,7 +853,7 @@ module Bro
       lines << "    }"
       lines << "}"
     
-      array_type = is_foundation? ? "NSArray<#{dict_type}#{dict_generics}>" : "CFArray"
+      array_type = is_foundation? ? "NSArray<#{dict_type}>" : "CFArray"
       array_class = is_foundation? ? "NSArray.class" : "CFArray.class"
     
       lines << "public static class AsListMarshaler {"
@@ -876,7 +875,7 @@ module Bro
       lines << "        if (l == null) {"
       lines << "            return 0L;"
       lines << "        }"
-      lines << "        NSArray<NSDictionary<NSString, NSObject>> array = new NSMutableArray<>();" if is_foundation?
+      lines << "        NSArray<NSDictionary> array = new NSMutableArray<>();" if is_foundation?
       lines << "        CFArray array = CFMutableArray.create();" if !is_foundation?
       lines << "        for (#{@name} i : l) {"
       lines << "            array.add(i.getDictionary());"
@@ -887,7 +886,7 @@ module Bro
     end
     
     def append_constructors(lines)
-      dict_type = is_foundation? ? "NSDictionary<NSString, NSObject>" : "CFDictionary"
+      dict_type = is_foundation? ? "NSDictionary" : "CFDictionary"
     
       constructor_visibility = @constructor_visibility.nil? ? '' : "#{@constructor_visibility} "
     
@@ -1004,7 +1003,7 @@ module Bro
             s << "return #{name}.valueOf(val);"
           end
         elsif resolved_type.is_a?(GlobalValueDictionaryWrapper) || type_hint == 'GlobalValueDictionaryWrapper'
-          s << "NSDictionary<NSString, NSObject> val = (NSDictionary<NSString, NSObject>) get(#{key_accessor});"
+          s << "NSDictionary val = (NSDictionary) get(#{key_accessor});"
           s << "return new #{name}(val);"
         elsif resolved_type.is_a?(Enum)
           s << "NSNumber val = (NSNumber) get(#{key_accessor});"
@@ -1044,8 +1043,8 @@ module Bro
             generic_type = @model.resolve_type_by_name("#{$1}")
 			if generic_type.is_a?(GlobalValueDictionaryWrapper)
               s << "List<#{$1}> list = new ArrayList<>();"
-              s << "NSDictionary<NSString, NSObject>[] array = (NSDictionary<NSString, NSObject>[]) val.toArray(new NSDictionary[val.size()]);"
-              s << "for (NSDictionary<NSString, NSObject> d : array) {"
+              s << "NSDictionary[] array = (NSDictionary[]) val.toArray(new NSDictionary[val.size()]);"
+              s << "for (NSDictionary d : array) {"
               s << "   list.add(new #{$1}(d));"
               s << "}"
               s << "return list;"
@@ -1173,7 +1172,7 @@ module Bro
             generic_type = @model.resolve_type_by_name("#{$1}")
 			if generic_type.is_a?(GlobalValueDictionaryWrapper)
 			  s = []
-			  s << "    NSArray<NSDictionary<NSString, NSObject>> val = new NSMutableArray<>();"
+			  s << "    NSArray<NSDictionary> val = new NSMutableArray<>();"
 			  s << "    for (#{generic_type.name} e : #{param_name}) {"
 			  s << "        val.add(e.getDictionary());"
 			  s << "    }"
